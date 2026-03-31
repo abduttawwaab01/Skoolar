@@ -1,0 +1,58 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "skoolar"
+main = ".open-next/worker.js"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+# ============================================
+# Skoolar on Cloudflare Pages + R2
+# ============================================
+# This is the main wrangler config for deploying
+# Skoolar to Cloudflare Pages using OpenNext.
+
+# -------------------------------------------
+# R2 Storage Binding
+# -------------------------------------------
+# Files uploaded via the platform admin panel
+# are stored here. No S3 credentials needed —
+# the binding provides direct, fast access.
+#
+# Prerequisites:
+#   1. Create bucket: wrangler r2 bucket create skoolar
+#   2. Enable public access in R2 dashboard
+#   3. Add custom domain or use the dev URL
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "skoolar"
+
+# -------------------------------------------
+# Environment Variables
+# -------------------------------------------
+# For local development, these are read from .dev.vars
+# For production, set these in the Cloudflare Dashboard:
+#   Workers & Pages → skoolar → Settings → Variables and Secrets
+#
+# Required variables:
+#   DATABASE_URL         - PostgreSQL connection string (Neon)
+#   DIRECT_URL           - Direct connection for migrations (Neon)
+#   NEXTAUTH_SECRET      - Random 32+ char string
+#   NEXTAUTH_URL         - Your production URL
+#   R2_PUBLIC_URL        - Public URL for R2 bucket (custom domain or dev URL)
+
+[vars]
+NEXTAUTH_URL = "https://skoolar.org"
+R2_PUBLIC_URL = "https://storage.skoolar.org"
+R2_BUCKET_NAME = "skoolar"
+
+# -------------------------------------------
+# Development (wrangler dev) Overrides
+# -------------------------------------------
+[dev]
+port = 8788
+local_protocol = "http"
+
+# -------------------------------------------
+# Static Assets (served from .open-next/assets)
+# -------------------------------------------
+[site]
+bucket = ".open-next/assets"
