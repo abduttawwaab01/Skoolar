@@ -7,6 +7,8 @@ export async function middleware(request: NextRequest) {
   // Public paths that don't require authentication
   const publicPaths = [
     '/',
+    '/login',
+    '/register',
     '/api/auth/register',
     '/api/auth/seed',
     '/api/auth/signin',
@@ -65,9 +67,9 @@ export async function middleware(request: NextRequest) {
   });
 
   if (!token) {
-    // Redirect to home page (login) for page routes
+    // Redirect to login page for page routes
     if (!pathname.startsWith('/api/')) {
-      const loginUrl = new URL('/', request.url);
+      const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('callbackUrl', pathname);
       return NextResponse.redirect(loginUrl);
     }

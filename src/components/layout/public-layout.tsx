@@ -92,9 +92,14 @@ function PublicHeader({ settings, pathname }: { settings: PlatformSettings | nul
                 Legal
               </Button>
             </Link>
-            <Link href="/">
+            <Link href="/login">
+              <Button variant="ghost" size="sm" className="text-gray-600">
+                Log in
+              </Button>
+            </Link>
+            <Link href="/register">
               <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
-                Login
+                Register School
               </Button>
             </Link>
           </div>
@@ -164,9 +169,9 @@ function PublicHeader({ settings, pathname }: { settings: PlatformSettings | nul
 
                 {/* Mobile CTA */}
                 <div className="p-4 border-t">
-                  <Link href="/" onClick={() => setMobileOpen(false)}>
+                  <Link href="/login" onClick={() => setMobileOpen(false)}>
                     <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                      Login to Dashboard
+                      Log in
                     </Button>
                   </Link>
                 </div>
