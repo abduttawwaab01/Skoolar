@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { School, Menu, X, BookOpen, GraduationCap, CreditCard, PenLine, Shield, Cookie, Mail, Phone, MapPin, MessageCircle, Facebook, Twitter, Instagram, Linkedin, Youtube } from 'lucide-react';
+import { School, Menu, X, BookOpen, GraduationCap, CreditCard, PenLine, Shield, Cookie, Mail, Phone, MapPin, MessageCircle, Facebook, Twitter, Instagram, Linkedin, Youtube, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -52,18 +54,18 @@ function PublicHeader({ settings, pathname }: { settings: PlatformSettings | nul
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-white/20 shadow-sm transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8 h-20 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm shadow-emerald-500/20 group-hover:shadow-md group-hover:shadow-emerald-500/30 transition-all">
-              <School className="h-5 w-5 text-white" />
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-indigo-200 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+              <School className="h-6 w-6 text-white" />
             </div>
-            <span className="text-lg font-bold text-gray-900 tracking-tight">{siteName}</span>
+            <span className="text-2xl font-black text-gray-900 tracking-tighter uppercase italic">{siteName}</span>
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-1">
+          <nav className="hidden md:flex items-center gap-2 bg-gray-100/50 p-1.5 rounded-2xl backdrop-blur-sm border border-white/40">
             {navLinks.map((link) => {
               const Icon = link.icon;
               const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
@@ -71,13 +73,14 @@ function PublicHeader({ settings, pathname }: { settings: PlatformSettings | nul
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
                     isActive
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+                      ? 'bg-white text-indigo-700 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-white/40'
+                  )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-3.5 w-3.5" />
                   {link.label}
                 </Link>
               );
@@ -85,21 +88,15 @@ function PublicHeader({ settings, pathname }: { settings: PlatformSettings | nul
           </nav>
 
           {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-3">
-            <Link href="/privacy">
-              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700 gap-1.5">
-                <Shield className="h-3.5 w-3.5" />
-                Legal
-              </Button>
-            </Link>
+          <div className="hidden md:flex items-center gap-4">
             <Link href="/login">
-              <Button variant="ghost" size="sm" className="text-gray-600">
+              <Button variant="ghost" size="sm" className="text-gray-900 font-black text-xs uppercase tracking-widest hover:bg-transparent hover:text-indigo-600 transition-colors">
                 Log in
               </Button>
             </Link>
             <Link href="/register">
-              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
-                Register School
+              <Button size="sm" className="bg-gray-900 hover:bg-indigo-700 text-white shadow-xl shadow-gray-200 rounded-xl px-6 h-11 font-black text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95">
+                Register
               </Button>
             </Link>
           </div>
@@ -350,7 +347,6 @@ export function PublicLayout({ children }: PublicLayoutProps) {
   const pathname = usePathname();
   const [settings, setSettings] = useState<PlatformSettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
-  const [preloaderDone, setPreloaderDone] = useState(false);
 
   // Fetch platform settings
   useEffect(() => {
@@ -367,21 +363,6 @@ export function PublicLayout({ children }: PublicLayoutProps) {
     };
     fetchSettings();
   }, []);
-
-  // Check if preloader has been shown this session
-  useEffect(() => {
-    const hasShown = sessionStorage.getItem('skoolar-public-preloader-shown');
-    if (hasShown) {
-      setPreloaderDone(true);
-    }
-  }, []);
-
-  const handlePreloaderComplete = useCallback(() => {
-    setPreloaderDone(true);
-    sessionStorage.setItem('skoolar-public-preloader-shown', 'true');
-  }, []);
-
-  const showPreloader = !preloaderDone && settings?.enablePreloader !== false;
 
   // Loading skeleton for header/footer while settings load
   if (settingsLoading) {
@@ -409,18 +390,11 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      {showPreloader && (
-        <Preloader onComplete={handlePreloaderComplete} show={true} />
-      )}
-      {(!showPreloader) && (
-        <>
-          <PublicHeader settings={settings} pathname={pathname} />
-          <main className="flex-1">
-            {children}
-          </main>
-          <PublicFooter settings={settings} />
-        </>
-      )}
+      <PublicHeader settings={settings} pathname={pathname} />
+      <main className="flex-1">
+        {children}
+      </main>
+      <PublicFooter settings={settings} />
     </div>
   );
 }

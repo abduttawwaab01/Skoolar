@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useAppStore, navigationByRole, type NavItem, type DashboardView, type UserRole } from '@/store/app-store';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { slideUp, fadeIn, staggerContainer } from '@/lib/motion-variants';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -796,15 +798,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden relative">
+        <div className="absolute inset-0 bg-mesh-bg opacity-30 pointer-events-none" />
         <AnnouncementTicker />
         <Header />
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-          <div className="mb-4">
-            <AdvertCarousel />
-          </div>
-          {children}
-        </main>
+        <ScrollArea className="flex-1 bg-white/20 backdrop-blur-3xl relative z-10">
+          <main className="p-4 lg:p-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={useAppStore.getState().currentView}
+                initial={{ opacity: 0, y: 10, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: -10, filter: 'blur(10px)' }}
+                transition={{ duration: 0.3, ease: "circOut" }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          </main>
+        </ScrollArea>
       </div>
 
       {/* Notifications overlay */}

@@ -2,22 +2,33 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
-// GET /api/platform/preloader - Public: fetch random active quote
-export async function GET() {
+// GET /api/platform/preloader - Public: fetch only the latest active quote
+// For Super Admin: fetch all quotes for management
+export async function GET(request: NextRequest) {
   try {
-    const quotes = await db.preloaderQuote.findMany({
+    const token = await getToken({ req: request });
+    const isSuperAdmin = token?.role === 'SUPER_ADMIN';
+
+    if (isSuperAdmin) {
+      const quotes = await db.preloaderQuote.findMany({
+        orderBy: { updatedAt: 'desc' },
+      });
+      return NextResponse.json({ success: true, data: quotes });
+    }
+
+    const quote = await db.preloaderQuote.findFirst({
       where: { isActive: true },
+      orderBy: { updatedAt: 'desc' },
     });
 
-    if (quotes.length === 0) {
+    if (!quote) {
       return NextResponse.json({
         success: true,
         data: { quote: 'Education is the passport to the future.', author: 'Malcolm X' },
       });
     }
 
-    const randomIndex = Math.floor(Math.random() * quotes.length);
-    return NextResponse.json({ success: true, data: quotes[randomIndex] });
+    return NextResponse.json({ success: true, data: quote });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ success: false, message }, { status: 500 });

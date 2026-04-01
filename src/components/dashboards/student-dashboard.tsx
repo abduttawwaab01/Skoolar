@@ -14,8 +14,10 @@ import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
 import {
   GraduationCap, CalendarCheck, Award, Star, Trophy, Clock, BookOpen,
-  FileEdit, TrendingUp, Target, Medal, CheckCircle2, AlertTriangle, Info
+  FileEdit, TrendingUp, Target, Medal, CheckCircle2, AlertTriangle, Info, Sparkles
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { fadeIn, slideUp, staggerContainer, scaleIn } from '@/lib/motion-variants';
 
 const upcomingExams = [
   { subject: 'Mathematics', date: '2025-04-02', type: 'CA', duration: '45 mins', status: 'upcoming' as const },
@@ -213,274 +215,336 @@ export function StudentDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
+      className="space-y-6"
+    >
       {/* Welcome */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <motion.div 
+        variants={fadeIn}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Welcome back, {studentName}! 🎓</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold tracking-tight">Welcome back, {studentName}! 🎓</h1>
+            <Sparkles className="size-5 text-amber-500 animate-pulse" />
+          </div>
           <p className="text-muted-foreground">Keep up the great work! You&apos;re doing amazing this term.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1 text-sm py-1">
-            <GraduationCap className="size-3.5" /> GPA: {gpa.toFixed(1)}/5.0
+          <Badge variant="secondary" className="gap-1.5 text-sm py-1.5 px-3 bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100 transition-colors">
+            <GraduationCap className="size-4" /> GPA: {gpa.toFixed(1)}/5.0
           </Badge>
           {rank && (
-            <Badge variant="outline" className="gap-1 text-sm py-1">
-              <TrendingUp className="size-3.5" /> Rank: #{rank}
+            <Badge variant="secondary" className="gap-1.5 text-sm py-1.5 px-3 bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 transition-colors">
+              <TrendingUp className="size-4" /> Rank: #{rank}
             </Badge>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <KpiCard title="GPA" value={`${gpa.toFixed(1)}/5.0`} icon={GraduationCap} iconBgColor="bg-emerald-100" iconColor="text-emerald-600" change={0.3} changeLabel="vs last term" />
-        <KpiCard title="Attendance" value={`${attendanceStats.rate}%`} icon={CalendarCheck} iconBgColor="bg-blue-100" iconColor="text-blue-600" change={2} changeLabel="this term" />
-        <KpiCard title="Class Rank" value={rank ? `#${rank}` : '—'} icon={Award} iconBgColor="bg-purple-100" iconColor="text-purple-600" change={2} changeLabel="positions up" />
-        <KpiCard title="Behavior Score" value={`${studentProfile?.behaviorScore || 95}/100`} icon={Star} iconBgColor="bg-amber-100" iconColor="text-amber-600" change={5} changeLabel="improvement" />
-      </div>
+      <motion.div 
+        variants={staggerContainer}
+        className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+      >
+        <motion.div variants={scaleIn}>
+          <KpiCard title="GPA" value={`${gpa.toFixed(1)}/5.0`} icon={GraduationCap} iconBgColor="bg-emerald-100" iconColor="text-emerald-600" change={0.3} changeLabel="vs last term" />
+        </motion.div>
+        <motion.div variants={scaleIn}>
+          <KpiCard title="Attendance" value={`${attendanceStats.rate}%`} icon={CalendarCheck} iconBgColor="bg-blue-100" iconColor="text-blue-600" change={2} changeLabel="this term" />
+        </motion.div>
+        <motion.div variants={scaleIn}>
+          <KpiCard title="Class Rank" value={rank ? `#${rank}` : '—'} icon={Award} iconBgColor="bg-purple-100" iconColor="text-purple-600" change={2} changeLabel="positions up" />
+        </motion.div>
+        <motion.div variants={scaleIn}>
+          <KpiCard title="Behavior Score" value={`${studentProfile?.behaviorScore || 95}/100`} icon={Star} iconBgColor="bg-amber-100" iconColor="text-amber-600" change={5} changeLabel="improvement" />
+        </motion.div>
+      </motion.div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="academics">Academics</TabsTrigger>
-          <TabsTrigger value="schedule">Schedule</TabsTrigger>
-        </TabsList>
+        <motion.div variants={fadeIn}>
+          <TabsList className="bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Overview</TabsTrigger>
+            <TabsTrigger value="academics" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Academics</TabsTrigger>
+            <TabsTrigger value="schedule" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Schedule</TabsTrigger>
+          </TabsList>
+        </motion.div>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          {/* Current Term Overview */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Current Term Overview — Second Term 2024/2025</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-4">
-                <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <BookOpen className="size-5 mx-auto mb-1 text-blue-600" />
-                  <p className="text-xs text-muted-foreground">Subjects Enrolled</p>
-                  <p className="text-xl font-bold">{displayResults.length || 12}</p>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <CheckCircle2 className="size-5 mx-auto mb-1 text-emerald-600" />
-                  <p className="text-xs text-muted-foreground">Assignments Done</p>
-                  <p className="text-xl font-bold">45/48</p>
-                  <Progress value={93.75} className="h-1.5 mt-2" />
-                </div>
-                <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <CalendarCheck className="size-5 mx-auto mb-1 text-purple-600" />
-                  <p className="text-xs text-muted-foreground">Days to Exams</p>
-                  <p className="text-xl font-bold">34</p>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-muted/50">
-                  <Trophy className="size-5 mx-auto mb-1 text-amber-600" />
-                  <p className="text-xs text-muted-foreground">Achievements</p>
-                  <p className="text-xl font-bold">{achievements.filter(a => a.earned).length}/{achievements.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <AnimatePresence mode="wait">
+          {activeTab === 'overview' && (
+            <TabsContent value="overview" key="overview" className="mt-0 space-y-4">
+              <motion.div 
+                initial="hidden" animate="visible" exit="hidden" variants={staggerContainer}
+                className="space-y-4"
+              >
+                <motion.div variants={slideUp}>
+                  <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-gray-50/50">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base font-bold flex items-center gap-2">
+                        <Trophy className="size-4 text-amber-500" />
+                        Term Statistics — Second Term 2024/2025
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid gap-4 sm:grid-cols-4">
+                        <motion.div whileHover={{ y: -2 }} className="text-center p-4 rounded-xl bg-blue-50/50 border border-blue-100/50 transition-all">
+                          <BookOpen className="size-5 mx-auto mb-1.5 text-blue-600" />
+                          <p className="text-[10px] uppercase tracking-widest font-bold text-blue-600/70">Subjects</p>
+                          <p className="text-2xl font-black text-blue-900">{displayResults.length || 12}</p>
+                        </motion.div>
+                        <motion.div whileHover={{ y: -2 }} className="text-center p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50 transition-all">
+                          <CheckCircle2 className="size-5 mx-auto mb-1.5 text-emerald-600" />
+                          <p className="text-[10px] uppercase tracking-widest font-bold text-emerald-600/70">Assignments</p>
+                          <p className="text-2xl font-black text-emerald-900">45/48</p>
+                          <Progress value={93.75} className="h-1.5 mt-2 bg-emerald-100" />
+                        </motion.div>
+                        <motion.div whileHover={{ y: -2 }} className="text-center p-4 rounded-xl bg-indigo-50/50 border border-indigo-100/50 transition-all">
+                          <CalendarCheck className="size-5 mx-auto mb-1.5 text-indigo-600" />
+                          <p className="text-[10px] uppercase tracking-widest font-bold text-indigo-600/70">Days to Exam</p>
+                          <p className="text-2xl font-black text-indigo-900">34</p>
+                        </motion.div>
+                        <motion.div whileHover={{ y: -2 }} className="text-center p-4 rounded-xl bg-amber-50/50 border border-amber-100/50 transition-all">
+                          <Trophy className="size-5 mx-auto mb-1.5 text-amber-600" />
+                          <p className="text-[10px] uppercase tracking-widest font-bold text-amber-600/70">Achievement</p>
+                          <p className="text-2xl font-black text-amber-900">{achievements.filter(a => a.earned).length}/{achievements.length}</p>
+                        </motion.div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
 
-          {/* Performance Trend + Attendance */}
-          <div className="grid gap-4 lg:grid-cols-2">
-            {/* Performance Trend - CSS Line */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Performance Trend</CardTitle>
-                <CardDescription>Your average score over the past months</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-end gap-2 h-40">
-                  {performanceTrends.map((point, i) => {
-                    const min = Math.min(...performanceTrends.map(p => p.avg));
-                    const max = Math.max(...performanceTrends.map(p => p.avg));
-                    const height = ((point.avg - min) / (max - min || 1)) * 80 + 20;
-                    return (
-                      <div key={point.month} className="flex-1 flex flex-col items-center gap-1">
-                        <span className="text-[10px] font-semibold">{point.avg.toFixed(0)}</span>
-                        <div
-                          className={`w-full rounded-t-md transition-all duration-300 hover:opacity-80 cursor-pointer ${i === performanceTrends.length - 1 ? 'bg-emerald-500' : 'bg-emerald-200 dark:bg-emerald-800'}`}
-                          style={{ height: `${height}%` }}
-                          title={`${point.month}: ${point.avg.toFixed(0)}%`}
-                        />
-                        <span className="text-[10px] text-muted-foreground">{point.month}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <motion.div variants={slideUp}>
+                    <Card className="h-full">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base font-bold">Performance Analytics</CardTitle>
+                        <CardDescription>Monthly average across all subjects</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-end gap-2.5 h-48 pt-4">
+                          {performanceTrends.map((point, i) => {
+                            const min = Math.min(...performanceTrends.map(p => p.avg));
+                            const max = Math.max(...performanceTrends.map(p => p.avg));
+                            const height = ((point.avg - min) / (max - min || 1)) * 70 + 30;
+                            return (
+                              <div key={point.month} className="flex-1 flex flex-col items-center gap-2">
+                                <motion.div 
+                                  initial={{ height: 0 }}
+                                  animate={{ height: `${height}%` }}
+                                  transition={{ delay: i * 0.1, duration: 0.8, ease: "easeOut" }}
+                                  className={`w-full rounded-t-xl transition-all duration-300 relative group cursor-pointer ${
+                                    i === performanceTrends.length - 1 
+                                      ? 'bg-gradient-to-t from-emerald-600 to-emerald-400' 
+                                      : 'bg-gradient-to-t from-gray-200 to-gray-100 dark:from-gray-800 dark:to-gray-700 hover:from-emerald-200 hover:to-emerald-100'
+                                  }`}
+                                >
+                                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {point.avg.toFixed(1)}%
+                                  </div>
+                                </motion.div>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{point.month}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
 
-            {/* Attendance Stats */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Attendance This Week</CardTitle>
-                <CardDescription>Your daily attendance record</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 mb-4 h-16">
-                  {attendanceStats.weeklyData.map(d => (
-                    <div key={d.day} className="flex-1 flex flex-col items-center gap-1">
-                      <div className={`flex size-10 items-center justify-center rounded-lg text-xs font-bold ${
-                        d.status === 'present' ? 'bg-emerald-100 text-emerald-700' :
-                        d.status === 'absent' ? 'bg-red-100 text-red-700' :
-                        'bg-amber-100 text-amber-700'
-                      }`}>
-                        {d.status === 'present' ? '✓' : d.status === 'absent' ? '✗' : '~'}
-                      </div>
-                      <span className="text-[10px] text-muted-foreground">{d.day}</span>
-                    </div>
-                  ))}
+                  <motion.div variants={slideUp}>
+                    <Card className="h-full">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base font-bold">Weekly Presence</CardTitle>
+                        <CardDescription>Visualizing your consistency</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center gap-3 mb-6 h-20">
+                          {attendanceStats.weeklyData.map((d, i) => (
+                            <motion.div key={d.day} variants={scaleIn} className="flex-1 flex flex-col items-center gap-2">
+                              <motion.div 
+                                whileHover={{ scale: 1.1, rotate: 5 }}
+                                className={`flex size-12 items-center justify-center rounded-2xl text-lg font-bold shadow-sm transition-all ${
+                                  d.status === 'present' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
+                                  d.status === 'absent' ? 'bg-red-100 text-red-700 border border-red-200' :
+                                  'bg-amber-100 text-amber-700 border border-amber-200'
+                                }`}
+                              >
+                                {d.status === 'present' ? '✓' : d.status === 'absent' ? '✗' : '~'}
+                              </motion.div>
+                              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{d.day}</span>
+                            </motion.div>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="text-center p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                            <p className="text-lg font-black text-emerald-700">{attendanceStats.present}</p>
+                            <p className="text-[10px] font-bold tracking-tight text-emerald-600/70 uppercase">Present</p>
+                          </div>
+                          <div className="text-center p-3 rounded-xl bg-red-50 border border-red-100">
+                            <p className="text-lg font-black text-red-700">{attendanceStats.absent}</p>
+                            <p className="text-[10px] font-bold tracking-tight text-red-600/70 uppercase">Absent</p>
+                          </div>
+                          <div className="text-center p-3 rounded-xl bg-amber-50 border border-amber-100">
+                            <p className="text-lg font-black text-amber-700">{attendanceStats.late}</p>
+                            <p className="text-[10px] font-bold tracking-tight text-amber-600/70 uppercase">Late</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="text-center p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20">
-                    <p className="text-sm font-bold text-emerald-600">{attendanceStats.present}</p>
-                    <p className="text-[10px] text-muted-foreground">Present</p>
-                  </div>
-                  <div className="text-center p-2 rounded-lg bg-red-50 dark:bg-red-950/20">
-                    <p className="text-sm font-bold text-red-600">{attendanceStats.absent}</p>
-                    <p className="text-[10px] text-muted-foreground">Absent</p>
-                  </div>
-                  <div className="text-center p-2 rounded-lg bg-amber-50 dark:bg-amber-950/20">
-                    <p className="text-sm font-bold text-amber-600">{attendanceStats.late}</p>
-                    <p className="text-[10px] text-muted-foreground">Late</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+              </motion.div>
+            </TabsContent>
+          )}
 
-        {/* Academics Tab */}
-        <TabsContent value="academics" className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
-            {/* Upcoming Exams */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Upcoming Exams</CardTitle>
-                  <Button variant="ghost" size="sm" className="text-xs" onClick={() => setCurrentView('exams')}>View all</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {upcomingExams.map((exam, i) => (
-                    <div key={i} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
-                        <FileEdit className="size-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium">{exam.subject}</p>
-                        <p className="text-xs text-muted-foreground">{exam.date}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <Badge variant="outline" className="text-[10px]">{exam.type}</Badge>
-                        <p className="text-xs text-muted-foreground mt-1">{exam.duration}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+          {activeTab === 'academics' && (
+            <TabsContent value="academics" key="academics" className="mt-0 space-y-4">
+              <motion.div 
+                initial="hidden" animate="visible" exit="hidden" variants={staggerContainer}
+                className="grid gap-4 lg:grid-cols-2"
+              >
+                <motion.div variants={slideUp}>
+                  <Card>
+                    <CardHeader className="pb-3 text-sm font-bold border-b mb-4">Upcoming Schedule</CardHeader>
+                    <CardContent className="space-y-3">
+                      {upcomingExams.map((exam, i) => (
+                        <motion.div key={i} variants={fadeIn} whileHover={{ x: 5 }} className="flex items-center gap-3 rounded-xl border p-3 hover:bg-emerald-50 transition-all group">
+                          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 group-hover:bg-amber-500 group-hover:text-white transition-colors shadow-sm">
+                            <FileEdit className="size-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold text-gray-900 truncate">{exam.subject}</p>
+                            <p className="text-[11px] text-muted-foreground font-medium flex items-center gap-1"><Clock className="size-3" /> {exam.date}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider h-5 px-1.5">{exam.type}</Badge>
+                            <p className="text-[11px] font-black text-amber-600 mt-1">{exam.duration}</p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </motion.div>
 
-            {/* Recent Results */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Recent Results</CardTitle>
-                  <Button variant="ghost" size="sm" className="text-xs" onClick={() => setCurrentView('results')}>All results</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="max-h-[340px]">
-                  <div className="space-y-2">
-                    {displayResults.length > 0 ? displayResults.map((result, i) => (
-                      <div key={i} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors">
-                        <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
-                          result.grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
-                          result.grade === 'B' ? 'bg-blue-100 text-blue-700' :
-                          'bg-amber-100 text-amber-700'
+                <motion.div variants={slideUp}>
+                  <Card className="h-full">
+                    <CardHeader className="pb-3 border-b mb-4">Latest Scores</CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[340px] pr-2">
+                        <div className="space-y-2">
+                          {displayResults.map((result, i) => (
+                            <motion.div key={i} variants={fadeIn} whileHover={{ x: 5 }} className="flex items-center gap-3 rounded-xl border p-3 hover:bg-blue-50 transition-all bg-white">
+                              <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl text-lg font-black shadow-sm ${
+                                result.grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                                result.grade === 'B' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                              }`}>
+                                {result.grade}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-bold text-gray-900">{result.subject}</p>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <motion.div initial={{ width: 0 }} animate={{ width: `${result.score}%` }} className={`h-full ${result.score >= 70 ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-black text-gray-900">{result.score}%</p>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </motion.div>
+            </TabsContent>
+          )}
+
+          {activeTab === 'schedule' && (
+            <TabsContent value="schedule" key="schedule" className="mt-0">
+              <motion.div 
+                initial="hidden" animate="visible" exit="hidden" variants={staggerContainer}
+              >
+                <Card className="border-0 shadow-sm bg-gray-50/30">
+                  <CardHeader className="pb-3 border-b bg-white">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <Clock className="size-4 text-emerald-500" />
+                      Daily Flow
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-4 space-y-2">
+                    {todayTimetable.map((period, i) => (
+                      <motion.div 
+                        key={i} variants={slideUp} whileHover={{ scale: 1.01 }}
+                        className={`flex items-center gap-4 rounded-xl border p-4 transition-all ${
+                          period.status === 'break' ? 'bg-blue-50/30 border-dashed border-blue-200' :
+                          period.status === 'completed' ? 'bg-gray-50/50 border-gray-100 opacity-70' :
+                          period.status === 'in-progress' ? 'bg-white border-emerald-400 shadow-md ring-1 ring-emerald-400/20' :
+                          'bg-white border-gray-100 hover:border-blue-200 shadow-sm'
+                        }`}
+                      >
+                        <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl shadow-sm ${
+                          period.status === 'break' ? 'bg-blue-100 text-blue-600' :
+                          period.status === 'completed' ? 'bg-gray-100 text-gray-500' :
+                          period.status === 'in-progress' ? 'bg-emerald-600 text-white animate-pulse' :
+                          'bg-white border text-gray-400'
                         }`}>
-                          {result.grade}
+                          <Clock className="size-5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium">{result.subject}</p>
-                          <p className="text-xs text-muted-foreground">Class avg: {result.classAvg}%</p>
+                          <p className={`text-sm font-bold ${period.status === 'in-progress' ? 'text-emerald-700' : 'text-gray-900'}`}>{period.subject}</p>
+                          <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-tight mt-0.5">{period.teacher} · {period.room}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold">{result.score}%</p>
-                          <p className="text-[10px] text-muted-foreground">Highest: {result.highest}%</p>
+                          <span className="text-xs font-black text-gray-500">{period.time}</span>
                         </div>
-                      </div>
-                    )) : (
-                      <p className="text-sm text-muted-foreground text-center py-8">No results available yet</p>
-                    )}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Schedule Tab */}
-        <TabsContent value="schedule" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Today&apos;s Timetable</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {todayTimetable.map((period, i) => (
-                  <div key={i} className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
-                    period.status === 'break' ? 'bg-muted/50 border-dashed' :
-                    period.status === 'completed' ? 'bg-muted/30' :
-                    period.status === 'in-progress' ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800' :
-                    'hover:bg-muted/50'
-                  }`}>
-                    <div className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
-                      period.status === 'break' ? 'bg-muted text-muted-foreground' :
-                      period.status === 'completed' ? 'bg-emerald-100 text-emerald-600' :
-                      period.status === 'in-progress' ? 'bg-emerald-500 text-white animate-pulse' :
-                      'bg-primary/10 text-primary'
-                    }`}>
-                      <Clock className="size-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{period.subject}</p>
-                      <p className="text-xs text-muted-foreground">{period.teacher} · {period.room}</p>
-                    </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">{period.time}</span>
-                    {period.status === 'in-progress' && <Badge className="text-[10px] bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Now</Badge>}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                      </motion.div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+          )}
+        </AnimatePresence>
       </Tabs>
 
       {/* Achievements */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Achievements</CardTitle>
-            <Button variant="ghost" size="sm" className="text-xs" onClick={() => setCurrentView('achievements')}>View all</Button>
+      <motion.div variants={slideUp}>
+        <Card className="border-0 shadow-sm bg-gradient-to-r from-gray-900 to-indigo-950 text-white overflow-hidden relative">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <Trophy className="size-32" />
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-            {achievements.map(ach => (
-              <div key={ach.name} className="flex flex-col items-center gap-2">
-                <div className={`flex size-14 items-center justify-center rounded-full transition-all hover:scale-110 cursor-pointer ${ach.earned ? `${ach.color} ring-2 ring-offset-2 ring-offset-background ring-current opacity-100` : 'bg-gray-100 text-gray-400 opacity-60'}`}>
-                  <ach.icon className="size-6" />
-                </div>
-                <p className="text-[10px] text-center font-medium leading-tight">{ach.name}</p>
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between relative z-10">
+              <div>
+                <CardTitle className="text-lg font-bold">Badge Collection</CardTitle>
+                <CardDescription className="text-gray-400">Unlock more by staying active</CardDescription>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              <Button variant="outline" size="sm" className="text-xs font-bold bg-white/10 border-white/20 text-white hover:bg-white/20" onClick={() => setCurrentView('achievements')}>Library</Button>
+            </div>
+          </CardHeader>
+          <CardContent className="relative z-10">
+            <div className="grid grid-cols-3 gap-4 sm:grid-cols-6 mb-2">
+              {achievements.map(ach => (
+                <motion.div key={ach.name} whileHover={{ y: -5, scale: 1.05 }} className="flex flex-col items-center gap-3">
+                  <div className={`flex size-14 items-center justify-center rounded-2xl transition-all shadow-lg ${
+                    ach.earned ? `bg-gradient-to-br from-emerald-400 to-emerald-600 ring-2 ring-emerald-400 ring-offset-2 ring-offset-indigo-950` : 'bg-white/5 border border-white/10 text-white/30 grayscale opacity-40'
+                  }`}>
+                    <ach.icon className={`size-7 ${ach.earned ? 'text-white' : ''}`} />
+                  </div>
+                  <p className={`text-[10px] text-center font-bold uppercase tracking-widest ${ach.earned ? 'text-white' : 'text-white/30'}`}>{ach.name.split(' ')[0]}</p>
+                </motion.div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 }

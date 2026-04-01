@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { fadeIn, slideUp, staggerContainer, scaleIn, hoverScale } from '@/lib/motion-variants';
 import {
   Dialog,
   DialogContent,
@@ -261,15 +262,13 @@ export function StudentsView() {
   return (
     <motion.div 
       className="space-y-6"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
     >
       <motion.div 
         className="flex items-center justify-between"
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.1 }}
+        variants={slideUp}
       >
         <div>
           <h2 className="text-lg font-semibold">Students</h2>
@@ -349,9 +348,7 @@ export function StudentsView() {
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        variants={slideUp}
       >
         <DataTable
           columns={columns}

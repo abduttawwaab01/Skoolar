@@ -20,6 +20,9 @@ import {
   Award, AlertTriangle, CheckCircle2, UserCheck, Plus, ChevronRight,
   BarChart3, ArrowUpRight, ArrowDownRight, CircleDot, RefreshCw, XCircle
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { fadeIn, slideUp, staggerContainer, scaleIn, hoverScale } from '@/lib/motion-variants';
 
 interface StudentRecord {
   id: string;
@@ -273,348 +276,382 @@ export function SchoolAdminDashboard() {
   const feeTypeMax = Math.max(...byFeeType.map(f => f.amount), 1);
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-8"
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
+    >
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <motion.div 
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
+        variants={slideUp}
+      >
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">School Dashboard</h1>
-          <p className="text-muted-foreground">{currentUser.schoolName} — Second Term 2024/2025</p>
+          <h1 className="text-4xl font-black tracking-tight text-gray-900 dark:text-white">
+            Administrative <span className="text-blue-600">Command</span>
+          </h1>
+          <p className="text-muted-foreground font-medium mt-1">
+            {currentUser.schoolName} — Second Term 2024/2025 Snapshot
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1 text-sm py-1">
-            <GraduationCap className="size-3.5" /> Academic Year Active
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 py-1.5 px-4 rounded-xl font-bold text-xs shadow-sm uppercase tracking-widest animate-pulse-glow">
+            <GraduationCap className="size-4 mr-2" /> Academic Year Active
           </Badge>
         </div>
-      </div>
+      </motion.div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        <KpiCard title="Total Students" value={totalStudents.toLocaleString()} icon={GraduationCap} iconBgColor="bg-emerald-100" iconColor="text-emerald-600" change={8} changeLabel="new this term" sparklineData={[780, 800, 810, 820, 830, 840, 847]} />
-        <KpiCard title="Teachers" value={totalTeachers} icon={Users} iconBgColor="bg-blue-100" iconColor="text-blue-600" change={5} changeLabel="new hires" />
-        <KpiCard title="Attendance Rate" value={`${attendanceRate}%`} icon={CalendarCheck} iconBgColor="bg-green-100" iconColor="text-green-600" change={2.3} changeLabel="vs last week" />
-        <KpiCard title="Revenue Collected" value={`₦${(totalCollected / 1000000).toFixed(1)}M`} icon={Wallet} iconBgColor="bg-amber-100" iconColor="text-amber-600" change={15} changeLabel="this term" />
-        <KpiCard title="Pending Fees" value={`₦${(pendingAmount / 1000000).toFixed(1)}M`} icon={AlertTriangle} iconBgColor="bg-red-100" iconColor="text-red-600" change={-8} changeLabel="vs last month" />
-        <KpiCard title="Active Exams" value="8" icon={FileEdit} iconBgColor="bg-purple-100" iconColor="text-purple-600" change={3} changeLabel="this week" />
-      </div>
+      {/* KPI Row */}
+      <motion.div 
+        className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6"
+        variants={staggerContainer}
+      >
+        <motion.div variants={scaleIn}><KpiCard title="Students" value={totalStudents.toLocaleString()} icon={GraduationCap} iconBgColor="bg-emerald-50" iconColor="text-emerald-600" change={8} changeLabel="new this term" /></motion.div>
+        <motion.div variants={scaleIn}><KpiCard title="Teachers" value={totalTeachers} icon={Users} iconBgColor="bg-blue-50" iconColor="text-blue-600" change={5} changeLabel="new hires" /></motion.div>
+        <motion.div variants={scaleIn}><KpiCard title="Attendance" value={`${attendanceRate}%`} icon={CalendarCheck} iconBgColor="bg-green-50" iconColor="text-green-600" change={2.3} changeLabel="vs last week" /></motion.div>
+        <motion.div variants={scaleIn}><KpiCard title="Revenue" value={`₦${(totalCollected / 1000000).toFixed(1)}M`} icon={Wallet} iconBgColor="bg-amber-50" iconColor="text-amber-600" change={15} changeLabel="this term" /></motion.div>
+        <motion.div variants={scaleIn}><KpiCard title="Pending" value={`₦${(pendingAmount / 1000000).toFixed(1)}M`} icon={AlertTriangle} iconBgColor="bg-red-50" iconColor="text-red-600" change={-8} changeLabel="vs last month" /></motion.div>
+        <motion.div variants={scaleIn}><KpiCard title="Exams" value="8" icon={FileEdit} iconBgColor="bg-purple-50" iconColor="text-purple-600" change={3} changeLabel="this week" /></motion.div>
+      </motion.div>
 
-      {/* Fee Collection Progress */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <p className="text-sm font-medium">Fee Collection Progress</p>
-              <p className="text-xs text-muted-foreground">₦{(totalCollected / 1000000).toFixed(1)}M collected of ₦{((totalCollected + pendingAmount) / 1000000).toFixed(1)}M expected</p>
-            </div>
-            <span className="text-lg font-bold text-emerald-600">{collectionRate}%</span>
-          </div>
-          <Progress value={collectionRate} className="h-3" />
-          <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-            <span>₦0</span>
-            <span>₦{((totalCollected + pendingAmount) / 1000000).toFixed(1)}M Expected</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tabs for different sections */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="academics">Academics</TabsTrigger>
-          <TabsTrigger value="finance">Finance</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          {/* Attendance + Quick Actions */}
-          <div className="grid gap-4 lg:grid-cols-2">
-            {/* Today's Attendance - CSS Bar Chart */}
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">Weekly Attendance</CardTitle>
-                    <CardDescription>Present vs Absent students</CardDescription>
-                  </div>
-                  <Button variant="ghost" size="sm" className="text-xs" onClick={() => setCurrentView('attendance')}>Details</Button>
+      {/* Finance Progress Banner */}
+      <motion.div variants={slideUp}>
+        <Card className="glass-card border-0 shadow-lg overflow-hidden group">
+          <div className="absolute top-0 left-0 h-full w-1.5 bg-emerald-500" />
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                  <TrendingUp className="size-5 text-emerald-600" />
                 </div>
-              </CardHeader>
-              <CardContent>
-                {weeklyData.length > 0 ? (
-                  <>
-                    <div className="flex items-end gap-3 h-40 mb-4">
-                      {weeklyData.map((day, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                          <div className="flex gap-0.5 w-full h-32">
-                            <div
-                              className="flex-1 bg-emerald-500 rounded-t-md transition-all duration-300 hover:bg-emerald-600 cursor-pointer"
-                              style={{ height: `${(day.present / weeklyMaxPresent) * 100}%` }}
-                              title={`${day.day}: ${day.present} present`}
-                            />
-                            <div
-                              className="bg-red-400 rounded-t-md transition-all duration-300 hover:bg-red-500 cursor-pointer"
-                              style={{ width: '30%', height: `${(day.absent / weeklyMaxPresent) * 100}%` }}
-                              title={`${day.day}: ${day.absent} absent`}
-                            />
-                          </div>
-                          <span className="text-xs text-muted-foreground font-medium">{day.day}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 text-center">
-                      <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/20 p-2">
-                        <p className="text-sm font-bold text-emerald-600">{presentToday}</p>
-                        <p className="text-[10px] text-muted-foreground">Present Today</p>
-                      </div>
-                      <div className="rounded-lg bg-red-50 dark:bg-red-950/20 p-2">
-                        <p className="text-sm font-bold text-red-600">{absentToday}</p>
-                        <p className="text-[10px] text-muted-foreground">Absent</p>
-                      </div>
-                      <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-2">
-                        <p className="text-sm font-bold text-amber-600">{lateToday}</p>
-                        <p className="text-[10px] text-muted-foreground">Late</p>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-8">No attendance data available</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions + Top Performers */}
-            <div className="space-y-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-2">
-                    {quickActions.map(action => (
-                      <Button key={action.label} variant="outline" className="h-auto flex-col gap-2 py-3 px-2 hover:bg-accent" onClick={() => setCurrentView(action.view)}>
-                        <div className={`size-8 rounded-lg flex items-center justify-center ${action.color}`}>
-                          <action.icon className="size-4" />
-                        </div>
-                        <span className="text-[10px] font-medium text-center leading-tight">{action.label}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">Top Performers</CardTitle>
-                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => setCurrentView('results')}>View all</Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {topPerformers.length > 0 ? (
-                    <div className="space-y-2">
-                      {topPerformers.map(student => (
-                        <div key={student.rank} className="flex items-center gap-2.5">
-                          <span className="flex size-6 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
-                            {student.rank}
-                          </span>
-                          <Avatar className="size-7">
-                            <AvatarFallback className="text-[10px]">{student.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{student.name}</p>
-                            <p className="text-xs text-muted-foreground">{student.class}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-semibold">{student.gpa}</p>
-                            <p className={`text-[10px] font-medium ${student.trend === 'up' ? 'text-emerald-600' : student.trend === 'down' ? 'text-red-500' : 'text-muted-foreground'}`}>
-                              {student.trend === 'up' ? '↑' : student.trend === 'down' ? '↓' : '→'}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">No student data available</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* Academics Tab */}
-        <TabsContent value="academics" className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
-            {/* Attendance by Class */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Attendance by Class</CardTitle>
-                <CardDescription>Attendance rate per class</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="max-h-[360px]">
-                  <div className="space-y-3">
-                    {attendanceByClass.length > 0 ? attendanceByClass.map(cls => (
-                      <div key={cls.class} className="flex items-center gap-3">
-                        <span className="text-xs font-medium w-14 shrink-0">{cls.class}</span>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <Progress value={cls.rate} className="h-2.5 flex-1" />
-                            <span className={`text-xs font-semibold w-10 text-right ${cls.rate >= 90 ? 'text-emerald-600' : cls.rate >= 80 ? 'text-amber-600' : 'text-red-600'}`}>{cls.rate}%</span>
-                          </div>
-                        </div>
-                      </div>
-                    )) : (
-                      <p className="text-sm text-muted-foreground text-center py-8">No attendance data available</p>
-                    )}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-
-            {/* Upcoming Events */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Upcoming Events</CardTitle>
-                  <Button variant="ghost" size="sm" className="text-xs" onClick={() => setCurrentView('calendar')}>Calendar</Button>
+                <div>
+                  <p className="text-sm font-black uppercase tracking-widest text-gray-500">Revenue Milestones</p>
+                  <p className="text-xs font-medium text-muted-foreground">₦{(totalCollected / 1000000).toFixed(1)}M collected of ₦{((totalCollected + pendingAmount) / 1000000).toFixed(1)}M target</p>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="max-h-[360px]">
-                  <div className="space-y-3">
-                    {calendarEvents.length > 0 ? calendarEvents.map(ev => (
-                      <div key={ev.id} className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors cursor-pointer">
-                        <div className="w-1.5 h-10 rounded-full shrink-0" style={{ backgroundColor: ev.color }} />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{ev.title}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(ev.startDate).toISOString().split('T')[0]}</p>
-                        </div>
-                        <Badge variant="outline" className="text-[10px] shrink-0">{ev.type}</Badge>
-                      </div>
-                    )) : (
-                      <p className="text-sm text-muted-foreground text-center py-8">No upcoming events</p>
-                    )}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+              </div>
+              <div className="text-right">
+                <span className="text-3xl font-black text-emerald-600">{collectionRate}%</span>
+              </div>
+            </div>
+            <div className="relative h-4 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${collectionRate}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className="absolute inset-0 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-600"
+              />
+              <div className="absolute inset-0 animate-shimmer opacity-30" />
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
-        {/* Finance Tab */}
-        <TabsContent value="finance" className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
-            {/* Revenue by Payment Method - CSS Bars */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Revenue by Payment Method</CardTitle>
-                <CardDescription>Breakdown of collected fees</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {byFeeType.length > 0 ? (
-                  <div className="space-y-3">
-                    {byFeeType.map((item, i) => {
-                      const colors = ['bg-emerald-500', 'bg-purple-500', 'bg-red-500', 'bg-cyan-500', 'bg-amber-500'];
-                      return (
-                        <div key={item.type} className="space-y-1">
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <div className={`size-3 rounded ${colors[i % colors.length]}`} />
-                              <span className="font-medium">{item.type}</span>
+      {/* Dashboard Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <motion.div variants={fadeIn}>
+          <TabsList className="bg-gray-100/50 p-1.5 rounded-2xl border backdrop-blur-sm">
+            <TabsTrigger value="overview" className="rounded-xl px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-sm">Insights</TabsTrigger>
+            <TabsTrigger value="academics" className="rounded-xl px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-sm">Academic Life</TabsTrigger>
+            <TabsTrigger value="finance" className="rounded-xl px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-sm">Financials</TabsTrigger>
+          </TabsList>
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+          >
+            {activeTab === 'overview' && (
+              <div className="grid gap-6 lg:grid-cols-12">
+                {/* Weekly Attendance Visualization */}
+                <div className="lg:col-span-7">
+                  <Card className="glass-panel border-0 h-full overflow-hidden">
+                    <CardHeader className="border-b bg-white/40">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg font-bold flex items-center gap-2">
+                            <CalendarCheck className="size-5 text-blue-500" />
+                            Attendance Analytics
+                          </CardTitle>
+                          <CardDescription className="text-xs">Live tracking of student engagement</CardDescription>
+                        </div>
+                        <Button variant="ghost" size="sm" className="font-bold text-xs hover:bg-blue-50" onClick={() => setCurrentView('attendance')}>Deep Dive</Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      {weeklyData.length > 0 ? (
+                        <div className="space-y-8">
+                          <div className="flex items-end gap-4 h-48">
+                            {weeklyData.map((day, i) => (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                                <div className="flex gap-1 w-full h-40">
+                                  <motion.div
+                                    initial={{ height: 0 }}
+                                    animate={{ height: `${(day.present / weeklyMaxPresent) * 100}%` }}
+                                    className="flex-1 bg-gradient-to-t from-blue-600 to-blue-400 rounded-t-lg shadow-sm group-hover:from-blue-500 transition-all duration-300 relative"
+                                  >
+                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-black bg-blue-900 text-white px-1.5 py-0.5 rounded">{day.present}</div>
+                                  </motion.div>
+                                  <motion.div
+                                    initial={{ height: 0 }}
+                                    animate={{ height: `${(day.absent / weeklyMaxPresent) * 100}%` }}
+                                    className="w-1/3 bg-red-200/50 rounded-t-lg group-hover:bg-red-300 transition-all duration-300"
+                                  />
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{day.day}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-3 gap-4">
+                            {[
+                              { label: 'Present Today', val: presentToday, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                              { label: 'Absent', val: absentToday, color: 'text-red-600', bg: 'bg-red-50' },
+                              { label: 'Late Arrival', val: lateToday, color: 'text-amber-600', bg: 'bg-amber-50' }
+                            ].map(item => (
+                              <div key={item.label} className={cn("p-4 rounded-2xl border text-center transition-transform hover:scale-105", item.bg)}>
+                                <p className={cn("text-2xl font-black", item.color)}>{item.val}</p>
+                                <p className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground mt-1">{item.label}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center py-12 opacity-50"><BarChart3 className="size-12 mb-2" /><p className="text-sm font-medium">No activity data yet</p></div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Hot Actions + Performers */}
+                <div className="lg:col-span-5 space-y-6">
+                  <Card className="glass-panel border-0">
+                    <CardHeader className="pb-3 border-b bg-white/40 uppercase tracking-widest text-[10px] font-black text-gray-500">Command Center</CardHeader>
+                    <CardContent className="p-4 grid grid-cols-3 gap-3">
+                      {quickActions.map(action => (
+                        <motion.button 
+                          key={action.label} 
+                          whileHover={{ y: -3, scale: 1.02 }}
+                          whileTap={{ scale: 0.97 }}
+                          className="flex flex-col items-center gap-2 p-4 rounded-2xl border-2 border-transparent bg-white hover:border-blue-200 hover:shadow-md transition-all group shadow-sm"
+                          onClick={() => setCurrentView(action.view)}
+                        >
+                          <div className={cn("size-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110", action.color)}>
+                            <action.icon className="size-5" />
+                          </div>
+                          <span className="text-[10px] font-black text-center leading-tight uppercase">{action.label}</span>
+                        </motion.button>
+                      ))}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="glass-panel border-0 overflow-hidden">
+                    <CardHeader className="pb-3 border-b bg-white/40 flex flex-row items-center justify-between">
+                      <span className="uppercase tracking-widest text-[10px] font-black text-gray-500">Elite Talent</span>
+                      <Award className="size-4 text-amber-500" />
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="divide-y divide-gray-100">
+                        {topPerformers.map(student => (
+                          <div key={student.rank} className="flex items-center gap-4 p-4 hover:bg-white/60 transition-colors">
+                            <div className="flex size-8 items-center justify-center rounded-full bg-amber-50 text-amber-700 text-xs font-black shadow-inner">
+                              #{student.rank}
                             </div>
-                            <span className="font-semibold">₦{(item.amount / 1000000).toFixed(1)}M</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold truncate">{student.name}</p>
+                              <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{student.class}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-black text-emerald-600">{student.gpa}</p>
+                              <div className={cn(
+                                "flex items-center justify-end gap-1 text-[9px] font-black uppercase",
+                                student.trend === 'up' ? 'text-emerald-500' : student.trend === 'down' ? 'text-red-500' : 'text-gray-400'
+                              )}>
+                                {student.trend === 'up' ? <TrendingUp className="size-2.5" /> : student.trend === 'down' ? <RefreshCw className="size-2.5 rotate-180" /> : <ChevronRight className="size-2.5" />}
+                                {student.trend}
+                              </div>
+                            </div>
                           </div>
-                          <div className="h-3 bg-muted rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all duration-500 ${colors[i % colors.length]} hover:opacity-80 cursor-pointer`}
-                              style={{ width: `${(item.amount / feeTypeMax) * 100}%` }}
-                              title={`${item.type}: ₦${item.amount.toLocaleString()}`}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-8">No payment data available</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Recent Payments */}
-            <Card>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Recent Payments</CardTitle>
-                  <Button variant="ghost" size="sm" className="text-xs" onClick={() => setCurrentView('payments')}>View all</Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="max-h-[340px]">
-                  <div className="space-y-2.5">
-                    {payments.length > 0 ? payments.map(p => (
-                      <div key={p.id} className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50 transition-colors">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium truncate">{p.student?.user?.name || p.paidBy || 'Unknown'}</p>
-                          <p className="text-xs text-muted-foreground">{p.method} · {new Date(p.createdAt).toISOString().split('T')[0]}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold">₦{(p.amount || 0).toLocaleString()}</p>
-                          <StatusBadge variant={p.status === 'verified' || p.status === 'completed' ? 'success' : 'warning'} size="sm">
-                            {p.status}
-                          </StatusBadge>
-                        </div>
+                        ))}
                       </div>
-                    )) : (
-                      <p className="text-sm text-muted-foreground text-center py-8">No payments recorded</p>
-                    )}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'academics' && (
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="glass-panel border-0">
+                  <CardHeader className="border-b bg-white/40">
+                    <CardTitle className="text-lg font-bold flex items-center gap-2"><Users className="size-5 text-emerald-500" /> Attendance by Class</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <ScrollArea className="h-[400px] pr-4">
+                      <div className="space-y-6">
+                        {attendanceByClass.map(cls => (
+                          <div key={cls.class} className="space-y-2">
+                            <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest">
+                              <span>{cls.class}</span>
+                              <span className={cn(cls.rate >= 90 ? 'text-emerald-600' : 'text-amber-600')}>{cls.rate}%</span>
+                            </div>
+                            <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${cls.rate}%` }}
+                                className={cn("h-full rounded-full transition-all duration-1000", cls.rate >= 90 ? 'bg-emerald-500' : 'bg-amber-500')}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                <Card className="glass-panel border-0">
+                  <CardHeader className="border-b bg-white/40 flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg font-bold flex items-center gap-2">
+                      <CalendarCheck className="size-5 text-purple-500" /> Timeline
+                    </CardTitle>
+                    <Button variant="ghost" size="sm" className="font-bold text-xs" onClick={() => setCurrentView('calendar')}>Full View</Button>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <ScrollArea className="h-[400px] pr-4">
+                      <div className="space-y-4">
+                        {calendarEvents.map(ev => (
+                          <motion.div whileHover={{ x: 5 }} key={ev.id} className="flex items-center gap-4 p-4 rounded-2xl border bg-white shadow-sm hover:shadow-md transition-all group cursor-pointer">
+                            <div className="w-1.5 h-12 rounded-full shrink-0" style={{ backgroundColor: ev.color || '#3b82f6' }} />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{ev.title}</p>
+                              <div className="flex items-center gap-3 mt-1 text-[10px] font-black uppercase text-muted-foreground tracking-widest">
+                                <span className="flex items-center gap-1"><Clock className="size-3" /> {new Date(ev.startDate).toLocaleDateString()}</span>
+                                <Badge variant="secondary" className="px-1.5 py-0 h-4 text-[9px]">{ev.type}</Badge>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === 'finance' && (
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="glass-panel border-0">
+                  <CardHeader className="border-b bg-white/40">
+                    <CardTitle className="text-lg font-bold flex items-center gap-2"><CreditCard className="size-5 text-emerald-500" /> Revenue Stream</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-8">
+                      {byFeeType.map((item, i) => {
+                        const colors = ['bg-emerald-500', 'bg-blue-500', 'bg-purple-500', 'bg-amber-500', 'bg-rose-500'];
+                        return (
+                          <div key={item.type} className="space-y-3">
+                            <div className="flex items-center justify-between text-xs font-black uppercase tracking-widest">
+                              <span className="flex items-center gap-2">
+                                <div className={cn("size-2.5 rounded-sm shadow-sm", colors[i % colors.length])} />
+                                {item.type}
+                              </span>
+                              <span className="text-gray-900">₦{(item.amount / 1000000).toFixed(2)}M</span>
+                            </div>
+                            <div className="h-3 bg-gray-100 rounded-full overflow-hidden relative">
+                              <motion.div 
+                                initial={{ width: 0 }}
+                                animate={{ width: `${(item.amount / feeTypeMax) * 100}%` }}
+                                className={cn("h-full rounded-full", colors[i % colors.length])}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="glass-panel border-0">
+                  <CardHeader className="border-b bg-white/40 flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg font-bold flex items-center gap-2"><RefreshCw className="size-5 text-blue-500" /> Recent Transactions</CardTitle>
+                    <Button variant="ghost" size="sm" className="font-bold text-xs" onClick={() => setCurrentView('payments')}>All Log</Button>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <ScrollArea className="h-[430px]">
+                      <div className="divide-y divide-gray-50">
+                        {payments.map(p => (
+                          <div key={p.id} className="flex items-center gap-4 p-4 hover:bg-white/60 transition-colors group">
+                            <div className="size-10 rounded-xl bg-gray-100 flex items-center justify-center group-hover:bg-blue-50 transition-colors">
+                              <Wallet className="size-5 text-gray-500 group-hover:text-blue-500" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold truncate">{p.student?.user?.name || p.paidBy || 'External Payer'}</p>
+                              <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">{p.method} · {new Date(p.createdAt).toLocaleDateString()}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-black text-gray-900">₦{(p.amount || 0).toLocaleString()}</p>
+                              <Badge variant={p.status === 'verified' || p.status === 'completed' ? 'success' : 'warning'} className="text-[9px] px-1.5 h-4 uppercase font-bold tracking-tight">
+                                {p.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </Tabs>
 
-      {/* Bottom Row: Announcements */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CardTitle className="text-base">Recent Announcements</CardTitle>
-              <Badge variant="outline">{announcements.length} total</Badge>
+      {/* Global Announcements Feed */}
+      <motion.div variants={slideUp}>
+        <Card className="glass-panel border-0 border-t-4 border-t-emerald-500 shadow-xl overflow-hidden">
+          <CardHeader className="pb-3 border-b bg-white/40 flex flex-row items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Megaphone className="size-5 text-emerald-500 animate-gentle-bounce" />
+              <CardTitle className="text-lg font-bold">Broadcast Center</CardTitle>
+              <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 text-[10px] font-black">{announcements.length} ALERTS</Badge>
             </div>
-            <Button variant="ghost" size="sm" className="text-xs" onClick={() => setCurrentView('announcements')}>View all</Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {announcements.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <Button variant="ghost" size="sm" className="font-bold text-xs" onClick={() => setCurrentView('announcements')}>Bulletin Board</Button>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid gap-4 md:grid-cols-2">
               {announcements.slice(0, 4).map(ann => (
-                <div key={ann.id} className="flex items-start gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => setCurrentView('announcements')}>
-                  <div className={`mt-0.5 size-8 rounded-lg flex items-center justify-center shrink-0 ${
-                    ann.priority === 'urgent' ? 'bg-red-100 text-red-600' :
-                    ann.priority === 'high' ? 'bg-amber-100 text-amber-600' :
-                    'bg-blue-100 text-blue-600'
-                  }`}>
-                    <Megaphone className="size-4" />
+                <motion.div 
+                  key={ann.id} 
+                  whileHover={{ scale: 1.01, x: 5 }} 
+                  className="flex items-start gap-4 p-4 rounded-2xl border-2 border-transparent bg-white shadow-sm hover:border-emerald-200 hover:shadow-md transition-all group cursor-pointer"
+                  onClick={() => setCurrentView('announcements')}
+                >
+                  <div className={cn(
+                    "mt-1 size-10 rounded-2xl flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform",
+                    ann.priority === 'urgent' ? 'bg-red-50 text-red-600' : ann.priority === 'high' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600'
+                  )}>
+                    <Megaphone className="size-5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className="text-sm font-medium truncate">{ann.title}</p>
-                      <Badge variant={ann.priority === 'urgent' ? 'destructive' : 'outline'} className="text-[10px] shrink-0">{ann.priority}</Badge>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm font-black truncate text-gray-900 group-hover:text-emerald-700 transition-colors uppercase tracking-tight">{ann.title}</p>
+                      {ann.priority === 'urgent' && <div className="size-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" />}
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{ann.content}</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">{new Date(ann.createdAt).toISOString().split('T')[0]}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{ann.content}</p>
+                    <div className="mt-3 flex items-center justify-between pt-2 border-t border-dashed">
+                      <span className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">{new Date(ann.createdAt).toLocaleDateString()}</span>
+                      <Badge variant="outline" className="text-[9px] border-emerald-100 text-emerald-600 bg-emerald-50/30">READ MORE</Badge>
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-8">No announcements yet</p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 }

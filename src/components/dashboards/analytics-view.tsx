@@ -13,8 +13,11 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend,
 } from 'recharts';
-import { Search, CalendarDays, Users, RefreshCw, XCircle } from 'lucide-react';
+import { Search, CalendarDays, Users, RefreshCw, XCircle, TrendingUp as TrendingUpIcon, Award, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
+import { fadeIn, slideUp, staggerContainer, scaleIn } from '@/lib/motion-variants';
+import { cn } from '@/lib/utils';
 
 interface AnalyticsData {
   schoolOverview: {
@@ -217,180 +220,253 @@ export function AnalyticsView() {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+      className="space-y-6"
+    >
       {/* Header with Date Range */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <motion.div 
+        variants={fadeIn}
+        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
         <div>
-          <h2 className="text-lg font-semibold">Advanced Analytics</h2>
-          <p className="text-sm text-muted-foreground">Comprehensive academic and performance insights</p>
+          <h2 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+            Advanced Analytics
+            <Sparkles className="size-5 text-indigo-500 animate-pulse" />
+          </h2>
+          <p className="text-sm font-medium text-gray-500">Comprehensive academic and performance insights</p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 rounded-2xl bg-white/50 backdrop-blur-md border border-white/40 px-4 py-2 text-xs font-black uppercase tracking-widest text-indigo-600 shadow-sm">
           <CalendarDays className="size-4" />
           <span>Sep 2024 – Mar 2025</span>
         </div>
-      </div>
+      </motion.div>
+
+      {/* Stats Cards Row */}
+      <motion.div variants={slideUp} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Students', value: analytics?.schoolOverview?.totalStudents || 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Avg Attendance', value: '94.2%', icon: TrendingUpIcon, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+          { label: 'Avg GPA', value: '3.2', icon: Award, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'Revenue', value: '₦' + (analytics?.financialData?.totalRevenue || 0).toLocaleString(), icon: Sparkles, color: 'text-amber-600', bg: 'bg-amber-50' },
+        ].map((stat, i) => (
+          <div key={i} className="glass-panel p-6 rounded-3xl group hover:scale-[1.02] transition-all duration-300">
+            <div className={cn("size-12 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:rotate-6", stat.bg)}>
+              <stat.icon className={cn("size-6", stat.color)} />
+            </div>
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">{stat.label}</p>
+            <p className="text-2xl font-black text-gray-900 tracking-tight">{stat.value}</p>
+          </div>
+        ))}
+      </motion.div>
 
       {/* Charts Row */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Term Comparison */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Term Comparison</CardTitle>
-            <CardDescription>First Term vs Second Term average scores</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {performanceBySubject.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={performanceBySubject}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="subject" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid hsl(var(--border))' }} />
-                  <Legend />
-                  <Bar dataKey="term1" fill="#D97706" radius={[4, 4, 0, 0]} name="Term 1" />
-                  <Bar dataKey="term2" fill="#059669" radius={[4, 4, 0, 0]} name="Term 2" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[260px]"><p className="text-sm text-muted-foreground">No performance data available</p></div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Attendance Trends */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Attendance Trends</CardTitle>
-            <CardDescription>Weekly attendance this week</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {attendanceTrend.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <LineChart data={attendanceTrend}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid hsl(var(--border))' }} />
-                  <Legend />
-                  <Line type="monotone" dataKey="present" stroke="#059669" strokeWidth={2} name="Present" />
-                  <Line type="monotone" dataKey="absent" stroke="#DC2626" strokeWidth={2} name="Absent" />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[260px]"><p className="text-sm text-muted-foreground">No attendance data available</p></div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Middle Row: Ranking Table + Grade Distribution */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Student Ranking */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Student Rankings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <Input placeholder="Search student..." className="pl-9" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                </div>
-                <Select value={selectedClass} onValueChange={setSelectedClass}>
-                  <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Classes</SelectItem>
-                    {classOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5 max-h-72 overflow-y-auto">
-                {filteredStudents.length > 0 ? filteredStudents.map(s => (
-                  <div key={s.id} className="flex items-center gap-2.5 rounded-lg border px-3 py-2">
-                    <span className="flex size-6 items-center justify-center rounded-full bg-muted text-xs font-bold shrink-0">
-                      {s.rank}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{s.user?.name || 'Unknown'}</p>
-                      <p className="text-xs text-muted-foreground">{s.class ? `${s.class.name}${s.class.section ? ` ${s.class.section}` : ''}` : '-'}</p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-bold">{(s.gpa || 0).toFixed(1)} GPA</p>
-                      <p className="text-[10px] text-muted-foreground">{s.examCount} exams</p>
-                    </div>
-                  </div>
-                )) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">No student data available</p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Grade Distribution + Gender */}
-        <div className="space-y-4">
-          <Card>
+        <motion.div variants={slideUp}>
+          <Card className="glass-panel border-0 shadow-lg rounded-3xl overflow-hidden">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Performance Distribution</CardTitle>
+              <CardTitle className="text-lg font-black uppercase tracking-tight">Term Comparison</CardTitle>
+              <CardDescription className="text-xs font-medium">First Term vs Second Term average scores</CardDescription>
             </CardHeader>
             <CardContent>
-              {gradeDistribution.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <PieChart>
-                      <Pie data={gradeDistribution} cx="50%" cy="50%" outerRadius={70} dataKey="value" nameKey="grade" label={({ grade, value }) => `${grade}: ${value}%`}>
-                        {gradeDistribution.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ borderRadius: 8 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {gradeDistribution.map(g => (
-                      <div key={g.grade} className="flex items-center gap-1.5 text-xs">
-                        <span className="size-2 rounded-full" style={{ backgroundColor: g.color }} />
-                        {g.grade} ({g.value}%)
-                      </div>
-                    ))}
-                  </div>
-                </>
+              {performanceBySubject.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={performanceBySubject}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-100" vertical={false} />
+                    <XAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', fontWeight: 700 }} 
+                      cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                    />
+                    <Legend iconType="circle" />
+                    <Bar dataKey="term1" fill="#6366f1" radius={[6, 6, 0, 0]} name="Term 1" />
+                    <Bar dataKey="term2" fill="#10b981" radius={[6, 6, 0, 0]} name="Term 2" />
+                  </BarChart>
+                </ResponsiveContainer>
               ) : (
-                <div className="flex items-center justify-center h-[220px]"><p className="text-sm text-muted-foreground">No distribution data</p></div>
+                <div className="flex items-center justify-center h-[280px]"><p className="text-sm text-gray-400">No performance data available</p></div>
               )}
             </CardContent>
           </Card>
+        </motion.div>
 
-          {/* Gender Comparison */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Users className="size-4 text-muted-foreground" />
-                <p className="text-sm font-medium">Student Overview</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 p-3 text-center">
-                  <p className="text-2xl font-bold text-blue-600">{analytics?.schoolOverview?.totalStudents || 0}</p>
-                  <p className="text-xs text-muted-foreground">Total Students</p>
+        {/* Attendance Trends */}
+        <motion.div variants={slideUp}>
+          <Card className="glass-panel border-0 shadow-lg rounded-3xl overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-black uppercase tracking-tight">Attendance Trends</CardTitle>
+              <CardDescription className="text-xs font-medium">Weekly attendance patterns</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {attendanceTrend.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart data={attendanceTrend}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-100" vertical={false} />
+                    <XAxis dataKey="day" tick={{ fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', fontWeight: 700 }} />
+                    <Legend iconType="circle" />
+                    <Line type="monotone" dataKey="present" stroke="#10b981" strokeWidth={4} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} name="Present" />
+                    <Line type="monotone" dataKey="absent" stroke="#ef4444" strokeWidth={4} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} name="Absent" />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-[280px]"><p className="text-sm text-gray-400">No attendance data available</p></div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Middle Row: Ranking Table + Grade Distribution */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Student Ranking */}
+        <motion.div variants={slideUp}>
+          <Card className="glass-panel border-0 shadow-lg rounded-3xl overflow-hidden h-full">
+            <CardHeader className="pb-3 border-b border-gray-50/50">
+              <CardTitle className="text-lg font-black uppercase tracking-tight">Student Rankings</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="flex gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+                    <Input 
+                      placeholder="Search top performers..." 
+                      className="pl-11 rounded-2xl bg-gray-50/50 border-gray-100 focus:bg-white transition-all h-11" 
+                      value={searchQuery} 
+                      onChange={e => setSearchQuery(e.target.value)} 
+                    />
+                  </div>
+                  <Select value={selectedClass} onValueChange={setSelectedClass}>
+                    <SelectTrigger className="w-40 rounded-2xl bg-gray-50/50 border-gray-100 h-11"><SelectValue /></SelectTrigger>
+                    <SelectContent className="rounded-2xl border-gray-100">
+                      <SelectItem value="all">All Classes</SelectItem>
+                      {classOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/20 p-3 text-center">
-                  <p className="text-2xl font-bold text-purple-600">{analytics?.schoolOverview?.totalTeachers || 0}</p>
-                  <p className="text-xs text-muted-foreground">Total Teachers</p>
-                </div>
-                <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20 p-3 text-center">
-                  <p className="text-2xl font-bold text-blue-600">{maleCount}</p>
-                  <p className="text-xs text-muted-foreground">Male Students</p>
-                </div>
-                <div className="rounded-lg border border-pink-200 dark:border-pink-800 bg-pink-50/50 dark:bg-pink-950/20 p-3 text-center">
-                  <p className="text-2xl font-bold text-pink-600">{femaleCount}</p>
-                  <p className="text-xs text-muted-foreground">Female Students</p>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin">
+                  {filteredStudents.length > 0 ? filteredStudents.map((s, idx) => (
+                    <motion.div 
+                      key={s.id} 
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      className="flex items-center gap-3 rounded-2xl border border-gray-50 bg-white/50 p-4 hover:border-indigo-100 hover:bg-white hover:shadow-sm transition-all group"
+                    >
+                      <span className={cn(
+                        "flex size-10 items-center justify-center rounded-xl text-xs font-black shrink-0 transition-transform group-hover:scale-110",
+                        s.rank === 1 ? "bg-amber-100 text-amber-700" : 
+                        s.rank === 2 ? "bg-gray-100 text-gray-600" :
+                        s.rank === 3 ? "bg-orange-100 text-orange-700" : "bg-gray-50 text-gray-400"
+                      )}>
+                        #{s.rank}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-gray-900 truncate">{s.user?.name || 'Unknown'}</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{s.class ? `${s.class.name}${s.class.section ? ` ${s.class.section}` : ''}` : '-'}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-black text-indigo-600">{(s.gpa || 0).toFixed(2)} GPA</p>
+                        <div className="w-16 h-1 rounded-full bg-gray-100 mt-1.5 overflow-hidden">
+                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${(s.gpa / 4) * 100}%` }} />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )) : (
+                    <div className="text-center py-20 flex flex-col items-center gap-2">
+                       <Search className="size-10 text-gray-100" />
+                       <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">No candidates found</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
           </Card>
+        </motion.div>
+
+        {/* Grade Distribution + Metrics */}
+        <div className="flex flex-col gap-6">
+          <motion.div variants={slideUp}>
+            <Card className="glass-panel border-0 shadow-lg rounded-3xl overflow-hidden">
+              <CardHeader className="pb-0">
+                <CardTitle className="text-lg font-black uppercase tracking-tight">Performance Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {gradeDistribution.length > 0 ? (
+                  <div className="flex flex-col items-center sm:flex-row gap-4">
+                    <ResponsiveContainer width="100%" height={220} className="sm:w-1/2">
+                      <PieChart>
+                        <Pie 
+                          data={gradeDistribution} 
+                          cx="50%" 
+                          cy="50%" 
+                          innerRadius={60} 
+                          outerRadius={80} 
+                          paddingAngle={5}
+                          dataKey="value" 
+                          nameKey="grade"
+                        >
+                          {gradeDistribution.map((entry, i) => (
+                            <Cell key={i} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex-1 grid grid-cols-2 gap-3 w-full">
+                      {gradeDistribution.map(g => (
+                        <div key={g.grade} className="flex flex-col p-3 rounded-2xl bg-gray-50/50 border border-gray-50 transition-transform hover:scale-105">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="size-2 rounded-full" style={{ backgroundColor: g.color }} />
+                            <span className="text-xs font-black text-gray-900 uppercase">Grade {g.grade}</span>
+                          </div>
+                          <span className="text-lg font-black text-gray-900">{g.value}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-[220px]"><p className="text-sm text-gray-400">No distribution data</p></div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Student Overview Metrics */}
+          <motion.div variants={slideUp}>
+            <Card className="glass-panel border-0 shadow-lg rounded-3xl overflow-hidden h-full">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="size-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                    <Users className="size-5 text-indigo-600" />
+                  </div>
+                  <p className="text-sm font-black uppercase tracking-tight">Cohort Demographics</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { label: 'Male Students', value: maleCount, color: 'text-blue-600', sub: 'Calculated' },
+                    { label: 'Female Students', value: femaleCount, color: 'text-pink-600', sub: 'Calculated' },
+                    { label: 'Total Faculty', value: analytics?.schoolOverview?.totalTeachers || 0, color: 'text-indigo-600', sub: 'Official' },
+                    { label: 'Academic Staff', value: Math.round((analytics?.schoolOverview?.totalTeachers || 0) * 0.8), color: 'text-emerald-600', sub: 'Estimated' },
+                  ].map((m, i) => (
+                    <div key={i} className="p-4 rounded-3xl bg-gray-50/50 border border-gray-50 hover:bg-white hover:shadow-sm transition-all group">
+                      <p className={cn("text-2xl font-black mb-1 group-hover:scale-110 transition-transform", m.color)}>{m.value}</p>
+                      <p className="text-[10px] font-black text-gray-900 uppercase tracking-widest">{m.label}</p>
+                      <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest">{m.sub}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

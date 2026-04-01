@@ -27,7 +27,8 @@ import { Search, Plus, Phone, BookOpen, GraduationCap, Users, Loader2 } from 'lu
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { fadeIn, slideUp, staggerContainer, scaleIn, hoverScale } from '@/lib/motion-variants';
 
 interface TeacherRecord {
   id: string;
@@ -206,15 +207,13 @@ export function TeachersView() {
   return (
     <motion.div 
       className="space-y-6"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
     >
       <motion.div 
         className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.1 }}
+        variants={slideUp}
       >
         <div>
           <h2 className="text-lg font-semibold">Teachers</h2>
@@ -288,18 +287,15 @@ export function TeachersView() {
 
       <motion.div 
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
+        variants={staggerContainer}
       >
-        {filtered.map((teacher, idx) => (
-          <motion.div
-            key={teacher.id}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: idx * 0.05 }}
-            whileHover={{ scale: 1.02 }}
-          >
+        <AnimatePresence>
+          {filtered.map((teacher, idx) => (
+            <motion.div
+              key={teacher.name}
+              variants={scaleIn}
+              whileHover={{ y: -4, transition: { duration: 0.2 } }}
+            >
             <Card
               className="hover:shadow-md transition-shadow cursor-pointer"
               onClick={() => setDetailTeacher(teacher)}
@@ -336,9 +332,10 @@ export function TeachersView() {
                 <span>{teacher.exams} exams created</span>
               </div>
             </CardContent>
-          </Card>
+            </Card>
           </motion.div>
         ))}
+        </AnimatePresence>
       </motion.div>
 
       {filtered.length === 0 && !loading && (

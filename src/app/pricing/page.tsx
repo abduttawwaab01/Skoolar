@@ -17,6 +17,8 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from '@/components/ui/accordion';
 import { PublicLayout } from '@/components/layout/public-layout';
+import { motion, AnimatePresence } from 'framer-motion';
+import { fadeIn, slideUp, staggerContainer, scaleIn } from '@/lib/motion-variants';
 
 interface PlanData {
   id: string;
@@ -198,7 +200,8 @@ function PlanCard({
   const yearlySavings = plan.yearlyPrice ? (plan.price * 12 - plan.yearlyPrice) : 0;
 
   return (
-    <div
+    <motion.div
+      variants={slideUp}
       className={`relative bg-white rounded-2xl border-2 p-6 md:p-8 flex flex-col transition-all duration-300 hover:shadow-xl h-full ${
         isPopular
           ? 'border-emerald-500 shadow-lg shadow-emerald-500/10 ring-4 ring-emerald-500/5 scale-[1.02] md:scale-105'
@@ -291,7 +294,7 @@ function PlanCard({
           )}
         </Button>
       </Link>
-    </div>
+    </motion.div>
   );
 }
 
@@ -331,7 +334,9 @@ export default function PricingPage() {
   return (
     <PublicLayout>
       {/* Hero */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white py-20 px-4">
+      <section className="relative overflow-hidden pt-32 pb-24 md:pt-48 md:pb-40">
+        <div className="absolute inset-0 bg-mesh-bg opacity-40" />
+        <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-white to-transparent z-0" />
         {/* Background decorations */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-20 -left-20 w-80 h-80 bg-white/5 rounded-full blur-3xl animate-pulse" />
@@ -340,48 +345,71 @@ export default function PricingPage() {
           <div className="absolute bottom-1/4 left-[10%] opacity-10 text-4xl">🎓</div>
         </div>
 
-        <div className="max-w-4xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
+        <motion.div 
+          className="max-w-4xl mx-auto text-center relative z-10"
+          initial="hidden"
+          animate="visible"
+          variants={staggerContainer}
+        >
+          <motion.div 
+            variants={fadeIn}
+            className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 mb-6"
+          >
             <Sparkles className="h-4 w-4 text-amber-300" />
             <span className="text-sm font-medium">Simple, Transparent Pricing</span>
-          </div>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 tracking-tight">
-            The Right Plan for Every <span className="bg-gradient-to-r from-amber-300 to-yellow-200 bg-clip-text text-transparent">School</span>
-          </h1>
-          <p className="text-emerald-100 text-lg md:text-xl max-w-2xl mx-auto mb-8 leading-relaxed">
-            Start free and scale as you grow. No hidden fees. No long-term contracts.
-            All plans include a 14-day free trial.
-          </p>
+          </motion.div>
+          <motion.h1 
+            variants={slideUp}
+            className="text-5xl md:text-7xl lg:text-[5.5rem] font-black text-gray-900 tracking-tighter leading-[0.9] mb-8"
+          >
+            Invest in Your <span className="text-indigo-600 italic">Academic</span> Future
+          </motion.h1>
+          <motion.p 
+            variants={slideUp}
+            className="text-xl md:text-2xl font-medium text-gray-500 mb-12 max-w-3xl mx-auto leading-relaxed"
+          >
+            Simple, transparent pricing designed to grow with your institution. 
+            All plans include exhaustive features and world-class support.
+          </motion.p>
 
           {/* Billing Toggle */}
-          <div className="inline-flex items-center gap-1 bg-white/10 backdrop-blur-sm rounded-full p-1">
+          <motion.div 
+            variants={scaleIn}
+            className="inline-flex items-center gap-1 bg-gray-100/50 p-1.5 rounded-2xl backdrop-blur-sm border border-white/40 shadow-inner"
+          >
             <button
               onClick={() => setBillingPeriod('monthly')}
-              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all ${
+              className={`px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                 billingPeriod === 'monthly'
-                  ? 'bg-white text-emerald-700 shadow-lg'
-                  : 'text-white/70 hover:text-white'
+                  ? 'bg-white text-indigo-700 shadow-sm'
+                  : 'text-gray-400 hover:text-gray-900 hover:bg-white/40'
               }`}
             >
               Monthly
             </button>
             <button
               onClick={() => setBillingPeriod('yearly')}
-              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+              className={`px-8 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
                 billingPeriod === 'yearly'
-                  ? 'bg-white text-emerald-700 shadow-lg'
-                  : 'text-white/70 hover:text-white'
+                  ? 'bg-white text-indigo-700 shadow-sm'
+                  : 'text-gray-400 hover:text-gray-900 hover:bg-white/40'
               }`}
             >
               Yearly
-              <Badge className="bg-amber-500 text-white text-[10px] border-0 px-2 py-0">Save 17%</Badge>
+              <Badge className="bg-emerald-500 text-white text-[10px] border-0 px-2 font-black">SAVE 17%</Badge>
             </button>
-          </div>
-        </div>
-      </div>
+          </motion.div>
+        </motion.div>
+      </section>
 
       {/* Trust badges */}
-      <div className="bg-white border-b">
+      <motion.div 
+        className="bg-white border-b"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        viewport={{ once: true }}
+      >
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10 text-sm text-gray-500">
             <div className="flex items-center gap-2">
@@ -402,7 +430,7 @@ export default function PricingPage() {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Plans Grid */}
       <div className="max-w-6xl mx-auto px-4 py-16">
@@ -413,7 +441,13 @@ export default function PricingPage() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-50px' }}
+            variants={staggerContainer}
+          >
             {displayPlans.map((plan) => (
               <PlanCard
                 key={plan.id}
@@ -422,20 +456,32 @@ export default function PricingPage() {
                 billingPeriod={billingPeriod}
               />
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
 
       {/* Key Features Highlight */}
       <div className="bg-gray-50 py-16">
         <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-12">
+          <motion.div 
+            className="text-center mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeIn}
+          >
             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 mb-4">Why Skoolar?</Badge>
             <h2 className="text-3xl font-bold text-gray-900 mb-3">Everything You Need to Run Your School</h2>
             <p className="text-gray-500 max-w-2xl mx-auto">From attendance to AI-powered grading, Skoolar covers every aspect of school management.</p>
-          </div>
+          </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-100px' }}
+            variants={staggerContainer}
+          >
             {[
               { icon: Smartphone, title: 'Mobile Friendly', desc: 'Access on any device. Teachers and parents love the responsive design.', color: 'bg-blue-100 text-blue-600' },
               { icon: Cpu, title: 'AI-Powered', desc: 'AI grading assistant, quiz generator, and smart analytics save hours.', color: 'bg-purple-100 text-purple-600' },
@@ -448,18 +494,20 @@ export default function PricingPage() {
             ].map((feature, idx) => {
               const Icon = feature.icon;
               return (
-                <Card key={idx} className="border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all duration-300 h-full">
-                  <CardContent className="p-6">
-                    <div className={`w-11 h-11 rounded-xl ${feature.color} flex items-center justify-center mb-4`}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <h3 className="font-bold text-gray-900 mb-2">{feature.title}</h3>
-                    <p className="text-sm text-gray-500 leading-relaxed">{feature.desc}</p>
-                  </CardContent>
-                </Card>
+                <motion.div key={idx} variants={fadeIn}>
+                  <Card className="border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all duration-300 h-full">
+                    <CardContent className="p-6">
+                      <div className={`w-11 h-11 rounded-xl ${feature.color} flex items-center justify-center mb-4`}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <h3 className="font-bold text-gray-900 mb-2">{feature.title}</h3>
+                      <p className="text-sm text-gray-500 leading-relaxed">{feature.desc}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
       </div>
 
@@ -595,7 +643,13 @@ export default function PricingPage() {
           <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
           <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl" />
         </div>
-        <div className="max-w-3xl mx-auto text-center relative z-10">
+        <motion.div 
+          className="max-w-3xl mx-auto text-center relative z-10"
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={slideUp}
+        >
           <div className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center mx-auto mb-6">
             <Rocket className="h-8 w-8 text-white" />
           </div>
@@ -618,7 +672,7 @@ export default function PricingPage() {
           <p className="text-emerald-200/60 text-xs mt-6">
             No credit card required &bull; 14-day free trial &bull; Cancel anytime
           </p>
-        </div>
+        </motion.div>
       </div>
 
       {/* Money-back guarantee */}
