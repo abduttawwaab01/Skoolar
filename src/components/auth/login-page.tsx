@@ -275,12 +275,12 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
                         variant="outline" 
                         onClick={() => {
                           setSelectedSchool(null);
-                          setSelectedRole('ADMIN');
+                          setSelectedRole('SUPER_ADMIN');
                           setStep('credentials');
                         }}
                         className="w-full"
                       >
-                        Continue without school (Admin)
+                        Continue without school (Platform Admin)
                       </Button>
                     </div>
                   </div>
