@@ -63,25 +63,27 @@ model School {
   notificationList   Notification[]
   exams              Exam[]
   teacherComments    TeacherComment[]
-  attendances        Attendance[]
-  attendanceScanLogs AttendanceScanLog[]
-  reportCards        ReportCard[]
-  registrationCodes  RegistrationCode[]
-  homeworks          Homework[]
-  homeworkSubmissions HomeworkSubmission[]
-  videoLessons       VideoLesson[]
-  settings            SchoolSettings?
-  domainGrades        DomainGrade[]
-  scoreTypes          ScoreType[]
-  supportTickets      SupportTicket[]
-  platformPayments    PlatformPayment[]
-  subscriptionPlan    SubscriptionPlan?  @relation("SchoolPlan", fields: [planId], references: [id])
-  conversations        Conversation[]
-  messages            Message[]
-  schoolNotices       SchoolNotice[]
-  studentDiaries      StudentDiary[]
+   attendances        Attendance[]
+   attendanceScanLogs AttendanceScanLog[]
+   reportCards        ReportCard[]
+   registrationCodes  RegistrationCode[]
+   homeworks          Homework[]
+   homeworkSubmissions HomeworkSubmission[]
+   videoLessons       VideoLesson[]
+   settings            SchoolSettings?
+   domainGrades        DomainGrade[]
+   scoreTypes          ScoreType[]
+   supportTickets      SupportTicket[]
+   platformPayments    PlatformPayment[]
+   subscriptionPlan    SubscriptionPlan?  @relation("SchoolPlan", fields: [planId], references: [id])
+   conversations        Conversation[]
+   messages            Message[]
+   schoolNotices       SchoolNotice[]
+   studentDiaries      StudentDiary[]
+   weeklyEvaluations   WeeklyEvaluation[]
+   entranceExams       EntranceExam[]
 
-  planId              String?
+   planId              String?
 
   @@index([slug])
   @@index([region])
@@ -292,14 +294,15 @@ model Student {
   behaviorLogs    BehaviorLog[]
   achievements    Achievement[]
   teacherComments TeacherComment[]
-  payments        Payment[]
-  homeworkSubmissions HomeworkSubmission[]
-  examAttempts       ExamAttempt[]
+   payments        Payment[]
+   homeworkSubmissions HomeworkSubmission[]
+   examAttempts       ExamAttempt[]
+   weeklyEvaluations   WeeklyEvaluation[]
 
-  @@unique([schoolId, admissionNo])
-  @@index([schoolId])
-  @@index([classId])
-}
+   @@unique([schoolId, admissionNo])
+   @@index([schoolId])
+   @@index([classId])
+ }
 
 model Teacher {
   id              String   @id @default(cuid())
@@ -319,16 +322,17 @@ model Teacher {
   updatedAt       DateTime @updatedAt
   deletedAt       DateTime?
 
-  school          School   @relation(fields: [schoolId], references: [id])
-  user            User     @relation(fields: [userId], references: [id])
-  classes         Class[]  @relation("ClassTeacher")
-  classSubjects   ClassSubject[]
-  exams           Exam[]
-  comments        TeacherComment[]
+   school          School   @relation(fields: [schoolId], references: [id])
+   user            User     @relation(fields: [userId], references: [id])
+   classes         Class[]  @relation("ClassTeacher")
+   classSubjects   ClassSubject[]
+   exams           Exam[]
+   comments        TeacherComment[]
+   weeklyEvaluations WeeklyEvaluation[]
 
-  @@unique([schoolId, employeeNo])
-  @@index([schoolId])
-}
+   @@unique([schoolId, employeeNo])
+   @@index([schoolId])
+ }
 
 model Parent {
   id            String   @id @default(cuid())
@@ -529,10 +533,41 @@ model TeacherComment {
   student       Student  @relation(fields: [studentId], references: [id])
   term          Term     @relation(fields: [termId], references: [id])
 
-  @@index([schoolId])
-  @@index([studentId])
-  @@index([termId])
-}
+   @@index([schoolId])
+   @@index([studentId])
+   @@index([termId])
+ }
+
+model WeeklyEvaluation {
+   id            String   @id @default(cuid())
+   schoolId      String
+   teacherId     String
+   studentId     String
+   weekDate      DateTime // Date of the Monday of the week being evaluated
+   academicPerformance Int // 1-5 rating
+   behavior       Int    // 1-5 rating
+   attendance     Int    // 1-5 rating
+   homework       Int    // 1-5 rating
+   effort         Int?   // Optional 1-5 rating
+   comments       String?
+   goals          String?
+   strengths      String?
+   areasToImprove String?
+   isShared       Boolean @default(false) // Shared with parent
+   createdAt      DateTime @default(now())
+   updatedAt      DateTime @updatedAt
+
+   school         School   @relation(fields: [schoolId], references: [id])
+   teacher        Teacher  @relation(fields: [teacherId], references: [id])
+   student        Student  @relation(fields: [studentId], references: [id])
+
+   @@unique([schoolId, teacherId, studentId, weekDate])
+   @@index([schoolId])
+   @@index([teacherId])
+   @@index([studentId])
+   @@index([weekDate])
+   @@index([isShared])
+ }
 
 model Attendance {
   id            String   @id @default(cuid())
@@ -1856,4 +1891,85 @@ model DangerLog {
   @@index([action])
   @@index([targetType])
   @@index([createdAt])
+}
+
+// ========================================
+// ENTRANCE EXAM MODELS
+// ========================================
+
+model EntranceExam {
+  id              String   @id @default(cuid())
+  schoolId        String
+  title           String
+  description     String?
+  code            String   @unique
+  type            String   @default("assessment") // assessment, interview
+  totalMarks      Int      @default(100)
+  passingMarks    Int      @default(50)
+  duration        Int?     // Duration in minutes
+  instructions    String?
+  isActive        Boolean  @default(true)
+  securitySettings String? // JSON settings
+  allowCalculator Boolean  @default(true)
+  calculatorMode  String   @default("basic")
+  shuffleQuestions Boolean @default(false)
+  shuffleOptions  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  school          School   @relation(fields: [schoolId], references: [id])
+  questions       EntranceExamQuestion[]
+  attempts        EntranceExamAttempt[]
+
+  @@index([schoolId])
+  @@index([code])
+}
+
+model EntranceExamQuestion {
+  id              String   @id @default(cuid())
+  entranceExamId  String
+  type            String   @default("MCQ")
+  questionText    String 
+  options         String?  // JSON array
+  correctAnswer   String?  // JSON or string
+  marks           Int      @default(1)
+  explanation     String?
+  mediaUrl        String?
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  exam            EntranceExam @relation(fields: [entranceExamId], references: [id], onDelete: Cascade)
+
+  @@index([entranceExamId])
+  @@index([order])
+}
+
+model EntranceExamAttempt {
+  id                  String   @id @default(cuid())
+  entranceExamId      String
+  applicantName       String
+  applicantEmail      String?
+  applicantPhone      String?
+  applicantAddress    String?
+  answers             String?  // JSON map
+  autoScore           Float?
+  manualScore         Float?
+  finalScore          Float?
+  status              String   @default("in_progress") // in_progress, submitted, graded, disqualified
+  startedAt           DateTime @default(now())
+  submittedAt         DateTime?
+  gradedAt            DateTime?
+  securityViolations  String?  // JSON
+  tabSwitchCount      Int      @default(0)
+  timeTakenSeconds    Int?
+  aiSuggestions       String?  // Text/JSON from AI analysis
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  exam                EntranceExam @relation(fields: [entranceExamId], references: [id])
+
+  @@index([entranceExamId])
+  @@index([status])
 }

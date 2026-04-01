@@ -72,11 +72,12 @@ export function ResultsView() {
   // Fetch students and compute results
   useEffect(() => {
     if (!selectedSchoolId) return;
-    setLoading(true);
-    const classFilter = selectedClass !== 'all' ? `&classId=${selectedClass}` : '';
-    fetch(`/api/students?schoolId=${selectedSchoolId}${classFilter}&limit=500`)
-      .then(res => res.json())
-      .then(json => {
+
+    const fetchResults = async () => {
+      const classFilter = selectedClass !== 'all' ? `&classId=${selectedClass}` : '';
+      try {
+        const res = await fetch(`/api/students?schoolId=${selectedSchoolId}${classFilter}&limit=500`);
+        const json = await res.json();
         const students = json.data || [];
         const resultList: StudentResult[] = students
           .map((s: Record<string, unknown>) => {
@@ -95,9 +96,15 @@ export function ResultsView() {
           .sort((a, b) => b.gpa - a.gpa)
           .map((r, i) => ({ ...r, rank: r.rank || i + 1 }));
         setResults(resultList);
-      })
-      .catch(() => toast.error('Failed to load results'))
-      .finally(() => setLoading(false));
+      } catch {
+        toast.error('Failed to load results');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    setLoading(true);
+    fetchResults();
   }, [selectedSchoolId, selectedClass]);
 
   // Distribution chart data

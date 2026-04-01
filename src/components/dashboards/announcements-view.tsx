@@ -34,6 +34,7 @@ import {
   Filter, MoreVertical, Sparkles, Globe, GraduationCap, BookOpen, FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 // ==================== TYPES ====================
 interface Announcement {
@@ -257,9 +258,19 @@ export function AnnouncementsView() {
   };
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <motion.div 
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <div>
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <Megaphone className="h-6 w-6 text-emerald-600" /> Announcements
@@ -381,30 +392,47 @@ export function AnnouncementsView() {
             </DialogContent>
           </Dialog>
         </div>
-      </div>
+      </motion.div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <motion.div 
+        className="grid grid-cols-2 md:grid-cols-4 gap-3"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.15 }}
+      >
         {[
           { label: 'Published', value: publishedCount, icon: <CheckCircle2 className="h-4 w-4" />, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
           { label: 'Drafts', value: draftCount, icon: <FileText className="h-4 w-4" />, color: 'bg-gray-50 text-gray-700 border-gray-200' },
           { label: 'Urgent', value: urgentCount, icon: <AlertTriangle className="h-4 w-4" />, color: 'bg-red-50 text-red-700 border-red-200' },
           { label: 'Expired', value: expiredCount, icon: <Clock className="h-4 w-4" />, color: 'bg-amber-50 text-amber-700 border-amber-200' },
-        ].map(stat => (
-          <Card key={stat.label} className="border">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center border', stat.color)}>{stat.icon}</div>
-              <div>
-                <p className="text-lg font-bold">{stat.value}</p>
-                <p className="text-[11px] text-muted-foreground">{stat.label}</p>
-              </div>
-            </CardContent>
-          </Card>
+        ].map((stat, idx) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 + idx * 0.05 }}
+          >
+            <Card className="border">
+              <CardContent className="p-3 flex items-center gap-3">
+                <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center border', stat.color)}>{stat.icon}</div>
+                <div>
+                  <p className="text-lg font-bold">{stat.value}</p>
+                  <p className="text-[11px] text-muted-foreground">{stat.label}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
+      <motion.div 
+        className="flex flex-wrap items-center gap-2"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input placeholder="Search announcements..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-8 h-8 text-sm" />
@@ -445,10 +473,15 @@ export function AnnouncementsView() {
             <X className="h-3 w-3" /> Clear
           </Button>
         )}
-      </div>
+      </motion.div>
 
       {/* Announcement List */}
-      <div className="space-y-3 max-h-[calc(100vh-20rem)] overflow-y-auto pr-1">
+      <motion.div 
+        className="space-y-3 max-h-[calc(100vh-20rem)] overflow-y-auto pr-1"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.25 }}
+      >
         {loading ? (
           <div className="space-y-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-xl" />)}</div>
         ) : displayItems.length === 0 ? (
@@ -563,7 +596,7 @@ export function AnnouncementsView() {
             );
           })
         )}
-      </div>
+      </motion.div>
 
       {/* Detail Dialog */}
       <Dialog open={!!detailItem} onOpenChange={(open) => { if (!open) setDetailItem(null); }}>
@@ -643,6 +676,6 @@ export function AnnouncementsView() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }

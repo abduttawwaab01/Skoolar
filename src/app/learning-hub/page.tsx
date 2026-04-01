@@ -530,13 +530,11 @@ function PostCard({ post, currentUser, onOpen, onLike, isBookmarked, onBookmark,
 }
 
 function GameCard({ game, currentUser, onPlay }: { game: HubGame; currentUser: HubUser | null; onPlay: (g: HubGame) => void }) {
-  const GameIcon = getGameIcon(game.icon);
   const DiffIcon = DIFFICULTY_CONFIG[game.difficulty].icon;
-  const gameIconEl = <GameIcon className="w-12 h-12 text-white/80 group-hover:scale-110 transition-transform" />;
   return (
     <Card className="group cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden" onClick={() => onPlay(game)}>
       <div className={`h-28 bg-gradient-to-br ${game.color} flex items-center justify-center relative`}>
-        {gameIconEl}
+        {React.createElement(getGameIcon(game.icon), { className: "w-12 h-12 text-white/80 group-hover:scale-110 transition-transform" })}
         {game.isFeatured && (
           <Badge className="absolute top-2 right-2 bg-white/20 text-white border-white/30 backdrop-blur-sm text-[10px] gap-1">
             <Star className="h-3 w-3 fill-white" /> Featured

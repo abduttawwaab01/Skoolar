@@ -10,6 +10,8 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email', placeholder: 'admin@skoolar.com' },
         password: { label: 'Password', type: 'password' },
+        role: { label: 'Role', type: 'text' },
+        schoolId: { label: 'School ID', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -32,6 +34,25 @@ export const authOptions: NextAuthOptions = {
         const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
         if (!isPasswordValid) {
+          return null;
+        }
+
+        // For non-SUPER_ADMIN users, verify they belong to the selected school
+        if (user.role !== 'SUPER_ADMIN' && credentials.schoolId) {
+          if (user.schoolId !== credentials.schoolId) {
+            // Check if user has any school association
+            if (!user.schoolId) {
+              // User needs to be assigned to a school
+              return null;
+            }
+            // School mismatch - they might be trying to access wrong school
+            return null;
+          }
+        }
+
+        // For SUPER_ADMIN, skip school requirement
+        // For others, require school assignment
+        if (user.role !== 'SUPER_ADMIN' && !user.schoolId) {
           return null;
         }
 

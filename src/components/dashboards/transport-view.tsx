@@ -15,6 +15,7 @@ import {
 import { Plus, Bus, MapPin, Users, Gauge, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/app-store';
+import { motion } from 'framer-motion';
 
 interface Route {
   id: string;
@@ -171,8 +172,18 @@ export function TransportView() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <motion.div 
+        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <div>
           <h2 className="text-lg font-semibold">Transport Management</h2>
           <p className="text-sm text-muted-foreground">Manage school bus routes and schedules</p>
@@ -216,7 +227,7 @@ export function TransportView() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+      </motion.div>
 
       {/* Route Cards */}
       {routes.length === 0 ? (
@@ -228,43 +239,56 @@ export function TransportView() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {routes.map(route => (
-            <Card key={route.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                      <Bus className="size-4" />
+        <motion.div 
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          {routes.map((route, idx) => (
+            <motion.div
+              key={route.id}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: idx * 0.05 }}
+              whileHover={{ scale: 1.02 }}
+            >
+              <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                        <Bus className="size-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{route.name}</p>
+                        <p className="text-xs text-muted-foreground">{route.vehicle}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold">{route.name}</p>
-                      <p className="text-xs text-muted-foreground">{route.vehicle}</p>
+                    <StatusBadge variant={route.status === 'active' ? 'success' : 'neutral'} size="sm">
+                      {route.status}
+                    </StatusBadge>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Driver</span>
+                      <span className="font-medium">{route.driver}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="size-3 text-muted-foreground" />
+                      <span>{route.stops} stops</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Users className="size-3 text-muted-foreground" />
+                      <span>{route.capacity} capacity</span>
                     </div>
                   </div>
-                  <StatusBadge variant={route.status === 'active' ? 'success' : 'neutral'} size="sm">
-                    {route.status}
-                  </StatusBadge>
-                </div>
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Driver</span>
-                    <span className="font-medium">{route.driver}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <MapPin className="size-3 text-muted-foreground" />
-                    <span>{route.stops} stops</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Users className="size-3 text-muted-foreground" />
-                    <span>{route.capacity} capacity</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }

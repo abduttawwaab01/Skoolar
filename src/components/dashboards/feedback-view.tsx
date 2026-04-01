@@ -88,13 +88,22 @@ export function FeedbackView() {
   // Fetch feedback data
   useEffect(() => {
     if (!selectedSchoolId) return;
+
+    const fetchFeedback = async () => {
+      const statusParam = statusFilter !== 'all' ? `&status=${statusFilter}` : '';
+      try {
+        const res = await fetch(`/api/feedback?schoolId=${selectedSchoolId}${statusParam}&limit=100`);
+        const json = await res.json();
+        setFeedbackData(json.data || []);
+      } catch {
+        toast.error('Failed to load feedback');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     setLoading(true);
-    const statusParam = statusFilter !== 'all' ? `&status=${statusFilter}` : '';
-    fetch(`/api/feedback?schoolId=${selectedSchoolId}${statusParam}&limit=100`)
-      .then(res => res.json())
-      .then(json => setFeedbackData(json.data || []))
-      .catch(() => toast.error('Failed to load feedback'))
-      .finally(() => setLoading(false));
+    fetchFeedback();
   }, [selectedSchoolId, statusFilter]);
 
   const totalRating = feedbackData.reduce((sum, f) => sum + (f.rating || 0), 0);

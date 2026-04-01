@@ -18,6 +18,7 @@ import {
 import { Plus, GraduationCap, AlertCircle, Loader2 } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 interface ExamRecord {
   id: string;
@@ -313,9 +314,19 @@ export function ExamsView() {
   }
 
   return (
-    <div className="space-y-4">
+    <motion.div 
+      className="space-y-4"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <motion.div 
+        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <div>
           <h2 className="text-lg font-semibold">Exam Management</h2>
           <p className="text-sm text-muted-foreground">{exams.length} examinations configured</p>
@@ -407,19 +418,30 @@ export function ExamsView() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+      </motion.div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2">
+      <motion.div 
+        className="flex flex-wrap gap-2"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.15 }}
+      >
         {statusFilters.map(filter => (
           <Button key={filter} variant={activeStatus === filter ? 'default' : 'outline'} size="sm" onClick={() => setActiveStatus(filter)}>
             {filter}
           </Button>
         ))}
-      </div>
+      </motion.div>
 
       {/* Data Table */}
-      <DataTable columns={columns} data={filteredExams} searchKey="name" searchPlaceholder="Search exams..." />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <DataTable columns={columns} data={filteredExams} searchKey="name" searchPlaceholder="Search exams..." />
+      </motion.div>
 
       {filteredExams.length === 0 && exams.length > 0 && (
         <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
@@ -435,6 +457,6 @@ export function ExamsView() {
           <p className="text-xs mt-1">Click &quot;Create Exam&quot; to get started</p>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { motion } from 'framer-motion';
 import {
   Dialog,
   DialogContent,
@@ -258,8 +259,18 @@ export function StudentsView() {
   if (loading) return <LoadingSkeleton />;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <motion.div 
+        className="flex items-center justify-between"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <div>
           <h2 className="text-lg font-semibold">Students</h2>
           <p className="text-sm text-muted-foreground">{students.length} total students enrolled</p>
@@ -335,16 +346,22 @@ export function StudentsView() {
             </DialogContent>
           </Dialog>
         </div>
-      </div>
+      </motion.div>
 
-      <DataTable
-        columns={columns}
-        data={filtered}
-        searchKey="name"
-        searchPlaceholder="Search students..."
-        emptyMessage="No students found."
-        onRowClick={(student) => setDetailStudent(student)}
-      />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <DataTable
+          columns={columns}
+          data={filtered}
+          searchKey="name"
+          searchPlaceholder="Search students..."
+          emptyMessage="No students found."
+          onRowClick={(student) => setDetailStudent(student)}
+        />
+      </motion.div>
 
       <Dialog open={!!detailStudent} onOpenChange={() => setDetailStudent(null)}>
         <DialogContent className="max-w-lg">
@@ -411,6 +428,6 @@ export function StudentsView() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }

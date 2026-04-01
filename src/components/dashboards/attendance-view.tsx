@@ -18,6 +18,7 @@ import {
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
+import { motion } from 'framer-motion';
 
 type AttendanceStatus = 'present' | 'absent' | 'late';
 
@@ -218,14 +219,32 @@ export function AttendanceView() {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       {/* Today's Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <KpiCard title="Present" value={String(presentCount)} icon={UserCheck} iconBgColor="bg-emerald-100" iconColor="text-emerald-600" />
-        <KpiCard title="Absent" value={String(absentCount)} icon={UserX} iconBgColor="bg-red-100" iconColor="text-red-600" />
-        <KpiCard title="Late" value={String(lateCount)} icon={Clock} iconBgColor="bg-amber-100" iconColor="text-amber-600" />
-        <KpiCard title="Rate" value={`${rate}%`} icon={TrendingUp} iconBgColor="bg-blue-100" iconColor="text-blue-600" change={2.3} changeLabel="vs last week" />
-      </div>
+      <motion.div 
+        className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}>
+          <KpiCard title="Present" value={String(presentCount)} icon={UserCheck} iconBgColor="bg-emerald-100" iconColor="text-emerald-600" />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}>
+          <KpiCard title="Absent" value={String(absentCount)} icon={UserX} iconBgColor="bg-red-100" iconColor="text-red-600" />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.25 }}>
+          <KpiCard title="Late" value={String(lateCount)} icon={Clock} iconBgColor="bg-amber-100" iconColor="text-amber-600" />
+        </motion.div>
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
+          <KpiCard title="Rate" value={`${rate}%`} icon={TrendingUp} iconBgColor="bg-blue-100" iconColor="text-blue-600" change={2.3} changeLabel="vs last week" />
+        </motion.div>
+      </motion.div>
 
       {/* Charts Row */}
       <div className="grid gap-4 lg:grid-cols-2">
@@ -334,6 +353,6 @@ export function AttendanceView() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 }

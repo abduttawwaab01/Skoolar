@@ -27,6 +27,7 @@ import {
 import { Plus, BookOpen, Loader2, GraduationCap } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 interface SubjectRecord {
   id: string;
@@ -203,8 +204,18 @@ export function SubjectsView() {
   if (loading) return <LoadingSkeleton />;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <motion.div 
+        className="flex items-center justify-between"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <div>
           <h2 className="text-lg font-semibold">Subjects</h2>
           <p className="text-sm text-muted-foreground">{subjects.length} subjects configured</p>
@@ -261,15 +272,21 @@ export function SubjectsView() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+      </motion.div>
 
-      <DataTable
-        columns={columns}
-        data={subjects}
-        searchKey="name"
-        searchPlaceholder="Search subjects..."
-        emptyMessage="No subjects found."
-      />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <DataTable
+          columns={columns}
+          data={subjects}
+          searchKey="name"
+          searchPlaceholder="Search subjects..."
+          emptyMessage="No subjects found."
+        />
+      </motion.div>
 
       {subjects.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
@@ -277,6 +294,6 @@ export function SubjectsView() {
           <p className="mt-2 text-sm">No subjects configured yet</p>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

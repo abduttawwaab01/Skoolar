@@ -17,42 +17,18 @@ export interface RealtimeState {
 }
 
 export function useRealtime() {
-  // Try to use the shared context first
   const context = useRealtimeContext();
-  
-  // If context is available (provider is wrapping the app), use it
-  if (context) {
-    return {
-      isConnected: context.isConnected,
-      isReconnecting: context.isReconnecting,
-      joinSchool: context.joinSchool,
-      leaveSchool: context.leaveSchool,
-      joinClass: context.joinClass,
-      leaveClass: context.leaveClass,
-      setUserOnline: context.setUserOnline,
-      setUserOffline: () => {},
-      sendNotification: () => {},
-      markAttendance: () => {},
-      publishExam: () => {},
-      updateGrade: () => {},
-      receivePayment: () => {},
-      postAnnouncement: () => {},
-      sendChatMessage: context.sendChatMessage,
-      sendTypingIndicator: context.sendTypingIndicator,
-      emit: context.emit,
-      on: context.on,
-      off: () => {},
-    };
-  }
-
-  // Fallback: create own connection (legacy behavior for components outside provider)
   const socketRef = useRef<Socket | null>(null);
   const [state, setState] = useState<RealtimeState>({
     isConnected: false,
     isReconnecting: false,
   });
 
+  const fallbackHooks = context === null;
+
   useEffect(() => {
+    if (!fallbackHooks) return;
+
     const socket = io('/?XTransformPort=3003', {
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -97,169 +73,213 @@ export function useRealtime() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, []);
-
-  // ─── Room management ─────────────────────────────────────────────
+  }, [fallbackHooks]);
 
   const joinSchool = useCallback((schoolId: string) => {
-    socketRef.current?.emit('join-school', { schoolId });
-  }, []);
+    if (fallbackHooks) {
+      socketRef.current?.emit('join-school', { schoolId });
+    } else {
+      context.joinSchool(schoolId);
+    }
+  }, [context, fallbackHooks]);
 
   const leaveSchool = useCallback((schoolId: string) => {
-    socketRef.current?.emit('leave-school', { schoolId });
-  }, []);
+    if (fallbackHooks) {
+      socketRef.current?.emit('leave-school', { schoolId });
+    } else {
+      context.leaveSchool(schoolId);
+    }
+  }, [context, fallbackHooks]);
 
   const joinClass = useCallback((schoolId: string, classId: string) => {
-    socketRef.current?.emit('join-class', { schoolId, classId });
-  }, []);
+    if (fallbackHooks) {
+      socketRef.current?.emit('join-class', { schoolId, classId });
+    } else {
+      context.joinClass(schoolId, classId);
+    }
+  }, [context, fallbackHooks]);
 
   const leaveClass = useCallback((schoolId: string, classId: string) => {
-    socketRef.current?.emit('leave-class', { schoolId, classId });
-  }, []);
-
-  // ─── Presence ────────────────────────────────────────────────────
+    if (fallbackHooks) {
+      socketRef.current?.emit('leave-class', { schoolId, classId });
+    } else {
+      context.leaveClass(schoolId, classId);
+    }
+  }, [context, fallbackHooks]);
 
   const setUserOnline = useCallback(
     (schoolId: string, userId: string, userName: string) => {
-      socketRef.current?.emit('user-online', { schoolId, userId, userName });
+      if (fallbackHooks) {
+        socketRef.current?.emit('user-online', { schoolId, userId, userName });
+      } else {
+        context.setUserOnline(schoolId, userId, userName);
+      }
     },
-    [],
+    [context, fallbackHooks],
   );
 
   const setUserOffline = useCallback(() => {
-    socketRef.current?.emit('user-offline');
-  }, []);
-
-  // ─── Notifications ───────────────────────────────────────────────
+    if (fallbackHooks) {
+      socketRef.current?.emit('user-offline');
+    }
+  }, [fallbackHooks]);
 
   const sendNotification = useCallback(
-    (
-      data: {
-        schoolId: string;
-        title: string;
-        message: string;
-        type?: string;
-        category?: string;
-      },
-    ) => {
-      socketRef.current?.emit('send-notification', data);
+    (data: {
+      schoolId: string;
+      title: string;
+      message: string;
+      type?: string;
+      category?: string;
+    }) => {
+      if (fallbackHooks) {
+        socketRef.current?.emit('send-notification', data);
+      }
     },
-    [],
+    [fallbackHooks],
   );
-
-  // ─── Attendance ──────────────────────────────────────────────────
 
   const markAttendance = useCallback(
     (data: { schoolId: string; classId: string; studentId: string; status: string; date?: string }) => {
-      socketRef.current?.emit('attendance-marked', data);
+      if (fallbackHooks) {
+        socketRef.current?.emit('attendance-marked', data);
+      }
     },
-    [],
+    [fallbackHooks],
   );
-
-  // ─── Exams ───────────────────────────────────────────────────────
 
   const publishExam = useCallback(
     (data: { schoolId: string; classId: string; subjectId: string; examName: string }) => {
-      socketRef.current?.emit('exam-published', data);
+      if (fallbackHooks) {
+        socketRef.current?.emit('exam-published', data);
+      }
     },
-    [],
+    [fallbackHooks],
   );
-
-  // ─── Grades ──────────────────────────────────────────────────────
 
   const updateGrade = useCallback(
     (data: { schoolId: string; classId: string; studentId: string; subject: string; score: number }) => {
-      socketRef.current?.emit('grade-updated', data);
+      if (fallbackHooks) {
+        socketRef.current?.emit('grade-updated', data);
+      }
     },
-    [],
+    [fallbackHooks],
   );
-
-  // ─── Payments ────────────────────────────────────────────────────
 
   const receivePayment = useCallback(
     (data: { schoolId: string; studentId: string; amount: number; currency?: string }) => {
-      socketRef.current?.emit('payment-received', data);
+      if (fallbackHooks) {
+        socketRef.current?.emit('payment-received', data);
+      }
     },
-    [],
+    [fallbackHooks],
   );
-
-  // ─── Announcements ───────────────────────────────────────────────
 
   const postAnnouncement = useCallback(
     (data: { schoolId: string; title: string; type?: string; priority?: string }) => {
-      socketRef.current?.emit('announcement-posted', data);
+      if (fallbackHooks) {
+        socketRef.current?.emit('announcement-posted', data);
+      }
     },
-    [],
+    [fallbackHooks],
   );
-
-  // ─── Chat ────────────────────────────────────────────────────────
 
   const sendChatMessage = useCallback(
     (data: { schoolId: string; toUserId: string; fromUserId: string; message: string }) => {
-      socketRef.current?.emit('chat-message', data);
+      if (fallbackHooks) {
+        socketRef.current?.emit('chat-message', data);
+      } else {
+        context.sendChatMessage(data);
+      }
     },
-    [],
+    [context, fallbackHooks],
   );
 
   const sendTypingIndicator = useCallback(
     (data: { schoolId: string; toUserId: string; fromUserId: string }) => {
-      socketRef.current?.emit('typing', data);
+      if (fallbackHooks) {
+        socketRef.current?.emit('typing', data);
+      } else {
+        context.sendTypingIndicator(data);
+      }
     },
-    [],
+    [context, fallbackHooks],
   );
 
-  // ─── Generic emitter / listener ──────────────────────────────────
-
   const emit = useCallback((event: string, data: unknown) => {
-    socketRef.current?.emit(event, data);
-  }, []);
+    if (fallbackHooks) {
+      socketRef.current?.emit(event, data);
+    } else {
+      context.emit(event, data);
+    }
+  }, [context, fallbackHooks]);
 
   const on = useCallback(
     (event: string, callback: (...args: unknown[]) => void) => {
-      const handler = (...args: unknown[]) => callback(...args);
-      socketRef.current?.on(event, handler);
-      return () => {
-        socketRef.current?.off(event, handler);
-      };
+      if (fallbackHooks) {
+        const handler = (...args: unknown[]) => callback(...args);
+        socketRef.current?.on(event, handler);
+        return () => {
+          socketRef.current?.off(event, handler);
+        };
+      } else {
+        return context.on(event, callback);
+      }
     },
-    [],
+    [context, fallbackHooks],
   );
 
   const off = useCallback((event: string, callback?: (...args: unknown[]) => void) => {
-    if (callback) {
-      socketRef.current?.off(event, callback);
-    } else {
-      socketRef.current?.removeAllListeners(event);
+    if (fallbackHooks) {
+      if (callback) {
+        socketRef.current?.off(event, callback);
+      } else {
+        socketRef.current?.removeAllListeners(event);
+      }
     }
-  }, []);
+  }, [fallbackHooks]);
+
+  if (context) {
+    return {
+      isConnected: context.isConnected,
+      isReconnecting: context.isReconnecting,
+      joinSchool: context.joinSchool,
+      leaveSchool: context.leaveSchool,
+      joinClass: context.joinClass,
+      leaveClass: context.leaveClass,
+      setUserOnline: context.setUserOnline,
+      setUserOffline: () => {},
+      sendNotification: () => {},
+      markAttendance: () => {},
+      publishExam: () => {},
+      updateGrade: () => {},
+      receivePayment: () => {},
+      postAnnouncement: () => {},
+      sendChatMessage: context.sendChatMessage,
+      sendTypingIndicator: context.sendTypingIndicator,
+      emit: context.emit,
+      on: context.on,
+      off: () => {},
+    };
+  }
 
   return {
     isConnected: state.isConnected,
     isReconnecting: state.isReconnecting,
-    // Room management
     joinSchool,
     leaveSchool,
     joinClass,
     leaveClass,
-    // Presence
     setUserOnline,
     setUserOffline,
-    // Notifications
     sendNotification,
-    // Attendance
     markAttendance,
-    // Exams
     publishExam,
-    // Grades
     updateGrade,
-    // Payments
     receivePayment,
-    // Announcements
     postAnnouncement,
-    // Chat
     sendChatMessage,
     sendTypingIndicator,
-    // Generic
     emit,
     on,
     off,

@@ -15,6 +15,7 @@ import {
 import { Plus, Users, Loader2, GraduationCap, AlertCircle } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 interface ParentRecord {
   id: string;
@@ -213,8 +214,18 @@ export function ParentsView() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <motion.div 
+      className="space-y-4"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <motion.div 
+        className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <div>
           <h2 className="text-lg font-semibold">Parents</h2>
           <p className="text-sm text-muted-foreground">{parents.length} parent/guardian contacts</p>
@@ -258,15 +269,21 @@ export function ParentsView() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
+      </motion.div>
 
-      <DataTable
-        columns={columns}
-        data={parents}
-        searchKey="name"
-        searchPlaceholder="Search parent..."
-        emptyMessage="No parents found. Add your first parent/guardian."
-      />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <DataTable
+          columns={columns}
+          data={parents}
+          searchKey="name"
+          searchPlaceholder="Search parent..."
+          emptyMessage="No parents found. Add your first parent/guardian."
+        />
+      </motion.div>
 
       {parents.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
@@ -275,6 +292,6 @@ export function ParentsView() {
           <p className="text-xs mt-1">Click &quot;Add Parent&quot; to get started</p>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

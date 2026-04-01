@@ -27,6 +27,7 @@ import { Search, Plus, Phone, BookOpen, GraduationCap, Users, Loader2 } from 'lu
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 interface TeacherRecord {
   id: string;
@@ -203,8 +204,18 @@ export function TeachersView() {
   if (loading) return <LoadingSkeleton />;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <motion.div 
+        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <div>
           <h2 className="text-lg font-semibold">Teachers</h2>
           <p className="text-sm text-muted-foreground">{teachers.length} teachers on staff</p>
@@ -273,15 +284,26 @@ export function TeachersView() {
             </DialogContent>
           </Dialog>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <motion.div 
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
         {filtered.map((teacher, idx) => (
-          <Card
+          <motion.div
             key={teacher.id}
-            className="hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => setDetailTeacher(teacher)}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: idx * 0.05 }}
+            whileHover={{ scale: 1.02 }}
           >
+            <Card
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => setDetailTeacher(teacher)}
+            >
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
                 <div
@@ -315,8 +337,9 @@ export function TeachersView() {
               </div>
             </CardContent>
           </Card>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {filtered.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -394,6 +417,6 @@ export function TeachersView() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }

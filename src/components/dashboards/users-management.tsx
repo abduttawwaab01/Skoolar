@@ -60,6 +60,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 type UserRole = 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT' | 'ACCOUNTANT' | 'LIBRARIAN' | 'DIRECTOR';
 
@@ -560,40 +561,62 @@ export function UsersManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       {/* Stats */}
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+      <motion.div 
+        className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.1 }}
+      >
         {loading ? (
           Array.from({ length: 6 }).map((_, i) => <Card key={i} className="p-4"><Skeleton className="h-4 w-20 mb-2" /><Skeleton className="h-8 w-12" /></Card>)
         ) : (
           <>
-            <Card className="p-4">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground"><Users className="size-3.5" /> Total Users</div>
-              <p className="text-2xl font-bold mt-1">{stats.total}</p>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground"><CheckCircle2 className="size-3.5 text-emerald-500" /> Active</div>
-              <p className="text-2xl font-bold mt-1 text-emerald-600">{stats.active}</p>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground"><XCircle className="size-3.5 text-red-500" /> Inactive</div>
-              <p className="text-2xl font-bold mt-1 text-red-600">{stats.inactive}</p>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground"><GraduationCap className="size-3.5" /> Students</div>
-              <p className="text-2xl font-bold mt-1">{stats.students}</p>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground"><BookOpen className="size-3.5" /> Teachers</div>
-              <p className="text-2xl font-bold mt-1">{stats.teachers}</p>
-            </Card>
-            <Card className="p-4">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground"><Shield className="size-3.5" /> Staff</div>
-              <p className="text-2xl font-bold mt-1">{stats.staff}</p>
-            </Card>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground"><Users className="size-3.5" /> Total Users</div>
+                <p className="text-2xl font-bold mt-1">{stats.total}</p>
+              </Card>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground"><CheckCircle2 className="size-3.5 text-emerald-500" /> Active</div>
+                <p className="text-2xl font-bold mt-1 text-emerald-600">{stats.active}</p>
+              </Card>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.25 }}>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground"><XCircle className="size-3.5 text-red-500" /> Inactive</div>
+                <p className="text-2xl font-bold mt-1 text-red-600">{stats.inactive}</p>
+              </Card>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground"><GraduationCap className="size-3.5" /> Students</div>
+                <p className="text-2xl font-bold mt-1">{stats.students}</p>
+              </Card>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.35 }}>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground"><BookOpen className="size-3.5" /> Teachers</div>
+                <p className="text-2xl font-bold mt-1">{stats.teachers}</p>
+              </Card>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }}>
+              <Card className="p-4">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground"><Shield className="size-3.5" /> Staff</div>
+                <p className="text-2xl font-bold mt-1">{stats.staff}</p>
+              </Card>
+            </motion.div>
           </>
         )}
-      </div>
+      </motion.div>
 
       {/* Tabs and Controls */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -743,6 +766,6 @@ export function UsersManagement() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }

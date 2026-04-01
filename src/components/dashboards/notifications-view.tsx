@@ -58,17 +58,23 @@ export function NotificationsView() {
   // Fetch notifications
   useEffect(() => {
     if (!selectedSchoolId) return;
-    setLoading(true);
-    const typeParam = activeFilter !== 'All' ? `&type=${activeFilter.toLowerCase()}` : '';
-    fetch(`/api/notifications?schoolId=${selectedSchoolId}${typeParam}&limit=100`)
-      .then(res => res.json())
-      .then(json => {
-        // API returns data in json.data, but notifications endpoint wraps differently
+
+    const fetchNotifs = async () => {
+      const typeParam = activeFilter !== 'All' ? `&type=${activeFilter.toLowerCase()}` : '';
+      try {
+        const res = await fetch(`/api/notifications?schoolId=${selectedSchoolId}${typeParam}&limit=100`);
+        const json = await res.json();
         const notifData = json.data || json || [];
         setNotifs(Array.isArray(notifData) ? notifData : []);
-      })
-      .catch(() => toast.error('Failed to load notifications'))
-      .finally(() => setLoading(false));
+      } catch {
+        toast.error('Failed to load notifications');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    setLoading(true);
+    fetchNotifs();
   }, [selectedSchoolId, activeFilter]);
 
   const filteredNotifs = React.useMemo(() => {

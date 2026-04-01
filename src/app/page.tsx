@@ -60,10 +60,14 @@ function PublicNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navLinks = [
+    { href: '/features', label: 'Features' },
     { href: '/blog', label: 'Blog' },
     { href: '/stories', label: 'Stories' },
     { href: '/learning-hub', label: 'Learning Hub' },
     { href: '/pricing', label: 'Pricing' },
+    { href: '/id-cards', label: 'ID Cards' },
+    { href: '/attendance', label: 'Attendance' },
+    { href: '/exams', label: 'Exams' },
   ];
 
   return (
@@ -255,12 +259,20 @@ function CTASection() {
 
 function Footer() {
   const footerLinks = [
+    { href: '/features', label: 'Features' },
     { href: '/blog', label: 'Blog' },
     { href: '/stories', label: 'Stories' },
     { href: '/learning-hub', label: 'Learning Hub' },
     { href: '/pricing', label: 'Pricing' },
     { href: '/privacy', label: 'Privacy Policy' },
     { href: '/cookies', label: 'Cookie Policy' },
+  ];
+
+  const socialLinks = [
+    { name: 'Facebook', url: 'https://facebook.com/skoolar' },
+    { name: 'Twitter', url: 'https://twitter.com/skoolar' },
+    { name: 'Instagram', url: 'https://instagram.com/skoolar' },
+    { name: 'LinkedIn', url: 'https://linkedin.com/company/skoolar' },
   ];
 
   return (
@@ -286,14 +298,23 @@ function Footer() {
             ))}
           </nav>
           
-          <div className="flex items-center gap-4 text-sm text-gray-500">
-            <Lock className="h-4 w-4" />
-            <span>Secure & Reliable</span>
+          <div className="flex items-center gap-3">
+            {socialLinks.map((social) => (
+              <a
+                key={social.name}
+                href={social.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-gray-500 hover:text-emerald-600 transition-colors"
+              >
+                {social.name}
+              </a>
+            ))}
           </div>
         </div>
         
         <div className="mt-8 pt-8 border-t text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} Skoolar. All rights reserved.
+          © {new Date().getFullYear()} SKOOLAR | Odebunmi Tawwāb. All rights reserved.
         </div>
       </div>
     </footer>

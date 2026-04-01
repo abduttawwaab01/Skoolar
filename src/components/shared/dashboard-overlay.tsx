@@ -44,38 +44,37 @@ export function DashboardOverlay() {
   const [isVisible, setIsVisible] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
-  const fetchOverlays = useCallback(async () => {
-    if (!currentUser) return;
-    try {
-      const params = new URLSearchParams();
-      if (currentUser.schoolId) params.set('schoolId', currentUser.schoolId);
-      params.set('userId', currentUser.id);
-      params.set('role', currentRole || '');
-      const res = await fetch(`/api/platform/overlays?${params.toString()}`);
-      if (res.ok) {
-        const json = await res.json();
-        const items = json.data || [];
-        setOverlays(items);
-
-        // Check which overlays the user has already dismissed
-        const dismissed = JSON.parse(localStorage.getItem('skoolar-dismissed-overlays') || '{}');
-
-        // Find the first overlay that should be shown
-        for (const overlay of items) {
-          if (overlay.showOnce && dismissed[overlay.id]) continue;
-          setCurrentOverlay(overlay);
-          setIsVisible(true);
-          break;
-        }
-      }
-    } catch {
-      // Silently fail
-    }
-  }, [currentUser, currentRole]);
-
   useEffect(() => {
-    fetchOverlays();
-  }, [fetchOverlays]);
+    if (!currentUser) return;
+
+    const loadOverlays = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (currentUser.schoolId) params.set('schoolId', currentUser.schoolId);
+        params.set('userId', currentUser.id);
+        params.set('role', currentRole || '');
+        const res = await fetch(`/api/platform/overlays?${params.toString()}`);
+        if (res.ok) {
+          const json = await res.json();
+          const items = json.data || [];
+          setOverlays(items);
+
+          const dismissed = JSON.parse(localStorage.getItem('skoolar-dismissed-overlays') || '{}');
+
+          for (const overlay of items) {
+            if (overlay.showOnce && dismissed[overlay.id]) continue;
+            setCurrentOverlay(overlay);
+            setIsVisible(true);
+            break;
+          }
+        }
+      } catch {
+        // Silently fail
+      }
+    };
+
+    loadOverlays();
+  }, [currentUser, currentRole]);
 
   const handleDismiss = () => {
     if (currentOverlay) {

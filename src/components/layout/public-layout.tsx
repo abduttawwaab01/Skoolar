@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { School, Menu, X, BookOpen, GraduationCap, CreditCard, PenLine, Shield, Cookie, Mail, Phone, MapPin, MessageCircle } from 'lucide-react';
+import { School, Menu, X, BookOpen, GraduationCap, CreditCard, PenLine, Shield, Cookie, Mail, Phone, MapPin, MessageCircle, Facebook, Twitter, Instagram, Linkedin, Youtube } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -186,11 +186,43 @@ function PublicHeader({ settings, pathname }: { settings: PlatformSettings | nul
 }
 
 // ── Configurable Footer Credits ────────────────────────────────────────────
-const FOOTER_CREDITS_TEXT = 'Powered by Skoolar || Odebunmi Tawwāb';
+const FOOTER_CREDITS_TEXT = 'SKOOLAR | Odebunmi Tawwāb';
+
+interface SocialLink {
+  platform: string;
+  url: string;
+  icon: React.ElementType;
+}
+
+function parseSocialLinks(json: string | null): SocialLink[] {
+  if (!json) return [];
+  try {
+    const links = JSON.parse(json);
+    return Object.entries(links).map(([platform, url]) => ({
+      platform,
+      url: url as string,
+      icon: getSocialIcon(platform),
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function getSocialIcon(platform: string): React.ElementType {
+  const icons: Record<string, React.ElementType> = {
+    facebook: Facebook,
+    twitter: Twitter,
+    instagram: Instagram,
+    linkedin: Linkedin,
+    youtube: Youtube,
+  };
+  return icons[platform.toLowerCase()] || Facebook;
+}
 
 function PublicFooter({ settings }: { settings: PlatformSettings | null }) {
   const siteName = settings?.siteName || 'Skoolar';
   const year = new Date().getFullYear();
+  const socialLinks = parseSocialLinks(settings?.socialLinks);
 
   return (
     <footer className="bg-white border-t mt-auto">
@@ -274,6 +306,30 @@ function PublicFooter({ settings }: { settings: PlatformSettings | null }) {
                 </li>
               )}
             </ul>
+            
+            {/* Social Links */}
+            {socialLinks.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Follow Us</h4>
+                <div className="flex gap-3">
+                  {socialLinks.map((link) => {
+                    const Icon = link.icon;
+                    return (
+                      <a
+                        key={link.platform}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-emerald-100 hover:text-emerald-600 transition-colors"
+                        aria-label={`Follow us on ${link.platform}`}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

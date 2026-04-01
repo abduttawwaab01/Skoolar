@@ -27,6 +27,7 @@ import {
 import { Plus, Users, UserCheck, Loader2, GraduationCap } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 interface ClassRecord {
   id: string;
@@ -173,8 +174,18 @@ export function ClassesView() {
   if (loading) return <LoadingSkeleton />;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <motion.div 
+      className="space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <motion.div 
+        className="flex items-center justify-between"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <div>
           <h2 className="text-lg font-semibold">Classes</h2>
           <p className="text-sm text-muted-foreground">{classes.length} classes configured</p>
@@ -231,17 +242,28 @@ export function ClassesView() {
             </form>
           </DialogContent>
         </Dialog>
-      </div>
+      </motion.div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {classes.map((cls) => {
+      <motion.div 
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        {classes.map((cls, idx) => {
           const pct = Math.round((cls.studentCount / cls.capacity) * 100);
           return (
-            <Card
+            <motion.div
               key={cls.id}
-              className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => setSelectedClass(cls)}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: idx * 0.05 }}
+              whileHover={{ scale: 1.02 }}
             >
+              <Card
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => setSelectedClass(cls)}
+              >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div>
@@ -280,9 +302,10 @@ export function ClassesView() {
                 </div>
               </CardContent>
             </Card>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
 
       {classes.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
@@ -340,6 +363,6 @@ export function ClassesView() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }
