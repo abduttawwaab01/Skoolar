@@ -126,7 +126,7 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
             description: 'Redirecting to dashboard...',
           });
           playLogin();
-          router.push('/');
+          router.push('/dashboard');
           router.refresh();
         }
       } else {
@@ -161,7 +161,7 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
             description: 'Redirecting to dashboard...',
           });
           playLogin();
-          router.push('/');
+          router.push('/dashboard');
           router.refresh();
         }
       }
