@@ -7,6 +7,7 @@ import { AppShell } from '@/components/layout/app-shell';
 import { useAppStore, navigationByRole, type DashboardView, type UserRole, type NavItem } from '@/store/app-store';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -92,6 +93,7 @@ export default function DashboardPage() {
   const { currentView, setCurrentView, currentRole, setCurrentRole, setCurrentUser } = useAppStore();
   const [ViewComponent, setViewComponent] = useState<React.ComponentType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -111,54 +113,62 @@ export default function DashboardPage() {
         schoolId: session.user.schoolId || '',
         schoolName: session.user.schoolName || 'Skoolar Platform',
       });
-      setCurrentRole((session.user.role as UserRole) || 'STUDENT');
+      
+      const userRole = (session.user.role as UserRole) || 'STUDENT';
+      setCurrentRole(userRole);
+      
+      // For SUPER_ADMIN, set default view to platform-management if not set
+      if (userRole === 'SUPER_ADMIN' && !currentView) {
+        setCurrentView('platform-management');
+      }
     }
+  }, [session, status, router, setCurrentUser, setCurrentRole, currentView, setCurrentView]);
 
-    // Load view component based on currentView
+  // Separate effect to load component after role is set
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session) return;
+    
     const loadComponent = async () => {
       try {
-        const loader = viewComponents[currentView as DashboardView];
+        const viewToLoad = currentView || 'overview';
+        const loader = viewComponents[viewToLoad as DashboardView];
+        
         if (loader) {
           const mod = await loader();
-          // Find the exported component
-          // If loader used .then(m => m.Component), mod is the component itself
-          // Otherwise mod is the module object
           const Component = (typeof mod === 'function') ? mod : (mod.default || Object.values(mod)[0]);
           setViewComponent(() => Component);
+          setError(null);
         } else {
           // Fallback to overview
           const mod = await viewComponents.overview();
           const Component = mod.default || Object.values(mod)[0];
           setViewComponent(() => Component);
+          setCurrentView('overview');
+          setError(null);
         }
-      } catch (error) {
-        console.error('Failed to load view component:', error);
-        setViewComponent(() => () => (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              Failed to load {currentView} view. The component may not exist.
-            </AlertDescription>
-          </Alert>
-        ));
+      } catch (err) {
+        console.error('Failed to load view component:', err);
+        setError('Failed to load dashboard. Please refresh the page.');
       } finally {
         setLoading(false);
       }
     };
 
     loadComponent();
-  }, [session, status, currentView, router, setCurrentUser, setCurrentRole]);
+  }, [currentView, session, status, setCurrentView]);
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="space-y-4 text-center">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-48" />
-          <Skeleton className="h-64 w-full max-w-4xl" />
+      <AppShell>
+        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+          <div className="space-y-4 text-center">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-64 w-full max-w-4xl" />
+          </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
@@ -166,9 +176,30 @@ export default function DashboardPage() {
     return null;
   }
 
+  if (error) {
+    return (
+      <AppShell>
+        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            <Button onClick={() => window.location.reload()}>Refresh Page</Button>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
-      <ViewComponent />
+      {ViewComponent ? <ViewComponent /> : (
+        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+          <Skeleton className="h-64 w-full max-w-4xl" />
+        </div>
+      )}
     </AppShell>
   );
 }
