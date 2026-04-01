@@ -12,6 +12,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { School, Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, UserPlus, Search, Check, GraduationCap, Users, UserCircle, Briefcase, Shield } from 'lucide-react';
 import { toast } from 'sonner';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LoginOverlay } from '@/components/shared/login-overlay';
 import { playLogin, playError } from '@/lib/ui-sounds';
 
@@ -33,6 +34,7 @@ const ROLES = [
 
 export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => void }) {
   const router = useRouter();
+  const [loginMode, setLoginMode] = useState<'member' | 'staff'>('member');
   const [step, setStep] = useState<'credentials' | 'school'>('school');
   const [selectedRole, setSelectedRole] = useState('');
   const [schools, setSchools] = useState<SchoolOption[]>([]);
@@ -40,6 +42,18 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
   const [schoolSearch, setSchoolSearch] = useState('');
   const [schoolLoading, setSchoolLoading] = useState(false);
   const [schoolOpen, setSchoolOpen] = useState(false);
+  
+  const handleModeChange = (mode: 'member' | 'staff') => {
+    setLoginMode(mode);
+    if (mode === 'staff') {
+      setSelectedSchool(null);
+      setSelectedRole('SUPER_ADMIN');
+      setStep('credentials');
+    } else {
+      setStep('school');
+      setSelectedRole('');
+    }
+  };
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -189,16 +203,24 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
                 </div>
                 
                 <CardTitle className="text-2xl font-bold">
-                  {step === 'school' ? '🏫 Select Your School' : 'Welcome Back!'}
+                  {loginMode === 'staff' ? '🛡️ Platform Access' : step === 'school' ? '🏫 Select Your School' : 'Welcome Back!'}
                 </CardTitle>
                 <CardDescription>
-                  {step === 'school' 
-                    ? 'Search and select your school' 
-                    : `Enter your ${selectedSchool?.name || 'school'} credentials`}
+                  {loginMode === 'staff' 
+                    ? 'Global system administration' 
+                    : step === 'school' 
+                      ? 'Search and select your school' 
+                      : `Enter your ${selectedSchool?.name || 'school'} credentials`}
                 </CardDescription>
               </CardHeader>
               
               <CardContent className="space-y-4">
+                <Tabs value={loginMode} onValueChange={(v) => handleModeChange(v as 'member' | 'staff')} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsTrigger value="member">School Member</TabsTrigger>
+                    <TabsTrigger value="staff">Platform Staff</TabsTrigger>
+                  </TabsList>
+                </Tabs>
                 {/* Step 1: School Selection */}
                 {step === 'school' && (
                   <div className="space-y-3">
@@ -269,20 +291,6 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
                         </Command>
                       </PopoverContent>
                     </Popover>
-                    
-                    <div className="text-center">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => {
-                          setSelectedSchool(null);
-                          setSelectedRole('SUPER_ADMIN');
-                          setStep('credentials');
-                        }}
-                        className="w-full"
-                      >
-                        Continue without school (Platform Admin)
-                      </Button>
-                    </div>
                   </div>
                 )}
 
@@ -296,9 +304,15 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
                       </div>
                     )}
 
-                    {!selectedSchool && (
-                      <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-100">
-                        <span className="text-sm text-amber-700 font-medium">Platform Admin</span>
+                    {!selectedSchool && loginMode === 'staff' && (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-indigo-50 border border-indigo-100 shadow-sm shadow-indigo-100/50">
+                        <div className="p-1.5 rounded-lg bg-indigo-200/50 text-indigo-700">
+                          <Shield className="size-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-indigo-900 leading-none">System Administrator</p>
+                          <p className="text-[10px] text-indigo-600 mt-1 uppercase tracking-wider font-semibold">Global Management Access</p>
+                        </div>
                       </div>
                     )}
 
@@ -330,25 +344,25 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
                     </div>
 
                     {/* Role Selection */}
-                    {!selectedSchool && (
+                    {selectedSchool && (
                       <div className="space-y-2">
                         <Label>Login as</Label>
                         <div className="grid grid-cols-2 gap-2">
-                          {ROLES.map((role) => {
+                          {ROLES.filter(r => r.value !== 'SUPER_ADMIN').map((role) => {
                             const Icon = role.icon;
                             return (
                               <button
                                 key={role.value}
                                 type="button"
                                 onClick={() => setSelectedRole(role.value)}
-                                className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${
+                                className={`flex items-center gap-2 p-2 rounded-lg border text-left transition-all ${
                                   selectedRole === role.value
-                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                                    : 'border-gray-200 hover:border-emerald-300'
+                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-500/20'
+                                    : 'border-gray-200 hover:border-emerald-300 hover:bg-gray-50'
                                 }`}
                               >
-                                <Icon className="size-4" />
-                                <span className="text-sm font-medium">{role.label}</span>
+                                <Icon className="size-4 shrink-0" />
+                                <span className="text-sm font-medium truncate">{role.label}</span>
                               </button>
                             );
                           })}
