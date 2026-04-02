@@ -72,6 +72,7 @@ const viewComponents: Record<DashboardView, () => Promise<any>> = {
   'video-lessons': () => import('@/components/dashboards/video-lessons').then(m => m.default || m.VideoLessons),
   'student-video-lessons': () => import('@/components/features/video-lessons').then(m => m.default || m.VideoLessons),
   'parent-homework': () => import('@/components/features/homework-management').then(m => m.default || m.HomeworkManagement),
+  'parent-video-lessons': () => import('@/components/features/video-lessons').then(m => m.default || m.VideoLessons),
   'teacher-homework': () => import('@/components/features/homework-management').then(m => m.default || m.HomeworkManagement),
   'report-card-view': () => import('@/components/dashboards/report-card-view').then(m => m.ReportCardView),
   'teacher-grades': () => import('@/components/dashboards/teacher-grades').then(m => m.TeacherGrades || m.default),

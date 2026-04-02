@@ -22,7 +22,7 @@ export type DashboardView =
   | 'parent-portal' | 'admin-analytics-advanced'
   | 'notice-board' | 'student-diary' | 'student-ai-chat'
   | 'homework' | 'video-lessons' | 'student-video-lessons'
-  | 'parent-homework' | 'teacher-homework'
+  | 'parent-homework' | 'parent-video-lessons' | 'teacher-homework'
   | 'report-card-view' | 'support' | 'subscription' | 'school-settings'
   | 'platform-management' | 'school-controls' | 'overlay-management' | 'plans-manager' | 'danger-zone'
   | 'class-monitoring' | 'messaging-center' | 'weekly-evaluations'
@@ -215,13 +215,14 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
     { id: 'student-ai-chat', label: 'AI Study Assistant', icon: 'sparkles' },
     { id: 'notifications', label: 'Notifications', icon: 'bell', badge: 2 },
   ],
-  PARENT: [
+   PARENT: [
     { id: 'overview', label: 'Dashboard', icon: 'layout-dashboard' },
     { id: 'parent-portal', label: 'My Children', icon: 'users' },
     { id: 'results', label: 'Child Results', icon: 'file-bar-chart' },
     { id: 'report-cards', label: 'Report Cards', icon: 'award' },
     { id: 'attendance', label: 'Attendance', icon: 'calendar-check' },
     { id: 'parent-homework', label: 'Child Homework', icon: 'book-open' },
+    { id: 'parent-video-lessons', label: 'Video Lessons', icon: 'video' },
     { id: 'student-diary', label: 'Child Diary', icon: 'book-open' },
     { id: 'finance', label: 'Fee Payments', icon: 'wallet' },
     { id: 'messaging-center', label: 'Messages', icon: 'message-circle', badge: 5 },
