@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/layout/app-shell';
@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Map of view IDs to their components
 // Map of view IDs to their components - Using a loader function type to avoid TS component mismatch
@@ -55,6 +56,7 @@ const viewComponents: Record<DashboardView, () => Promise<any>> = {
   branding: () => import('@/components/dashboards/branding-view').then(m => m.BrandingView),
   reports: () => import('@/components/dashboards/reports-view').then(m => m.ReportsView),
   'users-management': () => import('@/components/dashboards/users-management').then(m => m.UsersManagement),
+  'payment-verification': () => import('@/components/dashboards/payment-verification-view').then(m => m.PaymentVerificationView),
   'ai-grading': () => import('@/components/features/ai-grading-assistant').then(m => m.default || m.AIGradingAssistant),
   'bulk-operations': () => import('@/components/features/bulk-operations').then(m => m.default || m.BulkOperations),
   'advanced-search': () => import('@/components/features/advanced-search').then(m => m.default || m.AdvancedSearch),
@@ -94,10 +96,75 @@ const viewComponents: Record<DashboardView, () => Promise<any>> = {
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { currentView, setCurrentView, currentRole, setCurrentRole, setCurrentUser } = useAppStore();
+  const queryClient = useQueryClient();
+  const { currentView, setCurrentView, currentRole, setCurrentRole, setCurrentUser, currentUser } = useAppStore();
   const [ViewComponent, setViewComponent] = useState<React.ComponentType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const prefetchViewData = useCallback(async (view: DashboardView) => {
+    if (!currentUser.schoolId) return;
+    
+    const prefetchMap: Record<DashboardView, () => Promise<void>> = {
+      'students': () => queryClient.prefetchQuery({
+        queryKey: ['students', { limit: 50 }, currentUser.schoolId],
+        queryFn: () => fetch(`/api/students?limit=50`).then(r => r.json()),
+      }),
+      'teachers': () => queryClient.prefetchQuery({
+        queryKey: ['teachers', { limit: 50 }, currentUser.schoolId],
+        queryFn: () => fetch(`/api/teachers?limit=50`).then(r => r.json()),
+      }),
+      'classes': () => queryClient.prefetchQuery({
+        queryKey: ['classes', currentUser.schoolId],
+        queryFn: () => fetch(`/api/classes?schoolId=${currentUser.schoolId}`).then(r => r.json()),
+      }),
+      'attendance': () => queryClient.prefetchQuery({
+        queryKey: ['attendance', { limit: 100 }, currentUser.schoolId],
+        queryFn: () => fetch(`/api/attendance?limit=100`).then(r => r.json()),
+      }),
+      'exams': () => queryClient.prefetchQuery({
+        queryKey: ['exams', currentUser.schoolId],
+        queryFn: () => fetch(`/api/exams`).then(r => r.json()),
+      }),
+      'results': () => queryClient.prefetchQuery({
+        queryKey: ['results', currentUser.schoolId],
+        queryFn: () => fetch(`/api/results`).then(r => r.json()),
+      }),
+      'finance': () => queryClient.prefetchQuery({
+        queryKey: ['payments', currentUser.schoolId],
+        queryFn: () => fetch(`/api/payments`).then(r => r.json()),
+      }),
+      'payments': () => queryClient.prefetchQuery({
+        queryKey: ['payments', currentUser.schoolId],
+        queryFn: () => fetch(`/api/payments`).then(r => r.json()),
+      }),
+      'analytics': () => queryClient.prefetchQuery({
+        queryKey: ['analytics', currentUser.schoolId],
+        queryFn: () => fetch(`/api/analytics?schoolId=${currentUser.schoolId}`).then(r => r.json()),
+      }),
+      'announcements': () => queryClient.prefetchQuery({
+        queryKey: ['announcements', currentUser.schoolId],
+        queryFn: () => fetch(`/api/announcements?schoolId=${currentUser.schoolId}`).then(r => r.json()),
+      }),
+      'subjects': () => queryClient.prefetchQuery({
+        queryKey: ['subjects', currentUser.schoolId],
+        queryFn: () => fetch(`/api/subjects?schoolId=${currentUser.schoolId}`).then(r => r.json()),
+      }),
+      'homework': () => queryClient.prefetchQuery({
+        queryKey: ['homework', currentUser.schoolId],
+        queryFn: () => fetch(`/api/homework`).then(r => r.json()),
+      }),
+      'overview': () => queryClient.prefetchQuery({
+        queryKey: ['analytics', currentUser.schoolId],
+        queryFn: () => fetch(`/api/analytics?schoolId=${currentUser.schoolId}`).then(r => r.json()),
+      }),
+    };
+
+    const prefetchFn = prefetchMap[view];
+    if (prefetchFn) {
+      prefetchFn().catch(console.error);
+    }
+  }, [queryClient, currentUser.schoolId]);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -143,6 +210,7 @@ export default function DashboardPage() {
           const Component = (typeof mod === 'function') ? mod : (mod.default || Object.values(mod)[0]);
           setViewComponent(() => Component);
           setError(null);
+          prefetchViewData(viewToLoad as DashboardView);
         } else {
           // Fallback to overview
           const mod = await viewComponents.overview();
@@ -150,6 +218,7 @@ export default function DashboardPage() {
           setViewComponent(() => Component);
           setCurrentView('overview');
           setError(null);
+          prefetchViewData('overview');
         }
       } catch (err) {
         console.error('Failed to load view component:', err);

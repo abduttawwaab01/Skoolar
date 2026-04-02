@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -190,6 +193,14 @@ export function SubscriptionView() {
   const [payment, setPayment] = React.useState<PaymentData | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [subscribing, setSubscribing] = React.useState<string | null>(null);
+  
+  // Bank transfer modal state
+  const [showBankTransfer, setShowBankTransfer] = React.useState(false);
+  const [selectedPlan, setSelectedPlan] = React.useState<Plan | null>(null);
+  const [transferAmount, setTransferAmount] = React.useState('');
+  const [transferDate, setTransferDate] = React.useState('');
+  const [transferNote, setTransferNote] = React.useState('');
+  const [submittingPayment, setSubmittingPayment] = React.useState(false);
 
   const isSuperAdmin = currentRole === 'SUPER_ADMIN';
 
@@ -309,27 +320,34 @@ export function SubscriptionView() {
     }));
   }, [plans]);
 
-  // Handle subscribe
-  const handleSubscribe = async (plan: typeof displayPlans[0]) => {
+  // Handle subscribe - open payment modal
+  const handleSubscribe = (plan: typeof displayPlans[0]) => {
     if (!schoolId || !school?.email) {
       toast.error('School information is required to subscribe');
       return;
     }
+    setSelectedPlan(plan as Plan);
+    setTransferAmount(String(plan.price));
+    setShowBankTransfer(true);
+  };
+
+  // Handle Paystack online payment
+  const handlePaystackPayment = async () => {
+    if (!schoolId || !school?.email || !selectedPlan) return;
     try {
-      setSubscribing(plan.id);
+      setSubscribing(selectedPlan.id);
       const res = await fetch('/api/payments/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           schoolId,
-          planId: plan.id,
+          planId: selectedPlan.id,
           email: school.email,
         }),
       });
       if (res.ok) {
         const json = await res.json();
         if (json.data?.authorization_url) {
-          // Redirect to Paystack
           window.location.href = json.data.authorization_url;
         } else {
           toast.success('Subscription initiated! Payment record created.');
@@ -342,6 +360,45 @@ export function SubscriptionView() {
       toast.error('Failed to initiate subscription');
     } finally {
       setSubscribing(null);
+    }
+  };
+
+  // Handle manual bank transfer submission
+  const handleSubmitBankTransfer = async () => {
+    if (!selectedPlan || !schoolId || !transferAmount || !transferDate) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setSubmittingPayment(true);
+    try {
+      const res = await fetch('/api/payments/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schoolId,
+          planId: selectedPlan.id,
+          amount: Number(transferAmount),
+          transferDate,
+          notes: transferNote,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success('Payment submitted! We will verify and activate your plan shortly.');
+        setShowBankTransfer(false);
+        setSelectedPlan(null);
+        setTransferAmount('');
+        setTransferDate('');
+        setTransferNote('');
+      } else {
+        const json = await res.json();
+        toast.error(json.error || 'Failed to submit payment');
+      }
+    } catch {
+      toast.error('Failed to submit payment');
+    } finally {
+      setSubmittingPayment(false);
     }
   };
 
@@ -377,6 +434,98 @@ export function SubscriptionView() {
 
   return (
     <div className="space-y-6">
+      {/* Bank Transfer Payment Modal */}
+      <Dialog open={showBankTransfer} onOpenChange={setShowBankTransfer}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pay with Bank Transfer</DialogTitle>
+            <DialogDescription>
+              Transfer to the account below and submit your payment for verification.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Bank Details */}
+            <div className="p-4 bg-gray-50 rounded-lg space-y-2">
+              <p className="text-sm font-medium text-gray-900">Bank Transfer Details</p>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <span className="text-gray-500">Bank Name:</span>
+                <span className="font-medium">Palmpay</span>
+                <span className="text-gray-500">Account Number:</span>
+                <span className="font-medium">9033460322</span>
+                <span className="text-gray-500">Account Name:</span>
+                <span className="font-medium">Skoolar Technologies</span>
+              </div>
+              {selectedPlan && (
+                <div className="mt-2 pt-2 border-t">
+                  <p className="text-sm">
+                    <span className="text-gray-500">Amount to pay: </span>
+                    <span className="font-bold text-emerald-600">{formatCurrency(selectedPlan.price)}</span>
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Payment Form */}
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="amount">Amount Paid *</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    placeholder="e.g. 5000"
+                    value={transferAmount}
+                    onChange={(e) => setTransferAmount(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="date">Transfer Date *</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={transferDate}
+                    onChange={(e) => setTransferDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-1">
+                <Label htmlFor="note">Notes (Optional)</Label>
+                <Input
+                  id="note"
+                  placeholder="Any additional information..."
+                  value={transferNote}
+                  onChange={(e) => setTransferNote(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setShowBankTransfer(false);
+                  if (selectedPlan) handlePaystackPayment();
+                }}
+              >
+                Pay Online Instead
+              </Button>
+              <Button
+                className="flex-1 gap-2"
+                onClick={handleSubmitBankTransfer}
+                disabled={submittingPayment || !transferAmount || !transferDate}
+              >
+                {submittingPayment && <Loader2 className="size-4 animate-spin" />}
+                Submit Payment
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

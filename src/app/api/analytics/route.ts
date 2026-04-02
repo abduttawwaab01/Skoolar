@@ -1,13 +1,19 @@
-import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-middleware';
 
-// GET /api/analytics - Comprehensive analytics data
+export const dynamic = 'force-dynamic';
+
+const CACHE_CONTROL = 'public, s-maxage=30, stale-while-revalidate=60';
+
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+
     const { searchParams } = new URL(request.url);
     const schoolId = searchParams.get('schoolId') || '';
     const termId = searchParams.get('termId') || '';
-    const classId = searchParams.get('classId') || '';
 
     if (!schoolId) {
       return NextResponse.json(
@@ -19,9 +25,6 @@ export async function GET(request: NextRequest) {
     const where: Record<string, unknown> = { schoolId };
     if (termId) where.termId = termId;
 
-    // ==========================================
-    // 1. School Overview
-    // ==========================================
     const [
       totalStudents,
       totalTeachers,
@@ -42,9 +45,6 @@ export async function GET(request: NextRequest) {
       studentTeacherRatio: totalTeachers > 0 ? Math.round((totalStudents / totalTeachers) * 10) / 10 : 0,
     };
 
-    // ==========================================
-    // 2. Attendance Stats by Class
-    // ==========================================
     const classes = await db.class.findMany({
       where: { schoolId, deletedAt: null },
       select: {
@@ -72,23 +72,30 @@ export async function GET(request: NextRequest) {
       percentage: number;
     }> = [];
 
-    for (const cls of classes) {
-      const attendanceWhere: Record<string, unknown> = {
-        classId: cls.id,
-        schoolId,
-      };
-      if (termId) {
-        attendanceWhere.termId = termId;
+    const classIds = classes.map(c => c.id);
+    const attendanceWhere: Record<string, unknown> = { schoolId };
+    if (termId) attendanceWhere.termId = termId;
+    if (classIds.length > 0) attendanceWhere.classId = { in: classIds };
+
+    const allAttendance = await db.attendance.findMany({
+      where: attendanceWhere,
+      select: { classId: true, status: true },
+    });
+
+    const attendanceByClassId = new Map<string, { present: number; absent: number; late: number }>();
+    for (const record of allAttendance) {
+      if (!attendanceByClassId.has(record.classId)) {
+        attendanceByClassId.set(record.classId, { present: 0, absent: 0, late: 0 });
       }
+      const counts = attendanceByClassId.get(record.classId)!;
+      if (record.status === 'present') counts.present++;
+      else if (record.status === 'absent') counts.absent++;
+      else if (record.status === 'late') counts.late++;
+    }
 
-      const records = await db.attendance.findMany({
-        where: attendanceWhere,
-        select: { status: true },
-      });
-
-      const presentCount = records.filter((r) => r.status === 'present').length;
-      const absentCount = records.filter((r) => r.status === 'absent').length;
-      const lateCount = records.filter((r) => r.status === 'late').length;
+    for (const cls of classes) {
+      const counts = attendanceByClassId.get(cls.id) || { present: 0, absent: 0, late: 0 };
+      const totalRecords = counts.present + counts.absent + counts.late;
 
       attendanceByClass.push({
         classId: cls.id,
@@ -96,20 +103,16 @@ export async function GET(request: NextRequest) {
         section: cls.section,
         grade: cls.grade,
         totalStudents: cls.students.length,
-        totalRecords: records.length,
-        presentCount,
-        absentCount,
-        lateCount,
-        percentage: records.length > 0 ? Math.round((presentCount / records.length) * 100) : 0,
+        totalRecords,
+        presentCount: counts.present,
+        absentCount: counts.absent,
+        lateCount: counts.late,
+        percentage: totalRecords > 0 ? Math.round((counts.present / totalRecords) * 100) : 0,
       });
     }
 
-    // ==========================================
-    // 3. Performance Stats by Class/Subject
-    // ==========================================
     const examWhere: Record<string, unknown> = { schoolId };
     if (termId) examWhere.termId = termId;
-    if (classId) examWhere.classId = classId;
 
     const exams = await db.exam.findMany({
       where: examWhere,
@@ -119,11 +122,31 @@ export async function GET(request: NextRequest) {
         totalMarks: true,
         passingMarks: true,
         subjectId: true,
-        classId: true,
         subject: { select: { name: true } },
-        class: { select: { name: true, section: true } },
       },
     });
+
+    const examIds = exams.map(e => e.id);
+    let examScores: Array<{ examId: string; score: number }> = [];
+    if (examIds.length > 0) {
+      examScores = await db.examScore.findMany({
+        where: { examId: { in: examIds } },
+        select: { examId: true, score: true },
+      });
+    }
+
+    const scoresByExamId = new Map<string, number[]>();
+    for (const s of examScores) {
+      if (!scoresByExamId.has(s.examId)) scoresByExamId.set(s.examId, []);
+      scoresByExamId.get(s.examId)!.push(s.score);
+    }
+
+    const subjectGroups = new Map<string, typeof exams>();
+    for (const exam of exams) {
+      const key = exam.subjectId;
+      if (!subjectGroups.has(key)) subjectGroups.set(key, []);
+      subjectGroups.get(key)!.push(exam);
+    }
 
     const performanceBySubject: Array<{
       subjectId: string;
@@ -135,24 +158,10 @@ export async function GET(request: NextRequest) {
       passRate: number;
     }> = [];
 
-    // Group exams by subject
-    const subjectGroups = new Map<string, typeof exams>();
-    for (const exam of exams) {
-      const key = exam.subjectId;
-      if (!subjectGroups.has(key)) {
-        subjectGroups.set(key, []);
-      }
-      subjectGroups.get(key)!.push(exam);
-    }
-
     for (const [subjectId, subjectExams] of subjectGroups) {
-      const examIds = subjectExams.map((e) => e.id);
-      const scores = await db.examScore.findMany({
-        where: { examId: { in: examIds } },
-        select: { score: true },
-      });
-
-      const scoreValues = scores.map((s) => s.score);
+      const subjectExamIds = subjectExams.map(e => e.id);
+      const subjectScores = examScores.filter(s => subjectExamIds.includes(s.examId));
+      const scoreValues = subjectScores.map(s => s.score);
       const passingMarks = subjectExams[0]?.passingMarks || 50;
 
       performanceBySubject.push({
@@ -165,14 +174,11 @@ export async function GET(request: NextRequest) {
         highestScore: scoreValues.length > 0 ? Math.max(...scoreValues) : 0,
         lowestScore: scoreValues.length > 0 ? Math.min(...scoreValues) : 0,
         passRate: scoreValues.length > 0
-          ? Math.round((scores.filter((s) => s.score >= passingMarks).length / scoreValues.length) * 100)
+          ? Math.round((scoreValues.filter(s => s >= passingMarks).length / scoreValues.length) * 100)
           : 0,
       });
     }
 
-    // ==========================================
-    // 4. Financial Summary
-    // ==========================================
     const financialSummary = await db.payment.aggregate({
       _sum: { amount: true },
       _count: true,
@@ -189,80 +195,13 @@ export async function GET(request: NextRequest) {
     const financialData = {
       totalRevenue: financialSummary._sum.amount || 0,
       totalTransactions: financialSummary._count,
-      byStatus: paymentsByStatus.map((p) => ({
+      byStatus: paymentsByStatus.map(p => ({
         status: p.status,
         total: p._sum.amount || 0,
         count: p._count,
       })),
     };
 
-    // ==========================================
-    // 5. Student Ranking
-    // ==========================================
-    const effectiveClassId = classId || null;
-
-    const studentQueryWhere: Record<string, unknown> = {
-      schoolId,
-      deletedAt: null,
-      isActive: true,
-    };
-    if (effectiveClassId) studentQueryWhere.classId = effectiveClassId;
-
-    const students = await db.student.findMany({
-      where: studentQueryWhere,
-      select: {
-        id: true,
-        admissionNo: true,
-        userId: true,
-        classId: true,
-        gpa: true,
-        cumulativeGpa: true,
-        user: { select: { name: true, avatar: true } },
-        class: { select: { name: true, section: true } },
-      },
-      orderBy: { gpa: 'desc' },
-      take: 50,
-    });
-
-    // Get exam scores for each student for ranking
-    const rankedStudents: Array<{
-      id: string;
-      admissionNo: string;
-      userId: string;
-      classId: string | null;
-      gpa: number;
-      cumulativeGpa: number;
-      user: { name: string | null; avatar: string | null };
-      class: { name: string; section: string | null } | null;
-      totalScore: number;
-      examCount: number;
-    }> = [];
-    for (const student of students) {
-      const scoreWhere: Record<string, unknown> = { studentId: student.id };
-      if (termId) {
-        scoreWhere.exam = { termId };
-      }
-
-      const examScores = await db.examScore.findMany({
-        where: scoreWhere,
-        select: { score: true },
-      });
-
-      const totalScore = examScores.reduce((sum, s) => sum + s.score, 0);
-
-      rankedStudents.push({
-        ...student,
-        totalScore,
-        examCount: examScores.length,
-      });
-    }
-
-    // Sort by total score
-    rankedStudents.sort((a, b) => b.totalScore - a.totalScore);
-
-    // ==========================================
-    // 6. Attendance Trend (last 30 days)
-    // ==========================================
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -274,7 +213,6 @@ export async function GET(request: NextRequest) {
       select: { date: true, status: true },
     });
 
-    // Group by date
     const attendanceTrend = new Map<string, { date: string; present: number; absent: number; late: number; total: number }>();
     for (const record of recentAttendance) {
       const dateKey = record.date.toISOString().split('T')[0];
@@ -288,20 +226,19 @@ export async function GET(request: NextRequest) {
       else if (record.status === 'late') dayData.late++;
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       data: {
         schoolOverview,
         attendanceByClass,
         performanceBySubject,
         financialData,
-        studentRanking: rankedStudents.map((s, i) => ({
-          rank: i + 1,
-          ...s,
-        })),
         attendanceTrend: Array.from(attendanceTrend.values()).sort((a, b) => a.date.localeCompare(b.date)),
         generatedAt: new Date().toISOString(),
       },
     });
+
+    response.headers.set('Cache-Control', CACHE_CONTROL);
+    return response;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

@@ -2,6 +2,10 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
 
+export const dynamic = 'force-dynamic';
+
+const CACHE_CONTROL = 'public, s-maxage=15, stale-while-revalidate=30';
+
 // GET /api/students - List students with filters
 export async function GET(request: NextRequest) {
   try {
@@ -106,6 +110,10 @@ export async function GET(request: NextRequest) {
       total,
       page,
       totalPages: Math.ceil(total / limit),
+    }, {
+      headers: {
+        'Cache-Control': CACHE_CONTROL,
+      },
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';

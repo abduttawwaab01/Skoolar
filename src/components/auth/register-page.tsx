@@ -6,13 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { School, Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, ArrowLeft, User, KeyRound, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Badge } from '@/components/ui/badge';
+import { School, Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, ArrowLeft, User, KeyRound, CheckCircle2, AlertCircle, Sparkles, Gift, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { soundEffects } from '@/lib/ui-sounds';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeIn, slideUp, staggerContainer, scaleIn } from '@/lib/motion-variants';
 
 export function RegisterPage({ onSwitchToLogin }: { onSwitchToLogin: () => void }) {
+  const [registrationType, setRegistrationType] = useState<'free' | 'code'>('free');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -32,7 +35,11 @@ export function RegisterPage({ onSwitchToLogin }: { onSwitchToLogin: () => void 
     if (!formData.name.trim()) newErrors.name = 'Full name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Invalid email format';
-    if (!formData.registrationCode.trim()) newErrors.registrationCode = 'Registration code is required';
+    
+    if (registrationType === 'code' && !formData.registrationCode.trim()) {
+      newErrors.registrationCode = 'Registration code is required';
+    }
+    
     if (!formData.schoolName.trim()) newErrors.schoolName = 'School name is required';
     if (!formData.password) newErrors.password = 'Password is required';
     else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
@@ -67,7 +74,7 @@ export function RegisterPage({ onSwitchToLogin }: { onSwitchToLogin: () => void 
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          registrationCode: formData.registrationCode,
+          registrationCode: registrationType === 'code' ? formData.registrationCode : null,
           schoolName: formData.schoolName,
         }),
       });
@@ -83,7 +90,7 @@ export function RegisterPage({ onSwitchToLogin }: { onSwitchToLogin: () => void 
       }
 
       toast.success('Account created! 🎉', {
-        description: 'Your account has been created. You can now sign in.',
+        description: 'Your school has been created. You can now sign in.',
       });
       soundEffects.success();
 
@@ -165,23 +172,61 @@ export function RegisterPage({ onSwitchToLogin }: { onSwitchToLogin: () => void 
                   className="grid gap-4"
                   variants={staggerContainer}
                 >
-                  {/* Registration Code */}
-                  <motion.div variants={slideUp} className="space-y-2">
-                    <Label htmlFor="registration-code" className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
-                      🔑 Registration Code
+                  {/* Registration Type Toggle */}
+                  <motion.div variants={slideUp} className="space-y-3">
+                    <Label className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                      Choose Registration Type
                     </Label>
-                    <Input
-                      id="registration-code"
-                      type="text"
-                      placeholder="Enter your school registration code"
-                      value={formData.registrationCode}
-                      onChange={(e) => handleChange('registrationCode', e.target.value)}
-                      className={`h-11 bg-gray-50/50 border-gray-200 focus:bg-white focus:ring-emerald-500/20 transition-all rounded-xl ${errors.registrationCode ? 'border-red-300' : ''}`}
-                      required
-                      disabled={isLoading}
-                    />
-                    {errors.registrationCode && <p className="text-xs text-red-500 flex items-center gap-1 mt-1"><AlertCircle className="size-3" />{errors.registrationCode}</p>}
+                    <RadioGroup
+                      value={registrationType}
+                      onValueChange={(value) => setRegistrationType(value as 'free' | 'code')}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2 flex-1">
+                        <RadioGroupItem value="free" id="free" className="peer" />
+                        <Label 
+                          htmlFor="free" 
+                          className="flex items-center gap-2 cursor-pointer peer-data-[state=checked]:text-emerald-600"
+                        >
+                          <Gift className="size-4 text-emerald-500" />
+                          <span className="font-medium">Free Account</span>
+                          <Badge variant="secondary" className="ml-auto text-[10px] bg-emerald-100 text-emerald-700">
+                            Quick
+                          </Badge>
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2 flex-1">
+                        <RadioGroupItem value="code" id="code" className="peer" />
+                        <Label 
+                          htmlFor="code" 
+                          className="flex items-center gap-2 cursor-pointer peer-data-[state=checked]:text-emerald-600"
+                        >
+                          <KeyRound className="size-4 text-amber-500" />
+                          <span className="font-medium">With Code</span>
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </motion.div>
+
+                  {/* Registration Code (Conditional) */}
+                  {registrationType === 'code' && (
+                    <motion.div variants={slideUp} className="space-y-2">
+                      <Label htmlFor="registration-code" className="text-xs font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1.5">
+                        🔑 Registration Code
+                      </Label>
+                      <Input
+                        id="registration-code"
+                        type="text"
+                        placeholder="Enter your school registration code"
+                        value={formData.registrationCode}
+                        onChange={(e) => handleChange('registrationCode', e.target.value)}
+                        className={`h-11 bg-gray-50/50 border-gray-200 focus:bg-white focus:ring-emerald-500/20 transition-all rounded-xl ${errors.registrationCode ? 'border-red-300' : ''}`}
+                        disabled={isLoading}
+                      />
+                      {errors.registrationCode && <p className="text-xs text-red-500 flex items-center gap-1 mt-1"><AlertCircle className="size-3" />{errors.registrationCode}</p>}
+                      <p className="text-[10px] text-gray-400">Enter the code provided by your school administrator</p>
+                    </motion.div>
+                  )}
 
                   {/* School Name */}
                   <motion.div variants={slideUp} className="space-y-2">

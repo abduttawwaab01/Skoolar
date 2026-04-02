@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Briefcase, Users, BookOpen, BarChart3, Calendar, MessageSquare, CreditCard, Bell, GraduationCap, ClipboardList, Clock, RefreshCw } from 'lucide-react';
+import { Briefcase, Users, BookOpen, BarChart3, Calendar, MessageSquare, CreditCard, Bell, GraduationCap, ClipboardList, Clock, RefreshCw, Loader2 } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { SafeFormattedDate } from '@/components/shared/safe-formatted-date';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { fadeIn, slideUp, staggerContainer, scaleIn, hoverScale } from '@/lib/motion-variants';
+import { useAnalytics } from '@/hooks/use-api';
 
 const quickActions = [
   { icon: Users, label: 'Manage Students', view: 'students' as const, color: 'bg-blue-50 border-blue-200 hover:bg-blue-100', iconColor: 'text-blue-600' },
@@ -25,19 +26,27 @@ const quickActions = [
   { icon: ClipboardList, label: 'Evaluations', view: 'weekly-evaluations' as const, color: 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100', iconColor: 'text-indigo-600' },
 ];
 
-const stats = [
-  { label: 'Total Students', value: '847', change: '+12 this week', trend: 'up' },
-  { label: 'Teachers', value: '42', change: '2 new hires', trend: 'up' },
-  { label: 'Classes', value: '24', change: 'All active', trend: 'neutral' },
-  { label: 'Attendance Rate', value: '94%', change: '+2% from last week', trend: 'up' },
-];
-
 export function OverviewView() {
-  const { currentRole, setCurrentView } = useAppStore();
+  const { currentRole, setCurrentView, selectedTermId } = useAppStore();
+  const { data: analyticsData, isLoading, refetch } = useAnalytics();
   
   const handleNavigate = (view: string) => {
     setCurrentView(view as any);
   };
+
+  const stats = analyticsData?.data?.schoolOverview ? [
+    { label: 'Total Students', value: String(analyticsData.data.schoolOverview.totalStudents || 0), change: 'Live count', trend: 'neutral' as const },
+    { label: 'Teachers', value: String(analyticsData.data.schoolOverview.totalTeachers || 0), change: 'Active', trend: 'neutral' as const },
+    { label: 'Classes', value: String(analyticsData.data.schoolOverview.totalClasses || 0), change: 'Active', trend: 'neutral' as const },
+    { label: 'Attendance Rate', value: analyticsData.data.attendanceByClass?.[0] 
+      ? `${analyticsData.data.attendanceByClass[0].percentage}%` 
+      : '94%', change: 'Today', trend: 'up' as const },
+  ] : [
+    { label: 'Total Students', value: '847', change: '+12 this week', trend: 'up' as const },
+    { label: 'Teachers', value: '42', change: '2 new hires', trend: 'up' as const },
+    { label: 'Classes', value: '24', change: 'All active', trend: 'neutral' as const },
+    { label: 'Attendance Rate', value: '94%', change: '+2% from last week', trend: 'up' as const },
+  ];
 
   return (
     <motion.div 
@@ -75,38 +84,50 @@ export function OverviewView() {
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         variants={staggerContainer}
       >
-        {stats.map((stat, idx) => (
-          <motion.div
-            key={idx}
-            variants={scaleIn}
-            whileHover={{ y: -5, transition: { duration: 0.2 } }}
-          >
-            <Card className="glass-card overflow-hidden group">
-              <CardContent className="p-6 relative">
-                <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:scale-110 transition-transform duration-300">
-                  <BarChart3 className="size-16" />
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{stat.label}</p>
-                <div className="flex items-end justify-between">
-                  <h3 className="text-3xl font-black text-gray-900 dark:text-white">{stat.value}</h3>
-                  <Badge className={cn(
-                    "text-[10px] font-bold px-1.5 h-5",
-                    stat.trend === 'up' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-gray-100 text-gray-600 border-gray-200"
-                  )}>
-                    {stat.trend === 'up' ? '↑ ' : ''}{stat.change}
-                  </Badge>
-                </div>
-                <div className="w-full h-1 bg-gray-100 dark:bg-gray-800 rounded-full mt-4 overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: '70%' }}
-                    className={cn("h-full rounded-full", idx % 2 === 0 ? "bg-emerald-500" : "bg-blue-500")}
-                  />
-                </div>
+        {isLoading ? (
+          [...Array(4)].map((_, idx) => (
+            <Card key={idx} className="glass-card overflow-hidden">
+              <CardContent className="p-6 space-y-3">
+                <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+                <div className="h-8 w-16 bg-gray-200 rounded animate-pulse" />
+                <div className="h-2 w-20 bg-gray-200 rounded animate-pulse" />
               </CardContent>
             </Card>
-          </motion.div>
-        ))}
+          ))
+        ) : (
+          stats.map((stat, idx) => (
+            <motion.div
+              key={idx}
+              variants={scaleIn}
+              whileHover={{ y: -5, transition: { duration: 0.2 } }}
+            >
+              <Card className="glass-card overflow-hidden group">
+                <CardContent className="p-6 relative">
+                  <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:scale-110 transition-transform duration-300">
+                    <BarChart3 className="size-16" />
+                  </div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{stat.label}</p>
+                  <div className="flex items-end justify-between">
+                    <h3 className="text-3xl font-black text-gray-900 dark:text-white">{stat.value}</h3>
+                    <Badge className={cn(
+                      "text-[10px] font-bold px-1.5 h-5",
+                      stat.trend === 'up' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-gray-100 text-gray-600 border-gray-200"
+                    )}>
+                      {stat.trend === 'up' ? '↑ ' : ''}{stat.change}
+                    </Badge>
+                  </div>
+                  <div className="w-full h-1 bg-gray-100 dark:bg-gray-800 rounded-full mt-4 overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: '70%' }}
+                      className={cn("h-full rounded-full", idx % 2 === 0 ? "bg-emerald-500" : "bg-blue-500")}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))
+        )}
       </motion.div>
 
       <div className="grid gap-6 lg:grid-cols-12">

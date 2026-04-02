@@ -32,6 +32,7 @@ import { Progress } from '@/components/ui/progress';
 import { Plus, User, GraduationCap, BookOpen, BarChart3, CalendarCheck, Loader2 } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
+import { useStudents, useClasses, useCreateStudent } from '@/hooks/use-api';
 
 interface StudentRecord {
   id: string;
@@ -124,131 +125,66 @@ function LoadingSkeleton() {
 }
 
 export function StudentsView() {
-  const { selectedSchoolId } = useAppStore();
-  const [students, setStudents] = React.useState<StudentRecord[]>([]);
-  const [classes, setClasses] = React.useState<ClassRecord[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { currentUser } = useAppStore();
   const [classFilter, setClassFilter] = React.useState('all');
   const [addOpen, setAddOpen] = React.useState(false);
   const [detailStudent, setDetailStudent] = React.useState<StudentRecord | null>(null);
-  const [adding, setAdding] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!selectedSchoolId) {
-      setLoading(false);
-      return;
-    }
+  const { data: studentsData, isLoading } = useStudents({ limit: 100 });
+  const { data: classesData } = useClasses();
+  const createStudent = useCreateStudent();
 
-    setLoading(true);
-    Promise.all([
-      fetch(`/api/students?schoolId=${selectedSchoolId}&limit=100`)
-        .then(res => res.json())
-        .then(json => {
-          const items = json.data || json || [];
-          return items.map((s: Record<string, unknown>) => ({
-            id: s.id,
-            admissionNo: s.admissionNo || '',
-            name: (s.user as Record<string, unknown>)?.name || '',
-            className: (s.class as Record<string, unknown>)?.name || 'Unassigned',
-            gender: s.gender || null,
-            gpa: s.gpa ?? null,
-            behaviorScore: s.behaviorScore ?? null,
-            email: (s.user as Record<string, unknown>)?.email || null,
-            phone: (s.user as Record<string, unknown>)?.phone || null,
-            classId: s.classId || null,
-            isActive: s.isActive ?? true,
-          }));
-        })
-        .catch(() => {
-          toast.error('Failed to load students');
-          return [];
-        }),
-      fetch(`/api/classes?schoolId=${selectedSchoolId}&limit=100`)
-        .then(res => res.json())
-        .then(json => (json.data || json || []).map((c: Record<string, unknown>) => ({
-          id: c.id,
-          name: c.name,
-        })))
-        .catch(() => []),
-    ])
-      .then(([studentData, classData]) => {
-        setStudents(studentData);
-        setClasses(classData);
-      })
-      .finally(() => setLoading(false));
-  }, [selectedSchoolId]);
+  const students: StudentRecord[] = React.useMemo(() => {
+    if (!studentsData?.data) return [];
+    return studentsData.data.map((s: Record<string, unknown>) => ({
+      id: s.id as string,
+      admissionNo: (s.admissionNo as string) || '',
+      name: ((s.user as Record<string, unknown>)?.name as string) || '',
+      className: ((s.class as Record<string, unknown>)?.name as string) || 'Unassigned',
+      gender: s.gender as string | null,
+      gpa: s.gpa as number | null,
+      behaviorScore: s.behaviorScore as number | null,
+      email: ((s.user as Record<string, unknown>)?.email as string) || null,
+      phone: ((s.user as Record<string, unknown>)?.phone as string) || null,
+      classId: s.classId as string | null,
+      isActive: s.isActive as boolean ?? true,
+    }));
+  }, [studentsData]);
+
+  const classes: ClassRecord[] = React.useMemo(() => {
+    if (!classesData?.data) return [];
+    return classesData.data.map((c: Record<string, unknown>) => ({
+      id: c.id as string,
+      name: c.name as string,
+    }));
+  }, [classesData]);
 
   const filtered = classFilter === 'all'
     ? students
     : students.filter(s => s.className === classFilter);
 
-  const handleAddStudent = async () => {
-    if (!selectedSchoolId) {
-      toast.error('No school selected');
-      return;
-    }
-
-    const dialog = addOpen ? document.querySelector('[data-student-dialog]') : null;
-    if (!dialog) return;
-
-    const form = dialog.querySelector('form') as HTMLFormElement | null;
-    if (!form) return;
-
+  const handleAddStudent = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
     const formData = new FormData(form);
-    const name = formData.get('name') as string;
-    const email = formData.get('email') as string;
-    const admissionNo = formData.get('admissionNo') as string;
-
-    if (!name || !email || !admissionNo) {
-      toast.error('Name, email, and admission number are required');
-      return;
-    }
-
-    setAdding(true);
+    
     try {
-      const res = await fetch('/api/students', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolId: selectedSchoolId,
-          name,
-          email,
-          admissionNo,
-          classId: formData.get('classId') || null,
-          gender: formData.get('gender') || null,
-        }),
+      await createStudent.mutateAsync({
+        schoolId: currentUser.schoolId,
+        name: formData.get('name') as string,
+        email: formData.get('email') as string,
+        admissionNo: formData.get('admissionNo') as string,
+        classId: formData.get('classId') || null,
+        gender: formData.get('gender') || null,
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to create student');
-
       toast.success('Student added successfully');
       setAddOpen(false);
-
-      // Refresh data
-      const refreshed = await fetch(`/api/students?schoolId=${selectedSchoolId}&limit=100`)
-        .then(r => r.json())
-        .then(j => (j.data || j || []).map((s: Record<string, unknown>) => ({
-          id: s.id,
-          admissionNo: s.admissionNo || '',
-          name: (s.user as Record<string, unknown>)?.name || '',
-          className: (s.class as Record<string, unknown>)?.name || 'Unassigned',
-          gender: s.gender || null,
-          gpa: s.gpa ?? null,
-          behaviorScore: s.behaviorScore ?? null,
-          email: (s.user as Record<string, unknown>)?.email || null,
-          phone: (s.user as Record<string, unknown>)?.phone || null,
-          classId: s.classId || null,
-          isActive: s.isActive ?? true,
-        })));
-      setStudents(refreshed);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to add student');
-    } finally {
-      setAdding(false);
     }
   };
 
-  if (!selectedSchoolId) {
+  if (!currentUser.schoolId) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
         <GraduationCap className="size-12 opacity-30" />
@@ -257,7 +193,7 @@ export function StudentsView() {
     );
   }
 
-  if (loading) return <LoadingSkeleton />;
+  if (isLoading) return <LoadingSkeleton />;
 
   return (
     <motion.div 
@@ -336,8 +272,8 @@ export function StudentsView() {
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={adding}>
-                    {adding && <Loader2 className="size-4 animate-spin mr-1" />}
+                  <Button type="submit" disabled={createStudent.isPending}>
+                    {createStudent.isPending && <Loader2 className="size-4 animate-spin mr-1" />}
                     Add Student
                   </Button>
                 </DialogFooter>

@@ -26,7 +26,7 @@ export type DashboardView =
   | 'report-card-view' | 'support' | 'subscription' | 'school-settings'
   | 'platform-management' | 'school-controls' | 'overlay-management' | 'plans-manager' | 'danger-zone'
   | 'class-monitoring' | 'messaging-center' | 'weekly-evaluations'
-  | 'entrance-exams';
+  | 'entrance-exams' | 'payment-verification';
 
 interface AppState {
   currentRole: UserRole;

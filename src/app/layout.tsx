@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { PreloaderWrapper } from "@/components/preloader/preloader-wrapper";
+import { QueryProvider } from "@/components/providers/query-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -53,10 +54,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          <PreloaderWrapper>
-            {children}
-          </PreloaderWrapper>
-          <ServiceWorkerRegistration />
+          <QueryProvider>
+            <PreloaderWrapper>
+              {children}
+            </PreloaderWrapper>
+            <ServiceWorkerRegistration />
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>
