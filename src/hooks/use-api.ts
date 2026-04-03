@@ -20,6 +20,35 @@ async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
   return response.json();
 }
 
+export interface AnalyticsData {
+  schoolOverview: {
+    totalStudents: number;
+    totalTeachers: number;
+    totalClasses: number;
+    totalSubjects: number;
+    studentTeacherRatio: number;
+  };
+  attendanceByClass: Array<{
+    classId: string;
+    className: string;
+    percentage: number;
+  }>;
+  performanceBySubject: Array<{
+    subjectId: string;
+    subjectName: string;
+    averageScore: number;
+  }>;
+  financialData: {
+    totalRevenue: number;
+    totalTransactions: number;
+  };
+  attendanceTrend: Array<{
+    date: string;
+    present: number;
+    absent: number;
+  }>;
+}
+
 export function useStudents(params?: {
   page?: number;
   limit?: number;
@@ -183,8 +212,9 @@ export function useAnalytics() {
   
   return useQuery({
     queryKey: ['analytics', currentUser.schoolId],
-    queryFn: () => fetchApi<{ data: unknown }>(`/api/analytics?schoolId=${currentUser.schoolId}`),
+    queryFn: () => fetchApi<{ data: AnalyticsData }>(`/api/analytics?schoolId=${currentUser.schoolId}`),
     staleTime: 60 * 1000,
+    enabled: !!currentUser.schoolId,
   });
 }
 

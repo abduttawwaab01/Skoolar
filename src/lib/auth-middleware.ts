@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { checkAndUpdateUserLoginAccess, getSubscriptionStatus, updateSchoolLastActive, type SubscriptionStatus } from './subscription-utils';
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET;
 
@@ -9,6 +10,9 @@ export interface AuthResult {
   role?: string;
   schoolId?: string;
   schoolName?: string;
+  subscriptionStatus?: SubscriptionStatus;
+  canAccessFullDashboard?: boolean;
+  loginBlockedReason?: string;
 }
 
 /**
@@ -20,13 +24,26 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
     const token = await getToken({ req: request, secret: JWT_SECRET });
     if (!token) return { authenticated: false };
 
-    return {
+    const authResult: AuthResult = {
       authenticated: true,
       userId: token.id as string,
       role: token.role as string,
       schoolId: token.schoolId as string | undefined,
       schoolName: token.schoolName as string | undefined,
     };
+
+    if (authResult.schoolId) {
+      const subStatus = await getSubscriptionStatus(authResult.schoolId);
+      authResult.subscriptionStatus = subStatus;
+      
+      const accessCheck = await checkAndUpdateUserLoginAccess(authResult.userId!, authResult.schoolId);
+      authResult.canAccessFullDashboard = accessCheck.canLogin;
+      authResult.loginBlockedReason = accessCheck.reason;
+      
+      await updateSchoolLastActive(authResult.schoolId);
+    }
+
+    return authResult;
   } catch {
     return { authenticated: false };
   }
@@ -34,12 +51,41 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
 
 /**
  * Require authentication — returns 401 if not authenticated.
+ * Also checks subscription status and blocks access if expired.
  */
 export async function requireAuth(request: NextRequest): Promise<AuthResult & { authenticated: true } | NextResponse> {
   const auth = await authenticateRequest(request);
   if (!auth.authenticated) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
+
+  if (auth.schoolId && auth.subscriptionStatus) {
+    const { canAccessFullDashboard, loginBlockedReason, subscriptionStatus } = auth;
+    const isAdmin = auth.role === 'SCHOOL_ADMIN' || auth.role === 'SUPER_ADMIN' || auth.role === 'DIRECTOR';
+
+    if (!canAccessFullDashboard && !isAdmin) {
+      return NextResponse.json(
+        { 
+          error: loginBlockedReason || 'Access denied',
+          code: 'SUBSCRIPTION_EXPIRED',
+          subscriptionStatus 
+        },
+        { status: 403 }
+      );
+    }
+
+    if (!canAccessFullDashboard && isAdmin && subscriptionStatus.isFullyLocked) {
+      return NextResponse.json(
+        { 
+          error: 'Your subscription has expired. Please upgrade to continue using the platform.',
+          code: 'SUBSCRIPTION_FULLY_LOCKED',
+          subscriptionStatus 
+        },
+        { status: 403 }
+      );
+    }
+  }
+
   return auth as AuthResult & { authenticated: true };
 }
 

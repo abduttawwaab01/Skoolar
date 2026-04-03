@@ -84,9 +84,18 @@ model School {
    entranceExams       EntranceExam[]
 
    planId              String?
+   
+   // Subscription expiry tracking
+   subscriptionExpiresAt DateTime?  // When the current paid plan expires
+   gracePeriodEndsAt      DateTime?  // Grace period ends (14 days after expiry)
+   isFullyLocked          Boolean  @default(false) // True when all non-admin users are locked
+   lockedAt               DateTime? // When the school was fully locked
+   hasEverUpgraded        Boolean  @default(false) // True if school ever upgraded from free
+   lastActiveAt           DateTime? // Last time the school was active
 
-  @@index([slug])
-  @@index([region])
+   @@index([slug])
+   @@index([region])
+   @@index([subscriptionExpiresAt])
 }
 
 model RegistrationCode {
@@ -125,6 +134,11 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
+  
+  // Post-subscription expiry tracking
+  studentLoginOrder    Int?  // Order of student login after expiry (1-30)
+  teacherLoginOrder    Int?  // Order of teacher login after expiry (1-3)
+  isPostExpiryLogin    Boolean @default(false) // True if login was after subscription expiry
 
   school        School?   @relation(fields: [schoolId], references: [id])
   auditLogs     AuditLog[] @relation("AuditLogsByUser")

@@ -136,26 +136,26 @@ export function StudentsView() {
 
   const students: StudentRecord[] = React.useMemo(() => {
     if (!studentsData?.data) return [];
-    return studentsData.data.map((s: Record<string, unknown>) => ({
-      id: s.id as string,
-      admissionNo: (s.admissionNo as string) || '',
-      name: ((s.user as Record<string, unknown>)?.name as string) || '',
-      className: ((s.class as Record<string, unknown>)?.name as string) || 'Unassigned',
-      gender: s.gender as string | null,
-      gpa: s.gpa as number | null,
-      behaviorScore: s.behaviorScore as number | null,
-      email: ((s.user as Record<string, unknown>)?.email as string) || null,
-      phone: ((s.user as Record<string, unknown>)?.phone as string) || null,
-      classId: s.classId as string | null,
-      isActive: s.isActive as boolean ?? true,
+    return (studentsData.data as unknown[]).map((s) => ({
+      id: (s as Record<string, unknown>).id as string,
+      admissionNo: ((s as Record<string, unknown>).admissionNo as string) || '',
+      name: (((s as Record<string, unknown>).user as Record<string, unknown>)?.name as string) || '',
+      className: (((s as Record<string, unknown>).class as Record<string, unknown>)?.name as string) || 'Unassigned',
+      gender: (s as Record<string, unknown>).gender as string | null,
+      gpa: (s as Record<string, unknown>).gpa as number | null,
+      behaviorScore: (s as Record<string, unknown>).behaviorScore as number | null,
+      email: (((s as Record<string, unknown>).user as Record<string, unknown>)?.email as string) || null,
+      phone: (((s as Record<string, unknown>).user as Record<string, unknown>)?.phone as string) || null,
+      classId: (s as Record<string, unknown>).classId as string | null,
+      isActive: (s as Record<string, unknown>).isActive as boolean ?? true,
     }));
   }, [studentsData]);
 
   const classes: ClassRecord[] = React.useMemo(() => {
     if (!classesData?.data) return [];
-    return classesData.data.map((c: Record<string, unknown>) => ({
-      id: c.id as string,
-      name: c.name as string,
+    return (classesData.data as unknown[]).map((c) => ({
+      id: (c as Record<string, unknown>).id as string,
+      name: (c as Record<string, unknown>).name as string,
     }));
   }, [classesData]);
 
@@ -234,7 +234,7 @@ export function StudentsView() {
                 <DialogTitle>Add New Student</DialogTitle>
                 <DialogDescription>Enter the student&apos;s details below.</DialogDescription>
               </DialogHeader>
-              <form onSubmit={(e) => { e.preventDefault(); handleAddStudent(); }}>
+              <form onSubmit={(e) => { e.preventDefault(); handleAddStudent(e); }}>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
                     <Label>Full Name</Label>

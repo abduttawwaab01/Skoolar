@@ -26,7 +26,8 @@ export type DashboardView =
   | 'report-card-view' | 'support' | 'subscription' | 'school-settings'
   | 'platform-management' | 'school-controls' | 'overlay-management' | 'plans-manager' | 'danger-zone'
   | 'class-monitoring' | 'messaging-center' | 'weekly-evaluations'
-  | 'entrance-exams' | 'payment-verification';
+  | 'entrance-exams' | 'payment-verification'
+  | 'teacher-grades';
 
 interface AppState {
   currentRole: UserRole;
@@ -65,7 +66,11 @@ export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       currentRole: 'SUPER_ADMIN',
-      setCurrentRole: (role) => set({ currentRole: role, currentView: 'overview' }),
+      setCurrentRole: (role) => set(state => ({
+        currentRole: role,
+        // Only reset view if role actually changes
+        ...(state.currentRole !== role && { currentView: 'overview' })
+      })),
       setCurrentUser: (user) => set({ currentUser: user }),
       currentUser: {
         id: '',

@@ -34,12 +34,14 @@ export function OverviewView() {
     setCurrentView(view as any);
   };
 
-  const stats = analyticsData?.data?.schoolOverview ? [
-    { label: 'Total Students', value: String(analyticsData.data.schoolOverview.totalStudents || 0), change: 'Live count', trend: 'neutral' as const },
-    { label: 'Teachers', value: String(analyticsData.data.schoolOverview.totalTeachers || 0), change: 'Active', trend: 'neutral' as const },
-    { label: 'Classes', value: String(analyticsData.data.schoolOverview.totalClasses || 0), change: 'Active', trend: 'neutral' as const },
-    { label: 'Attendance Rate', value: analyticsData.data.attendanceByClass?.[0] 
-      ? `${analyticsData.data.attendanceByClass[0].percentage}%` 
+  const analytics = analyticsData?.data;
+  
+  const stats = analytics?.schoolOverview ? [
+    { label: 'Total Students', value: String(analytics.schoolOverview.totalStudents || 0), change: 'Live count', trend: 'neutral' as const },
+    { label: 'Teachers', value: String(analytics.schoolOverview.totalTeachers || 0), change: 'Active', trend: 'neutral' as const },
+    { label: 'Classes', value: String(analytics.schoolOverview.totalClasses || 0), change: 'Active', trend: 'neutral' as const },
+    { label: 'Attendance Rate', value: analytics.attendanceByClass?.[0] 
+      ? `${analytics.attendanceByClass[0].percentage}%` 
       : '94%', change: 'Today', trend: 'up' as const },
   ] : [
     { label: 'Total Students', value: '847', change: '+12 this week', trend: 'up' as const },

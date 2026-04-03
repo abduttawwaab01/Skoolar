@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
     const brandedExportData = {
       _watermark: 'Powered by Skoolar || Odebunmi Tawwāb',
       _generatedAt: new Date().toISOString(),
-      ...exportData,
+      ...(exportData as Record<string, unknown>),
     };
 
     return NextResponse.json({

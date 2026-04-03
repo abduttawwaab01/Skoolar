@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/s
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { AnnouncementTicker } from '@/components/platform/announcement-ticker';
-import { Preloader } from '@/components/platform/preloader';
+import { PreloaderWrapper as Preloader } from '@/components/preloader/preloader-wrapper';
 
 interface PlatformSettings {
   id: string;
@@ -219,7 +219,7 @@ function getSocialIcon(platform: string): React.ElementType {
 function PublicFooter({ settings }: { settings: PlatformSettings | null }) {
   const siteName = settings?.siteName || 'Skoolar';
   const year = new Date().getFullYear();
-  const socialLinks = parseSocialLinks(settings?.socialLinks);
+  const socialLinks = parseSocialLinks(settings?.socialLinks ?? null);
 
   return (
     <footer className="bg-white border-t mt-auto">

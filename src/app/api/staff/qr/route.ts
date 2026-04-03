@@ -3,6 +3,15 @@ import { getToken } from 'next-auth/jwt';
 import { db } from '@/lib/db';
 import QRCode from 'qrcode';
 
+interface TeacherWithUser {
+  id: string;
+  name: string;
+  employeeNo: string;
+  userId: string;
+  schoolId: string;
+  user: { name: string; email: string } | null;
+}
+
 // GET /api/staff/qr - Get staff member's attendance QR code
 export async function GET(request: NextRequest) {
   try {
@@ -20,12 +29,16 @@ export async function GET(request: NextRequest) {
     const staffId = searchParams.get('staffId');
 
     // Determine which staff member to generate QR for
-    let targetStaffId = staffId;
+    let targetStaffId: string | null = staffId;
     if (!staffId && token.role === 'TEACHER') {
       // Teachers can only get their own QR
-      targetStaffId = token.userId;
+      targetStaffId = (token.userId as string) || null;
     } else if (!staffId && (token.role === 'SCHOOL_ADMIN' || token.role === 'SUPER_ADMIN')) {
       return NextResponse.json({ error: 'staffId is required for admins' }, { status: 400 });
+    }
+
+    if (!targetStaffId) {
+      return NextResponse.json({ error: 'staffId is required' }, { status: 400 });
     }
 
     // Fetch staff data
@@ -34,14 +47,14 @@ export async function GET(request: NextRequest) {
       include: {
         user: { select: { name: true, email: true } },
       },
-    });
+    }) as TeacherWithUser | null;
 
     if (!staff) {
       return NextResponse.json({ error: 'Staff not found' }, { status: 404 });
     }
 
     // Verify school access
-    if (token.role !== 'SUPER_ADMIN' && staff.schoolId !== token.schoolId) {
+    if (token.role !== 'SUPER_ADMIN' && staff.schoolId !== (token.schoolId as string)) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 

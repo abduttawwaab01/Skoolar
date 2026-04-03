@@ -60,6 +60,19 @@ const DEFAULT_COLORS: SchoolColors = {
   secondary: '#FFFFFF'
 };
 
+function adjustColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = (num >> 16) + amt;
+  const G = (num >> 8 & 0x00FF) + amt;
+  const B = (num & 0x0000FF) + amt;
+  return '#' + (0x1000000 + 
+    (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 + 
+    (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 + 
+    (B < 255 ? (B < 1 ? 0 : B) : 255)
+  ).toString(16).slice(1);
+}
+
 const DEFAULT_BACK_TEXT = `This card remains the property of the school.
 If found, please return to the school office.
 
@@ -163,14 +176,15 @@ export function IDCardGenerator() {
   
   // Generate QR code data for a card
   const generateQRData = useCallback((person: StudentData | StaffData): string => {
+    const isStudent = cardType === 'student';
     const data = {
       type: cardType,
-      id: cardType === 'student' ? person.admissionNo : person.employeeNo,
+      id: isStudent ? (person as StudentData).admissionNo : (person as StaffData).employeeNo,
       userId: person.userId,
       personId: person.id,
       schoolId: person.schoolId || '',
       name: person.name,
-      role: cardType === 'student' ? 'STUDENT' : 'STAFF',
+      role: isStudent ? 'STUDENT' : 'STAFF',
       timestamp: Date.now(),
     };
     return JSON.stringify(data);
@@ -715,7 +729,7 @@ function IDCardPreview({ person, cardType, colors, showPhoto, showBarcode, showQ
         personId: person.id,
         schoolId: person.schoolId || '',
         name: person.name,
-        role: cardType === 'STUDENT' ? 'STUDENT' : 'STAFF',
+        role: cardType === 'student' ? 'STUDENT' : 'STAFF',
         timestamp: Date.now(),
       };
       QRCode.toDataURL(JSON.stringify(data), {

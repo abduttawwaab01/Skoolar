@@ -57,38 +57,38 @@ const viewComponents: Record<DashboardView, () => Promise<any>> = {
   reports: () => import('@/components/dashboards/reports-view').then(m => m.ReportsView),
   'users-management': () => import('@/components/dashboards/users-management').then(m => m.UsersManagement),
   'payment-verification': () => import('@/components/dashboards/payment-verification-view').then(m => m.PaymentVerificationView),
-  'ai-grading': () => import('@/components/features/ai-grading-assistant').then(m => m.default || m.AIGradingAssistant),
-  'bulk-operations': () => import('@/components/features/bulk-operations').then(m => m.default || m.BulkOperations),
-  'advanced-search': () => import('@/components/features/advanced-search').then(m => m.default || m.AdvancedSearch),
-  'school-comparison': () => import('@/components/features/multi-school-comparison').then(m => m.default || m.MultiSchoolComparison),
-  'data-import': () => import('@/components/features/data-import-export').then(m => m.default || m.DataImportExport),
+  'ai-grading': () => import('@/components/features/ai-grading-assistant').then(m => (m as any).default),
+  'bulk-operations': () => import('@/components/features/bulk-operations').then(m => (m as any).default),
+  'advanced-search': () => import('@/components/features/advanced-search').then(m => (m as any).default),
+  'school-comparison': () => import('@/components/features/multi-school-comparison').then(m => (m as any).default),
+  'data-import': () => import('@/components/features/data-import-export').then(m => (m as any).default),
   'in-app-chat': () => import('@/components/dashboards/messaging-center').then(m => m.MessagingCenter),
-  'student-promotion': () => import('@/components/features/student-promotion').then(m => m.default || m.StudentPromotion),
-  'school-calendar-enhanced': () => import('@/components/features/school-calendar').then(m => m.default || m.SchoolCalendar),
-  'parent-portal': () => import('@/components/features/parent-portal-enhanced').then(m => m.default || m.ParentPortalEnhanced),
-  'admin-analytics-advanced': () => import('@/components/features/admin-analytics-advanced').then(m => m.default || m.AdminAnalyticsAdvanced),
-  'notice-board': () => import('@/components/features/notice-board').then(m => m.default || m.NoticeBoard),
-  'student-diary': () => import('@/components/features/student-diary').then(m => m.default || m.StudentDiary),
-  'student-ai-chat': () => import('@/components/features/ai-homework-helper').then(m => m.default || m.AIHomeworkHelper),
-  homework: () => import('@/components/features/homework-management').then(m => m.default || m.HomeworkManagement),
-  'video-lessons': () => import('@/components/dashboards/video-lessons').then(m => m.default || m.VideoLessons),
-  'student-video-lessons': () => import('@/components/features/video-lessons').then(m => m.default || m.VideoLessons),
-  'parent-homework': () => import('@/components/features/homework-management').then(m => m.default || m.HomeworkManagement),
-  'parent-video-lessons': () => import('@/components/features/video-lessons').then(m => m.default || m.VideoLessons),
-  'teacher-homework': () => import('@/components/features/homework-management').then(m => m.default || m.HomeworkManagement),
+  'student-promotion': () => import('@/components/features/student-promotion').then(m => (m as any).default),
+  'school-calendar-enhanced': () => import('@/components/features/school-calendar').then(m => (m as any).default),
+  'parent-portal': () => import('@/components/features/parent-portal-enhanced').then(m => (m as any).default),
+  'admin-analytics-advanced': () => import('@/components/features/admin-analytics-advanced').then(m => (m as any).default),
+  'notice-board': () => import('@/components/features/notice-board').then(m => (m as any).default),
+  'student-diary': () => import('@/components/features/student-diary').then(m => (m as any).default),
+  'student-ai-chat': () => import('@/components/features/ai-homework-helper').then(m => (m as any).default),
+  homework: () => import('@/components/features/homework-management').then(m => (m as any).default),
+  'video-lessons': () => import('@/components/dashboards/video-lessons').then(m => (m as any).VideoLessonsView),
+  'student-video-lessons': () => import('@/components/features/video-lessons').then(m => (m as any).default),
+  'parent-homework': () => import('@/components/features/homework-management').then(m => (m as any).default),
+  'parent-video-lessons': () => import('@/components/features/video-lessons').then(m => (m as any).default),
+  'teacher-homework': () => import('@/components/features/homework-management').then(m => (m as any).default),
   'report-card-view': () => import('@/components/dashboards/report-card-view').then(m => m.ReportCardView),
-  'teacher-grades': () => import('@/components/dashboards/teacher-grades').then(m => m.TeacherGrades || m.default),
+  'teacher-grades': () => import('@/components/dashboards/teacher-grades').then(m => (m as any).default),
   support: () => import('@/components/dashboards/support-view').then(m => m.SupportView),
   subscription: () => import('@/components/dashboards/subscription-view').then(m => m.SubscriptionView),
   'school-settings': () => import('@/components/dashboards/school-settings-view').then(m => m.SchoolSettingsView),
   'platform-management': () => import('@/components/platform/platform-admin-panel').then(m => m.PlatformAdminPanel),
   'school-controls': () => import('@/components/features/school-controls').then(m => m.SchoolControlsPanel),
-  'overlay-management': () => import('@/components/features/overlay-management').then(m => m.OverlayManagement),
+  'overlay-management': () => import('@/components/features/overlay-management').then(m => (m as any).default),
   'plans-manager': () => import('@/components/dashboards/plans-manager').then(m => m.PlansManager),
   'danger-zone': () => import('@/components/dashboards/danger-zone').then(m => m.DangerZone),
   'class-monitoring': () => import('@/components/dashboards/class-monitoring').then(m => m.ClassMonitoring),
-  'messaging-center': () => import('@/components/features/in-app-chat').then(m => m.default || m.InAppChat),
-  'weekly-evaluations': () => import('@/components/features/weekly-evaluation').then(m => m.WeeklyEvaluation),
+  'messaging-center': () => import('@/components/features/in-app-chat').then(m => (m as any).default),
+  'weekly-evaluations': () => import('@/components/features/weekly-evaluation').then(m => (m as any).default),
   'entrance-exams': () => import('@/components/dashboards/entrance-exams-view').then(m => m.EntranceExamsView),
   'staff-self-attendance': () => import('@/components/dashboards/staff-self-attendance').then(m => m.StaffSelfAttendance),
 };
@@ -105,7 +105,7 @@ export default function DashboardPage() {
   const prefetchViewData = useCallback(async (view: DashboardView) => {
     if (!currentUser.schoolId) return;
     
-    const prefetchMap: Record<DashboardView, () => Promise<void>> = {
+    const prefetchFunctions: Partial<Record<DashboardView, () => Promise<void>>> = {
       'students': () => queryClient.prefetchQuery({
         queryKey: ['students', { limit: 50 }, currentUser.schoolId],
         queryFn: () => fetch(`/api/students?limit=50`).then(r => r.json()),
@@ -160,7 +160,7 @@ export default function DashboardPage() {
       }),
     };
 
-    const prefetchFn = prefetchMap[view];
+    const prefetchFn = prefetchFunctions[view];
     if (prefetchFn) {
       prefetchFn().catch(console.error);
     }

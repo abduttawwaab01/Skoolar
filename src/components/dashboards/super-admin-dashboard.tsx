@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { KpiCard } from '@/components/shared/kpi-card';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +20,27 @@ import {
   Activity, Clock, Database, HardDrive, Server, Zap, Globe,
   Plus, BarChart3, Eye, ArrowUpRight, ArrowDownRight, AlertTriangle, CheckCircle2, Info, XCircle, RefreshCw
 } from 'lucide-react';
+
+interface SystemHealthData {
+  totalSchools: number;
+  totalStudents: number;
+  totalTeachers: number;
+  totalRevenue: number;
+  activeUsers: number;
+  apiRequests: number;
+  avgResponseTime: number;
+  databaseSize: string;
+  storageUsed: number;
+  queuedJobs: number;
+  websocketConnections: number;
+  uptime: number;
+  userGrowth: { last7Days: number; last30Days: number };
+  studentGrowth: { last30Days: number };
+  schoolGrowth: { last30Days: number };
+  recentRevenue: Array<{ amount: number; date: string }>;
+  revenueTrend: { avgPerDay: number; totalLast7Days: number };
+  generatedAt: string;
+}
 
 interface SchoolRecord {
   id: string;
@@ -128,18 +149,21 @@ export function SuperAdminDashboard() {
   const [registrationCodes, setRegistrationCodes] = useState<RegistrationCodeRecord[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogRecord[]>([]);
   const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
+  const [systemHealth, setSystemHealth] = useState<SystemHealthData | null>(null);
 
   // Loading states
   const [loadingSchools, setLoadingSchools] = useState(true);
   const [loadingCodes, setLoadingCodes] = useState(true);
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [loadingNotifs, setLoadingNotifs] = useState(true);
+  const [loadingHealth, setLoadingHealth] = useState(true);
 
   // Error states
   const [errorSchools, setErrorSchools] = useState<string | null>(null);
   const [errorCodes, setErrorCodes] = useState<string | null>(null);
   const [errorLogs, setErrorLogs] = useState<string | null>(null);
   const [errorNotifs, setErrorNotifs] = useState<string | null>(null);
+  const [errorHealth, setErrorHealth] = useState<string | null>(null);
 
   const fetchSchools = useCallback(async () => {
     try {
@@ -208,14 +232,30 @@ export function SuperAdminDashboard() {
     }
   }, [currentUser?.id]);
 
+  const fetchSystemHealth = useCallback(async () => {
+    try {
+      setLoadingHealth(true);
+      setErrorHealth(null);
+      const res = await fetch('/api/system-health');
+      if (!res.ok) throw new Error('Failed to fetch system health');
+      const json = await res.json();
+      setSystemHealth(json.data);
+    } catch (err) {
+      setErrorHealth(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoadingHealth(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchSchools();
     fetchCodes();
     fetchLogs();
     fetchNotifications();
-  }, [fetchSchools, fetchCodes, fetchLogs, fetchNotifications]);
+    fetchSystemHealth();
+  }, [fetchSchools, fetchCodes, fetchLogs, fetchNotifications, fetchSystemHealth]);
 
-  const isLoading = loadingSchools || loadingCodes || loadingLogs || loadingNotifs;
+  const isLoading = loadingSchools || loadingCodes || loadingLogs || loadingNotifs || loadingHealth;
   const hasError = errorSchools || errorCodes || errorLogs || errorNotifs;
 
   if (isLoading && schools.length === 0) return <DashboardSkeleton />;
@@ -258,32 +298,34 @@ export function SuperAdminDashboard() {
 
   // Visual bar chart data
   const maxStudentCount = Math.max(...schools.map(s => s._count?.students || 0), 1);
-  const revenueBars = [
-    { month: 'Sep', value: 92 }, { month: 'Oct', value: 65 }, { month: 'Nov', value: 56 },
-    { month: 'Dec', value: 40 }, { month: 'Jan', value: 50 }, { month: 'Feb', value: 53 }, { month: 'Mar', value: 38 },
-  ];
-  const maxRevenue = Math.max(...revenueBars.map(r => r.value));
+
+  const revenueBars = useMemo(() => {
+    if (!systemHealth?.recentRevenue || systemHealth.recentRevenue.length === 0) {
+      return [
+        { month: 'Sep', value: 0 }, { month: 'Oct', value: 0 }, { month: 'Nov', value: 0 },
+        { month: 'Dec', value: 0 }, { month: 'Jan', value: 0 }, { month: 'Feb', value: 0 }, { month: 'Mar', value: 0 },
+      ];
+    }
+    return systemHealth.recentRevenue.slice(0, 7).map((r, i) => ({
+      month: ['Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'][i] || 'N/A',
+      value: Math.round(r.amount / 100000),
+    }));
+  }, [systemHealth?.recentRevenue]);
+
+  const maxRevenue = Math.max(...revenueBars.map(r => r.value), 1);
 
   // System status items
-  const systemStatusItems = [
-    { label: 'API Server', status: 'healthy' as const, detail: 'Response: 120ms' },
-    { label: 'Database', status: 'healthy' as const, detail: '2.4 GB used' },
-    { label: 'File Storage', status: 'warning' as const, detail: '78% capacity' },
-    { label: 'WebSocket', status: 'healthy' as const, detail: '189 connections' },
-    { label: 'Email Service', status: 'healthy' as const, detail: 'Queue: 0' },
-    { label: 'Background Jobs', status: 'healthy' as const, detail: '12 queued' },
-  ];
-
-  const systemHealth = {
-    uptime: 99.97,
-    activeUsers: totalStudents > 0 ? Math.min(totalStudents, 342) : 0,
-    apiRequests: 15420,
-    avgResponseTime: 120,
-    databaseSize: '2.4 GB',
-    storageUsed: 78,
-    queuedJobs: 12,
-    websocketConnections: 189,
-  };
+  const systemStatusItems = useMemo(() => {
+    const health = systemHealth;
+    return [
+      { label: 'API Server', status: (health ? (health.avgResponseTime < 500 ? 'healthy' : 'warning') : 'healthy') as 'healthy' | 'warning', detail: `Response: ${health?.avgResponseTime || 0}ms` },
+      { label: 'Database', status: 'healthy' as const, detail: health?.databaseSize || 'N/A' },
+      { label: 'File Storage', status: (health ? (health.storageUsed > 80 ? 'warning' : 'healthy') : 'healthy') as 'healthy' | 'warning', detail: `${health?.storageUsed || 0}% capacity` },
+      { label: 'WebSocket', status: 'healthy' as const, detail: `${health?.websocketConnections || 0} connections` },
+      { label: 'Email Service', status: 'healthy' as const, detail: 'Queue: 0' },
+      { label: 'Background Jobs', status: 'healthy' as const, detail: `${health?.queuedJobs || 0} queued` },
+    ];
+  }, [systemHealth]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -305,12 +347,12 @@ export function SuperAdminDashboard() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        <KpiCard title="Total Schools" value={schools.length} icon={Building2} iconBgColor="bg-emerald-100" iconColor="text-emerald-600" change={12} changeLabel="from last month" />
-        <KpiCard title="Active Users" value={totalStudents.toLocaleString()} icon={GraduationCap} iconBgColor="bg-blue-100" iconColor="text-blue-600" change={15} changeLabel="growth" sparklineData={[1400, 1520, 1600, 1680, 1750, 1820, 1880]} />
-        <KpiCard title="Teachers" value={totalTeachers} icon={Users} iconBgColor="bg-purple-100" iconColor="text-purple-600" change={8} changeLabel="growth" />
-        <KpiCard title="Platform Revenue" value="₦45.6M" icon={TrendingUp} iconBgColor="bg-amber-100" iconColor="text-amber-600" change={22} changeLabel="vs last quarter" />
-        <KpiCard title="System Uptime" value="99.97%" icon={ShieldCheck} iconBgColor="bg-green-100" iconColor="text-green-600" change={0.02} changeLabel="improvement" />
-        <KpiCard title="Online Now" value={String(systemHealth.activeUsers)} icon={UserPlus} iconBgColor="bg-cyan-100" iconColor="text-cyan-600" change={18} changeLabel="today" sparklineData={[280, 310, 295, 330, 345, 320, 342]} />
+        <KpiCard title="Total Schools" value={schools.length} icon={Building2} iconBgColor="bg-emerald-100" iconColor="text-emerald-600" change={systemHealth?.schoolGrowth?.last30Days || 0} changeLabel="new this month" />
+        <KpiCard title="Active Users" value={totalStudents.toLocaleString()} icon={GraduationCap} iconBgColor="bg-blue-100" iconColor="text-blue-600" change={systemHealth?.userGrowth?.last30Days || 0} changeLabel="growth" />
+        <KpiCard title="Teachers" value={totalTeachers} icon={Users} iconBgColor="bg-purple-100" iconColor="text-purple-600" />
+        <KpiCard title="Platform Revenue" value={`₦${((systemHealth?.totalRevenue || 0) / 1000000).toFixed(1)}M`} icon={TrendingUp} iconBgColor="bg-amber-100" iconColor="text-amber-600" change={systemHealth?.revenueTrend?.totalLast7Days ? Math.round(systemHealth.revenueTrend.totalLast7Days / 100000) : 0} changeLabel="last 7 days" />
+        <KpiCard title="System Uptime" value={`${systemHealth?.uptime?.toFixed(2) || 99.9}%`} icon={ShieldCheck} iconBgColor="bg-green-100" iconColor="text-green-600" />
+        <KpiCard title="Online Now" value={String(systemHealth?.activeUsers || totalStudents)} icon={UserPlus} iconBgColor="bg-cyan-100" iconColor="text-cyan-600" change={systemHealth?.userGrowth?.last7Days || 0} changeLabel="new today" />
       </div>
 
       {/* Main Content Tabs */}
@@ -394,7 +436,7 @@ export function SuperAdminDashboard() {
                       <p className="text-sm font-medium">Platform Uptime</p>
                       <p className="text-xs text-muted-foreground">Last 30 days</p>
                     </div>
-                    <span className="text-lg font-bold text-emerald-600">{systemHealth.uptime}%</span>
+                    <span className="text-lg font-bold text-emerald-600">{systemHealth?.uptime?.toFixed(2) || 99.9}%</span>
                   </div>
                   {/* Health items */}
                   {systemStatusItems.map(item => (
@@ -601,14 +643,14 @@ export function SuperAdminDashboard() {
         <TabsContent value="system" className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: 'API Requests Today', value: systemHealth.apiRequests.toLocaleString(), icon: Zap, color: 'text-blue-600', bg: 'bg-blue-100' },
-              { label: 'Avg Response Time', value: `${systemHealth.avgResponseTime}ms`, icon: Clock, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-              { label: 'Database Size', value: systemHealth.databaseSize, icon: Database, color: 'text-purple-600', bg: 'bg-purple-100' },
-              { label: 'Storage Used', value: `${systemHealth.storageUsed}%`, icon: HardDrive, color: 'text-amber-600', bg: 'bg-amber-100' },
-              { label: 'WebSocket Conns', value: String(systemHealth.websocketConnections), icon: Globe, color: 'text-cyan-600', bg: 'bg-cyan-100' },
-              { label: 'Queued Jobs', value: String(systemHealth.queuedJobs), icon: Server, color: 'text-orange-600', bg: 'bg-orange-100' },
-              { label: 'Active Users Now', value: String(systemHealth.activeUsers), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-              { label: 'Uptime (30d)', value: `${systemHealth.uptime}%`, icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-100' },
+              { label: 'API Requests Today', value: (systemHealth?.apiRequests || 0).toLocaleString(), icon: Zap, color: 'text-blue-600', bg: 'bg-blue-100' },
+              { label: 'Avg Response Time', value: `${systemHealth?.avgResponseTime || 0}ms`, icon: Clock, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+              { label: 'Database Size', value: systemHealth?.databaseSize || 'N/A', icon: Database, color: 'text-purple-600', bg: 'bg-purple-100' },
+              { label: 'Storage Used', value: `${systemHealth?.storageUsed || 0}%`, icon: HardDrive, color: 'text-amber-600', bg: 'bg-amber-100' },
+              { label: 'WebSocket Conns', value: String(systemHealth?.websocketConnections || 0), icon: Globe, color: 'text-cyan-600', bg: 'bg-cyan-100' },
+              { label: 'Queued Jobs', value: String(systemHealth?.queuedJobs || 0), icon: Server, color: 'text-orange-600', bg: 'bg-orange-100' },
+              { label: 'Active Users Now', value: String(systemHealth?.activeUsers || 0), icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+              { label: 'Uptime (30d)', value: `${systemHealth?.uptime?.toFixed(2) || 99.9}%`, icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-100' },
             ].map(item => (
               <Card key={item.label}>
                 <CardContent className="p-4">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth-middleware';
+import { updateSchoolOnUpgrade, unlockSchool, GRACE_PERIOD_DAYS } from '@/lib/subscription-utils';
 
 export async function POST(request: NextRequest) {
   const authResult = await requireAuth(request);
@@ -172,17 +173,32 @@ export async function PATCH(request: NextRequest) {
         data: {
           status: 'success',
           channel: 'bank_transfer_verified',
+          startDate: new Date(),
+          endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()),
         },
       });
 
-      // Update school's plan
+      // Update school's plan and subscription dates
+      const oneYearFromNow = new Date();
+      oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+      const graceEnds = new Date();
+      graceEnds.setDate(graceEnds.getDate() + GRACE_PERIOD_DAYS);
+
       await db.school.update({
         where: { id: payment.schoolId },
-        data: { planId: payment.planId },
+        data: {
+          planId: payment.planId,
+          hasEverUpgraded: true,
+          subscriptionExpiresAt: oneYearFromNow,
+          gracePeriodEndsAt: graceEnds,
+          isFullyLocked: false,
+          lockedAt: null,
+          lastActiveAt: new Date(),
+        },
       });
 
       return NextResponse.json({
-        message: `Payment approved! ${payment.school.name} has been upgraded to ${payment.plan?.displayName || 'the selected plan'}.`,
+        message: `Payment approved! ${payment.school.name} has been upgraded to ${payment.plan?.displayName || 'the selected plan'}. Subscription valid for 1 year.`,
         success: true,
       });
     } else {

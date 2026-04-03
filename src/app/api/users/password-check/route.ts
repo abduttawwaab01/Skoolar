@@ -99,10 +99,11 @@ export async function POST(request: NextRequest) {
       // Log the password change
       await db.auditLog.create({
         data: {
-          schoolId: token.schoolId,
+          schoolId: token.schoolId || 'system',
           userId: token.id,
           action: 'PASSWORD_CHANGE',
-          targetUserId: userId,
+          entity: 'USER',
+          entityId: userId,
           details: `Password changed for user ${user.email}`,
           ipAddress: request.headers.get('x-forwarded-for') || undefined,
         },

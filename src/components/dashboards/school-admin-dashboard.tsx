@@ -593,7 +593,7 @@ export function SchoolAdminDashboard() {
                             </div>
                             <div className="text-right">
                               <p className="text-sm font-black text-gray-900">₦{(p.amount || 0).toLocaleString()}</p>
-                              <Badge variant={p.status === 'verified' || p.status === 'completed' ? 'success' : 'warning'} className="text-[9px] px-1.5 h-4 uppercase font-bold tracking-tight">
+                              <Badge variant={p.status === 'verified' || p.status === 'completed' ? 'default' : 'secondary'} className="text-[9px] px-1.5 h-4 uppercase font-bold tracking-tight">
                                 {p.status}
                               </Badge>
                             </div>
