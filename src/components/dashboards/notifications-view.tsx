@@ -50,19 +50,18 @@ function formatTimeAgo(dateStr: string): string {
 }
 
 export function NotificationsView() {
-  const { selectedSchoolId, currentUser } = useAppStore();
+  const { selectedSchoolId, currentUser, currentRole } = useAppStore();
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>('All');
   const [loading, setLoading] = useState(true);
 
   // Fetch notifications
   useEffect(() => {
-    if (!selectedSchoolId) return;
-
     const fetchNotifs = async () => {
       const typeParam = activeFilter !== 'All' ? `&type=${activeFilter.toLowerCase()}` : '';
+      const schoolIdParam = currentRole === 'SUPER_ADMIN' ? '' : (selectedSchoolId ? `&schoolId=${selectedSchoolId}` : '');
       try {
-        const res = await fetch(`/api/notifications?schoolId=${selectedSchoolId}${typeParam}&limit=100`);
+        const res = await fetch(`/api/notifications?limit=100${typeParam}${schoolIdParam}`);
         const json = await res.json();
         const notifData = json.data || json || [];
         setNotifs(Array.isArray(notifData) ? notifData : []);
@@ -75,7 +74,7 @@ export function NotificationsView() {
 
     setLoading(true);
     fetchNotifs();
-  }, [selectedSchoolId, activeFilter]);
+  }, [selectedSchoolId, activeFilter, currentRole]);
 
   const filteredNotifs = React.useMemo(() => {
     if (activeFilter === 'All') return notifs;
