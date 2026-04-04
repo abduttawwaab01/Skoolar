@@ -182,8 +182,10 @@ export default function DashboardPage() {
       return;
     }
 
-    // Set user info in store
-    if (session.user) {
+    // Set user info in store and load component
+    const setupDashboard = async () => {
+      if (!session.user) return;
+
       setCurrentUser({
         id: session.user.id || '',
         name: session.user.name || 'User',
@@ -196,39 +198,24 @@ export default function DashboardPage() {
       const userRole = (session.user.role as UserRole) || 'STUDENT';
       setCurrentRole(userRole);
       
-      // Always set the correct default view based on role (ignore persisted value)
+      // Determine correct view based on role
+      let viewToLoad: DashboardView;
       if (userRole === 'SUPER_ADMIN') {
-        setCurrentView('super-admin-dashboard');
+        viewToLoad = 'super-admin-dashboard';
       } else {
-        setCurrentView('overview');
+        viewToLoad = 'overview';
       }
-    }
-  }, [session, status, router, setCurrentUser, setCurrentRole, currentView, setCurrentView]);
-
-  // Separate effect to load component after role is set
-  useEffect(() => {
-    if (status === 'loading') return;
-    if (!session) return;
-    
-    const loadComponent = async () => {
+      setCurrentView(viewToLoad);
+      
+      // Load the component
       try {
-        const viewToLoad = currentView || 'overview';
-        const loader = viewComponents[viewToLoad as DashboardView];
-        
+        const loader = viewComponents[viewToLoad];
         if (loader) {
           const mod = await loader();
           const Component = (typeof mod === 'function') ? mod : (mod.default || Object.values(mod)[0]);
           setViewComponent(() => Component);
           setError(null);
-          prefetchViewData(viewToLoad as DashboardView);
-        } else {
-          // Fallback to overview
-          const mod = await viewComponents.overview();
-          const Component = mod.default || Object.values(mod)[0];
-          setViewComponent(() => Component);
-          setCurrentView('overview');
-          setError(null);
-          prefetchViewData('overview');
+          prefetchViewData(viewToLoad);
         }
       } catch (err) {
         console.error('Failed to load view component:', err);
@@ -238,8 +225,8 @@ export default function DashboardPage() {
       }
     };
 
-    loadComponent();
-  }, [currentView, session, status, setCurrentView]);
+    setupDashboard();
+  }, [session, status, router, setCurrentUser, setCurrentRole, setCurrentView, setViewComponent, setError, setLoading]);
 
   if (status === 'loading' || loading) {
     return (

@@ -42,13 +42,8 @@ export function OverviewView() {
     { label: 'Classes', value: String(analytics.schoolOverview.totalClasses || 0), change: 'Active', trend: 'neutral' as const },
     { label: 'Attendance Rate', value: analytics.attendanceByClass?.[0] 
       ? `${analytics.attendanceByClass[0].percentage}%` 
-      : '94%', change: 'Today', trend: 'up' as const },
-  ] : [
-    { label: 'Total Students', value: '847', change: '+12 this week', trend: 'up' as const },
-    { label: 'Teachers', value: '42', change: '2 new hires', trend: 'up' as const },
-    { label: 'Classes', value: '24', change: 'All active', trend: 'neutral' as const },
-    { label: 'Attendance Rate', value: '94%', change: '+2% from last week', trend: 'up' as const },
-  ];
+      : 'N/A', change: 'Today', trend: 'neutral' as const },
+  ] : [];
 
   return (
     <motion.div 
@@ -96,7 +91,7 @@ export function OverviewView() {
               </CardContent>
             </Card>
           ))
-        ) : (
+        ) : stats.length > 0 ? (
           stats.map((stat, idx) => (
             <motion.div
               key={idx}
@@ -129,6 +124,12 @@ export function OverviewView() {
               </Card>
             </motion.div>
           ))
+        ) : (
+          <Card className="col-span-full glass-card">
+            <CardContent className="p-8 text-center">
+              <p className="text-muted-foreground">No analytics data available. Please ensure your school has students and teachers registered.</p>
+            </CardContent>
+          </Card>
         )}
       </motion.div>
 

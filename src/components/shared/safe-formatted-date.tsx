@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface SafeFormattedDateProps {
   date: Date | string | number;
@@ -27,10 +27,6 @@ function formatDateValue(date: Date | string | number, mode: string, locale: str
   return d.toLocaleString(locale, options);
 }
 
-/**
- * A component to safely render formatted dates without causing React hydration mismatches.
- * Uses suppressHydrationWarning to handle server/client time differences.
- */
 export function SafeFormattedDate({
   date,
   options = { month: 'short', day: 'numeric', year: 'numeric' },
@@ -39,11 +35,22 @@ export function SafeFormattedDate({
   className = '',
   mode = 'toLocaleString',
 }: SafeFormattedDateProps) {
-  const formatted = formatDateValue(date, mode, locale, options);
+  const [mounted, setMounted] = useState(false);
+  const [formatted, setFormatted] = useState('');
+
+  useEffect(() => {
+    setMounted(true);
+    setFormatted(formatDateValue(date, mode, locale, options));
+  }, [date, mode, locale, options]);
+
+  if (!mounted) {
+    return <span className={className}>{fallback}</span>;
+  }
+
   const displayValue = formatted || fallback;
   
   return (
-    <span className={className} suppressHydrationWarning>
+    <span className={className}>
       {displayValue}
     </span>
   );
