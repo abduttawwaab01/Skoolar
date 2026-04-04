@@ -919,7 +919,7 @@ export function StudentExams() {
             <Card className="lg:col-span-1 order-2 lg:order-1">
               <CardContent className="p-4">
                 <h3 className="text-sm font-semibold mb-3">Questions</h3>
-                <div className="grid grid-cols-5 lg:grid-cols-4 gap-1.5">
+                <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-4 gap-1.5">
                   {questions.map((q, i) => {
                     const isAnswered = (() => {
                       const a = answers[q.id];
