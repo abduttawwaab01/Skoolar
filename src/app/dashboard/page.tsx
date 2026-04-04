@@ -196,9 +196,11 @@ export default function DashboardPage() {
       const userRole = (session.user.role as UserRole) || 'STUDENT';
       setCurrentRole(userRole);
       
-      // For SUPER_ADMIN, set default view to super-admin-dashboard if not set
-      if (userRole === 'SUPER_ADMIN' && !currentView) {
+      // Always set the correct default view based on role (ignore persisted value)
+      if (userRole === 'SUPER_ADMIN') {
         setCurrentView('super-admin-dashboard');
+      } else {
+        setCurrentView('overview');
       }
     }
   }, [session, status, router, setCurrentUser, setCurrentRole, currentView, setCurrentView]);
