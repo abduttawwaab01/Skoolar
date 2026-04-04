@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { db } from '@/lib/db';
-import { seedDatabase, seedSubscriptionPlans } from '@/lib/seed';
+import { seedDatabase, seedSubscriptionPlans, hashPassword } from '@/lib/seed';
 
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
+    const forceReset = body?.forceReset === true;
+    
     // Check if SUPER_ADMIN already exists - allow first-time seeding without auth
-    const existingAdmin = await db.user.findFirst({
+    let existingAdmin = await db.user.findFirst({
       where: { role: 'SUPER_ADMIN' },
     });
 
-    // If admin exists, verify SUPER_ADMIN authentication
-    if (existingAdmin) {
+    // If admin exists, verify SUPER_ADMIN authentication unless forceReset is true
+    if (existingAdmin && !forceReset) {
       const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
       if (!token || token.role !== 'SUPER_ADMIN') {
         return NextResponse.json({ error: 'Unauthorized. Super Admin access required.' }, { status: 401 });
@@ -21,11 +24,29 @@ export async function POST(request: NextRequest) {
     // Always seed subscription plans (idempotent - only creates if missing)
     const plans = await seedSubscriptionPlans();
 
-    if (existingAdmin) {
+    if (existingAdmin && !forceReset) {
       return NextResponse.json(
         {
           message: 'Super Admin already exists. Subscription plans seeded/verified.',
           email: existingAdmin.email,
+          plansSeeded: plans.length,
+        },
+        { status: 200 }
+      );
+    }
+
+    // If forceReset is true, update the existing admin password
+    if (existingAdmin && forceReset) {
+      const newHash = await hashPassword('successor');
+      existingAdmin = await db.user.update({
+        where: { id: existingAdmin.id },
+        data: { password: newHash, isActive: true },
+      });
+      return NextResponse.json(
+        {
+          message: 'Super Admin password reset successfully.',
+          email: existingAdmin.email,
+          password: 'successor',
           plansSeeded: plans.length,
         },
         { status: 200 }
