@@ -25,7 +25,7 @@ export type DashboardView =
   | 'parent-homework' | 'parent-video-lessons' | 'teacher-homework'
   | 'report-card-view' | 'support' | 'subscription' | 'school-settings'
   | 'platform-management' | 'school-controls' | 'overlay-management' | 'plans-manager' | 'danger-zone'
-  | 'class-monitoring' | 'in-app-chat' | 'weekly-evaluations'
+  | 'class-monitoring' | 'messaging-center' | 'weekly-evaluations'
   | 'entrance-exams' | 'payment-verification'
   | 'teacher-grades';
 

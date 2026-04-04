@@ -11,12 +11,15 @@ export function PWAInstallPrompt() {
 
   useEffect(() => {
     const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
+      // Don't call preventDefault() - let the browser handle the event naturally
+      // We only need to capture the prompt for our custom UI
       const dismissed = localStorage.getItem('pwa-install-dismissed');
-      if (!dismissed || Date.now() - parseInt(dismissed) > 7 * 24 * 60 * 60 * 1000) {
-        setTimeout(() => setShowPrompt(true), 5000);
+      if (dismissed && Date.now() - parseInt(dismissed) < 7 * 24 * 60 * 60 * 1000) {
+        return; // User recently dismissed, don't show
       }
+      
+      setDeferredPrompt(e);
+      setTimeout(() => setShowPrompt(true), 5000);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
@@ -36,7 +39,10 @@ export function PWAInstallPrompt() {
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
+    
+    // Call prompt() to show the browser's install banner
     deferredPrompt.prompt();
+    
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
       setDeferredPrompt(null);
@@ -50,7 +56,7 @@ export function PWAInstallPrompt() {
     localStorage.setItem('pwa-install-dismissed', Date.now().toString());
   };
 
-  if (!showPrompt || isInstalled || !deferredPrompt) return null;
+  if (!showPrompt || isInstalled) return null;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 z-50 animate-in slide-in-from-bottom-4 fade-in">

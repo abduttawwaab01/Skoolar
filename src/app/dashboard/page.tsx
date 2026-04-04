@@ -106,7 +106,7 @@ export default function DashboardPage() {
   const prefetchViewData = useCallback(async (view: DashboardView) => {
     if (!currentUser.schoolId) return;
     
-    const prefetchFunctions: Partial<Record<DashboardView, () => Promise<void>>> = {
+    const prefetchFunctions: Partial<Record<DashboardView, () => Promise<unknown>>> = {
       'students': () => queryClient.prefetchQuery({
         queryKey: ['students', { limit: 50 }, currentUser.schoolId],
         queryFn: () => fetch(`/api/students?limit=50`).then(r => r.json()),
@@ -139,10 +139,13 @@ export default function DashboardPage() {
         queryKey: ['payments', currentUser.schoolId],
         queryFn: () => fetch(`/api/payments`).then(r => r.json()),
       }),
-      'analytics': () => queryClient.prefetchQuery({
-        queryKey: ['analytics', currentUser.schoolId],
-        queryFn: () => fetch(`/api/analytics?schoolId=${currentUser.schoolId}`).then(r => r.json()),
-      }),
+      'analytics': () => {
+        if (!currentUser.schoolId) return Promise.resolve() as Promise<unknown>;
+        return queryClient.prefetchQuery({
+          queryKey: ['analytics', currentUser.schoolId],
+          queryFn: () => fetch(`/api/analytics?schoolId=${currentUser.schoolId}`).then(r => r.json()),
+        });
+      },
       'announcements': () => queryClient.prefetchQuery({
         queryKey: ['announcements', currentUser.schoolId],
         queryFn: () => fetch(`/api/announcements?schoolId=${currentUser.schoolId}`).then(r => r.json()),
@@ -155,10 +158,13 @@ export default function DashboardPage() {
         queryKey: ['homework', currentUser.schoolId],
         queryFn: () => fetch(`/api/homework`).then(r => r.json()),
       }),
-      'overview': () => queryClient.prefetchQuery({
-        queryKey: ['analytics', currentUser.schoolId],
-        queryFn: () => fetch(`/api/analytics?schoolId=${currentUser.schoolId}`).then(r => r.json()),
-      }),
+      'overview': () => {
+        if (!currentUser.schoolId) return Promise.resolve() as Promise<unknown>;
+        return queryClient.prefetchQuery({
+          queryKey: ['analytics', currentUser.schoolId],
+          queryFn: () => fetch(`/api/analytics?schoolId=${currentUser.schoolId}`).then(r => r.json()),
+        });
+      },
     };
 
     const prefetchFn = prefetchFunctions[view];
