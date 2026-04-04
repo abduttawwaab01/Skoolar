@@ -11,25 +11,23 @@ interface UsePushNotificationsReturn {
   unsubscribe: () => Promise<void>;
 }
 
+function getInitialSupport(): boolean {
+  if (typeof window === 'undefined') return false;
+  return 'serviceWorker' in navigator && 'PushManager' in window;
+}
+
+function getInitialPermission(): NotificationPermission {
+  if (typeof window === 'undefined') return 'default';
+  return Notification.permission;
+}
+
 export function usePushNotifications(): UsePushNotificationsReturn {
-  const [isSupported, setIsSupported] = useState(false);
-  const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [isSupported] = useState(getInitialSupport);
+  const [permission, setPermission] = useState(getInitialPermission);
   const [isSubscribed, setIsSubscribed] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      setIsSupported(true);
-      setPermission(Notification.permission);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isSupported) return;
-    checkSubscription();
-  }, [isSupported]);
-
   const checkSubscription = useCallback(async () => {
+    if (!isSupported) return;
     try {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
@@ -37,7 +35,12 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     } catch {
       setIsSubscribed(false);
     }
-  }, []);
+  }, [isSupported]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    checkSubscription();
+  }, [checkSubscription]);
 
   const subscribe = useCallback(async () => {
     if (!isSupported) {
@@ -107,9 +110,10 @@ export function usePushNotifications(): UsePushNotificationsReturn {
   return { isSupported, permission, isSubscribed, subscribe, unsubscribe };
 }
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = window.atob(base64);
-  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+  const uint8Array = Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+  return uint8Array.buffer;
 }

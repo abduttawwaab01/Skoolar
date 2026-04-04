@@ -183,7 +183,13 @@ export function useAnalytics() {
   
   return useQuery({
     queryKey: ['analytics', currentUser.schoolId],
-    queryFn: () => fetchApi<{ data: unknown }>(`/api/analytics?schoolId=${currentUser.schoolId}`),
+    queryFn: () => {
+      if (!currentUser.schoolId) {
+        return Promise.resolve({ data: null });
+      }
+      return fetchApi<{ data: unknown }>(`/api/analytics?schoolId=${currentUser.schoolId}`);
+    },
+    enabled: !!currentUser.schoolId,
     staleTime: 60 * 1000,
   });
 }
@@ -714,27 +720,4 @@ export function useInfiniteExamScores(examId: string) {
     staleTime: 30 * 1000,
     enabled: !!examId,
   });
-}
-
-export function invalidateAllQueries() {
-  const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries();
-}
-
-export function invalidateSchoolData() {
-  const queryClient = useQueryClient();
-  const { currentUser } = useAppStore();
-  
-  return () => {
-    queryClient.invalidateQueries({ queryKey: ['students', currentUser.schoolId] });
-    queryClient.invalidateQueries({ queryKey: ['teachers', currentUser.schoolId] });
-    queryClient.invalidateQueries({ queryKey: ['classes', currentUser.schoolId] });
-    queryClient.invalidateQueries({ queryKey: ['subjects', currentUser.schoolId] });
-    queryClient.invalidateQueries({ queryKey: ['attendance', currentUser.schoolId] });
-    queryClient.invalidateQueries({ queryKey: ['exams', currentUser.schoolId] });
-    queryClient.invalidateQueries({ queryKey: ['results', currentUser.schoolId] });
-    queryClient.invalidateQueries({ queryKey: ['payments', currentUser.schoolId] });
-    queryClient.invalidateQueries({ queryKey: ['analytics', currentUser.schoolId] });
-    queryClient.invalidateQueries({ queryKey: ['announcements', currentUser.schoolId] });
-  };
 }

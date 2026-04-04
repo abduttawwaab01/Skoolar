@@ -7,7 +7,12 @@ import { Button } from '@/components/ui/button';
 export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(display-mode: standalone)').matches;
+    }
+    return false;
+  });
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -29,10 +34,6 @@ export function PWAInstallPrompt() {
       setShowPrompt(false);
       setDeferredPrompt(null);
     });
-
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true);
-    }
 
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);

@@ -66,7 +66,7 @@ export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       currentRole: 'SUPER_ADMIN',
-      setCurrentRole: (role) => set({ currentRole: role, currentView: 'overview' }),
+      setCurrentRole: (role) => set({ currentRole: role }),
       setCurrentUser: (user) => set({ currentUser: user }),
       currentUser: {
         id: '',
