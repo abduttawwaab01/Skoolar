@@ -1,8 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { School, ArrowLeft, Lock, Loader2, CheckCircle2, Eye, EyeOff } from 'lucide-react';
@@ -11,11 +9,19 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 
-export default function ResetPasswordPage() {
+function LoadingFallback() {
   return (
-    <Suspense fallback={<ResetPasswordForm />}>
-      <ResetPasswordForm />
-    </Suspense>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-4">
+      <Card className="max-w-md w-full">
+        <CardHeader>
+          <CardTitle>Loading...</CardTitle>
+          <CardDescription>Please wait while we verify your reset link.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -160,5 +166,13 @@ function ResetPasswordForm() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
