@@ -109,19 +109,29 @@ async function seedSubscriptionPlans() {
   console.log('Subscription plans seeded');
 }
 
-async function seedDatabase() {
+async function seedDatabase(forceReset = false) {
   // Check if Super Admin already exists
-  const existingAdmin = await db.user.findFirst({
+  let existingAdmin = await db.user.findFirst({
     where: { role: 'SUPER_ADMIN' },
   });
 
-  if (existingAdmin) {
+  if (existingAdmin && !forceReset) {
     console.log('Super Admin already exists:', existingAdmin.email);
     return;
   }
 
-  // Create Super Admin
+  // Create or reset Super Admin
   const adminHash = await import('bcryptjs').then(b => b.hash('successor', 12));
+
+  if (existingAdmin && forceReset) {
+    // Reset existing admin password
+    await db.user.update({
+      where: { id: existingAdmin.id },
+      data: { password: adminHash, isActive: true },
+    });
+    console.log('Super Admin password reset:', existingAdmin.email, '-> successor');
+    return;
+  }
 
   const superAdmin = await db.user.create({
     data: {
@@ -134,15 +144,20 @@ async function seedDatabase() {
     },
   });
 
-  console.log('Super Admin created:', superAdmin.email);
+  console.log('Super Admin created:', superAdmin.email, '-> successor');
 }
 
 async function main() {
   console.log('Starting seeding...');
   
+  const forceReset = process.argv.includes('--force-reset');
+  if (forceReset) {
+    console.log('Force reset mode enabled');
+  }
+  
   try {
     await seedSubscriptionPlans();
-    await seedDatabase();
+    await seedDatabase(forceReset);
     console.log('Seeding completed!');
   } catch (e) {
     console.error('Error:', e);
