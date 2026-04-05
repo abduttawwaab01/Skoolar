@@ -227,8 +227,8 @@ export function SchoolAdminDashboard() {
   const totalTeachers = teachers.length;
 
   // Calculate changes compared to previous period
-  const studentChange = stats.previousStudents > 0 ? Math.round(((totalStudents - stats.previousStudents) / stats.previousStudents) * 100) : totalStudents > 0 ? 8 : 0;
-  const teacherChange = stats.previousTeachers > 0 ? Math.round(((totalTeachers - stats.previousTeachers) / stats.previousTeachers) * 100) : totalTeachers > 0 ? 5 : 0;
+  const studentChange = stats.previousStudents > 0 ? Math.round(((totalStudents - stats.previousStudents) / stats.previousStudents) * 100) : 0;
+  const teacherChange = stats.previousTeachers > 0 ? Math.round(((totalTeachers - stats.previousTeachers) / stats.previousTeachers) * 100) : 0;
   
   // Exams count - use real data from API
   const examCount = exams.length;
