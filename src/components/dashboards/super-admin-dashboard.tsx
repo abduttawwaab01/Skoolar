@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAppStore } from '@/store/app-store';
 import { SafeFormattedDate } from '@/components/shared/safe-formatted-date';
 import { toast } from 'sonner';
+import { cn } from "@/lib/utils";
 import {
   Building2, Users, GraduationCap, TrendingUp, ShieldCheck, UserPlus, Key,
   Activity, Clock, Database, HardDrive, Server, Zap, Globe,
