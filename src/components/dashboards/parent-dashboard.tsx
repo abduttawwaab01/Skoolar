@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { KpiCard } from '@/components/shared/kpi-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -121,7 +121,7 @@ export function ParentDashboard() {
   const outstanding = totalPending;
 
   // Use real attendance data from API
-  const attendanceDays = React.useMemo(() => {
+  const attendanceDays = useMemo(() => {
     const present = attendanceSummary?.present || 0;
     const absent = attendanceSummary?.absent || 0;
     const late = attendanceSummary?.late || 0;
@@ -152,16 +152,14 @@ export function ParentDashboard() {
     pendingCount: payments.filter(p => p.status === 'pending').length,
   };
 
-  // Use real academic data from results API
-  const recentReport = currentResults?.terms?.[0] ? {
-    term: currentResults.terms[0].termName || 'Current Term',
-    gpa: childGPA > 0 ? childGPA.toFixed(1) : 'N/A',
-    rank: childRank ? `${childRank}${getOrdinal(childRank)} of ${currentResults.classRank?.totalStudents || '—'}` : 'N/A',
-    totalSubjects: currentResults.terms[0].totalSubjects || 0,
-    average: currentResults.overallAverage?.toFixed(1) || 'N/A',
-    comment: currentResults.terms[0]?.teacherComment || 'No comment available',
-    teacher: currentResults.terms[0]?.classTeacher || 'Class Teacher',
-  } : null;
+   // Use real academic data from results API
+   const recentReport = currentResults?.terms?.[0] ? {
+     term: currentResults.terms[0].termName || 'Current Term',
+     gpa: childGPA > 0 ? childGPA.toFixed(1) : 'N/A',
+     rank: childRank ? `${childRank}${getOrdinal(childRank)} of ${currentResults.classRank?.totalStudents || '—'}` : 'N/A',
+     totalSubjects: currentResults.terms[0].totalSubjects || 0,
+     average: currentResults.overallAverage?.toFixed(1) || 'N/A',
+   } : null;
 
   function getOrdinal(n: number): string {
     const s = ['th', 'st', 'nd', 'rd'];
@@ -314,12 +312,9 @@ export function ParentDashboard() {
                     <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Pending Balance</p>
                     <p className="text-2xl font-bold text-gray-900 mt-1">₦{feeStatus.outstanding.toLocaleString()}</p>
                   </div>
-                </div>
-                <p className="text-[10px] font-bold text-muted-foreground flex items-center gap-2 uppercase tracking-widest">
-                  <Clock className="size-4 text-gray-400" /> Deadline Notification: <span className="text-gray-900">{feeStatus.nextDue}</span>
-                </p>
-              </CardContent>
-            </Card>
+                 </div>
+               </CardContent>
+             </Card>
           </motion.div>
         </div>
 
@@ -429,21 +424,10 @@ export function ParentDashboard() {
                   <p className={cn("text-3xl font-bold tracking-tighter transition-transform group-hover:scale-110", stat.color)}>{stat.value}</p>
                 </div>
               ))}
-            </div>
-            <div className="rounded-3xl bg-indigo-50/50 p-6 border-2 border-indigo-100/50 shadow-inner group">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="size-8 rounded-full bg-white flex items-center justify-center shadow-sm"><RefreshCw className="size-4 text-indigo-500" /></div>
-                <p className="text-[10px] font-bold text-indigo-700 uppercase tracking-widest">Faculty Evaluation Feedback</p>
-              </div>
-              <p className="text-base font-medium text-gray-700 italic leading-relaxed">&quot;{recentReport.comment}&quot;</p>
-              <div className="flex items-center justify-between mt-4 border-t border-indigo-100 pt-4">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">— {recentReport.teacher}</p>
-                <Badge className="bg-indigo-600 text-white font-bold text-xs uppercase tracking-widest px-3 border-0">Verified 2025</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+             </div>
+           </CardContent>
+         </Card>
+       </motion.div>
       )}
     </motion.div>
   );
