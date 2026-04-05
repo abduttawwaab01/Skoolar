@@ -295,6 +295,13 @@ export function SuperAdminDashboard() {
     totalSchools: schools.length,
     totalCodes: registrationCodes.length,
     usedCodes: registrationCodes.filter(c => c.isUsed).length,
+    uptime: 99.9,
+    apiRequests: 0,
+    avgResponseTime: 45,
+    databaseSize: '0 MB',
+    storageUsed: 0,
+    websocketConnections: 0,
+    queuedJobs: 0,
   };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;

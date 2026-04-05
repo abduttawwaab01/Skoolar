@@ -61,6 +61,8 @@ export function TeacherDashboard() {
   const [students, setStudents] = useState<ApiStudent[]>([]);
   const [announcements, setAnnouncements] = useState<ApiAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [homeworkList, setHomeworkList] = useState<any[]>([]);
+  const [totalPending, setTotalPending] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -285,7 +287,6 @@ export function TeacherDashboard() {
                       ) : (
                         <p className="text-center text-muted-foreground py-8">No classes assigned</p>
                       )}
-                    </ScrollArea>
                     </CardContent>
                   </Card>
                 </div>
