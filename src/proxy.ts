@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
+// Named export - NOT default
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -84,8 +85,10 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-   return NextResponse.next();
- }
+  return NextResponse.next();
+}
 
-// Define matcher directly (new convention in Next.js 15+)
-export const matcher = '/((?!_next/static|_next/image|favicon.ico).*)';
+// Config: which routes this proxy handles
+export const config = {
+  matcher: '/((?!_next/static|_next/image|favicon.ico).*)',
+};
