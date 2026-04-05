@@ -127,10 +127,9 @@ export function DirectorDashboard() {
   // Department comparison from performance by subject
   const deptComparison = useMemo(() => {
     if (!analytics?.performanceBySubject) return [];
-    return analytics.performanceBySubject.slice(0, 4).map((p, i) => ({
+    return analytics.performanceBySubject.slice(0, 4).map((p) => ({
       department: p.subjectName.length > 12 ? p.subjectName.substring(0, 12) + '...' : p.subjectName,
-      male: Math.round(p.averageScore * (0.9 + Math.random() * 0.2)),
-      female: Math.round(p.averageScore * (0.9 + Math.random() * 0.2)),
+      average: Math.round(p.averageScore),
     }));
   }, [analytics]);
 
@@ -241,8 +240,8 @@ export function DirectorDashboard() {
         {/* Department Comparison */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Department Comparison</CardTitle>
-            <CardDescription>Performance by department (grouped by gender)</CardDescription>
+            <CardTitle className="text-base">Department Performance</CardTitle>
+            <CardDescription>Average scores by department</CardDescription>
           </CardHeader>
           <CardContent>
             {deptComparison.length > 0 ? (
@@ -250,11 +249,10 @@ export function DirectorDashboard() {
                 <BarChart data={deptComparison}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="department" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
                   <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid hsl(var(--border))' }} />
                   <Legend />
-                  <Bar dataKey="male" fill="#0891B2" radius={[4, 4, 0, 0]} name="Male" />
-                  <Bar dataKey="female" fill="#BE185D" radius={[4, 4, 0, 0]} name="Female" />
+                  <Bar dataKey="average" fill="#0891B2" radius={[4, 4, 0, 0]} name="Average Score" />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
