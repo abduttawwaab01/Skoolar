@@ -84,11 +84,8 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  return NextResponse.next();
-}
+   return NextResponse.next();
+ }
 
-export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
-};
+// Define matcher directly (new convention in Next.js 15+)
+export const matcher = '/((?!_next/static|_next/image|favicon.ico).*)';

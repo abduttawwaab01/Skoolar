@@ -34,16 +34,16 @@ export function OverviewView() {
     setCurrentView(view as any);
   };
 
-  const analytics = analyticsData?.data as { schoolOverview?: { totalStudents: number; totalTeachers: number; totalClasses: number }; attendanceByClass?: Array<{ percentage: number }> } | undefined;
-  
-  const stats = analytics?.schoolOverview ? [
-    { label: 'Total Students', value: String(analytics.schoolOverview.totalStudents || 0), change: 'Live count', trend: 'neutral' as const },
-    { label: 'Teachers', value: String(analytics.schoolOverview.totalTeachers || 0), change: 'Active', trend: 'neutral' as const },
-    { label: 'Classes', value: String(analytics.schoolOverview.totalClasses || 0), change: 'Active', trend: 'neutral' as const },
-    { label: 'Attendance Rate', value: analytics.attendanceByClass?.[0] 
-      ? `${analytics.attendanceByClass[0].percentage}%` 
-      : 'N/A', change: 'Today', trend: 'neutral' as const },
-  ] : [];
+   const analytics = analyticsData?.data as { schoolOverview?: { totalStudents: number; totalTeachers: number; totalClasses: number }; attendanceByClass?: Array<{ percentage: number }> } | undefined;
+   
+   const stats = analytics?.schoolOverview ? [
+     { label: 'Total Students', value: String(analytics.schoolOverview.totalStudents || 0), change: 'Live count', trend: 'neutral' },
+     { label: 'Teachers', value: String(analytics.schoolOverview.totalTeachers || 0), change: 'Active', trend: 'neutral' },
+     { label: 'Classes', value: String(analytics.schoolOverview.totalClasses || 0), change: 'Active', trend: 'neutral' },
+     { label: 'Attendance Rate', value: analytics.attendanceByClass?.[0] 
+       ? `${analytics.attendanceByClass[0].percentage}%` 
+       : 'N/A', change: 'Today', trend: 'neutral' },
+   ] : [];
 
   return (
     <motion.div 
@@ -106,12 +106,12 @@ export function OverviewView() {
                   <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{stat.label}</p>
                   <div className="flex items-end justify-between">
                     <h3 className="text-3xl font-bold text-gray-900 dark:text-white">{stat.value}</h3>
-                    <Badge className={cn(
-                      "text-[10px] font-bold px-1.5 h-5",
-                      stat.trend === 'up' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-gray-100 text-gray-600 border-gray-200"
-                    )}>
-                      {stat.trend === 'up' ? '↑ ' : ''}{stat.change}
-                    </Badge>
+                     <Badge className={cn(
+                       "text-[10px] font-bold px-1.5 h-5",
+                       (stat.trend as string) === 'up' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-gray-100 text-gray-600 border-gray-200"
+                     )}>
+                       {(stat.trend as string) === 'up' ? '↑ ' : ''}{stat.change}
+                     </Badge>
                   </div>
                   <div className="w-full h-1 bg-gray-100 dark:bg-gray-800 rounded-full mt-4 overflow-hidden">
                     <motion.div 
