@@ -108,8 +108,11 @@ export function AnnouncementTicker() {
     // School filter: if targetSchools specified, currentUser's schoolId must be included
     if (a.targetSchools) {
       const schools = parseTargetList(a.targetSchools);
-      if (schools.length > 0 && currentUser?.schoolId && !schools.includes(currentUser.schoolId)) {
-        return false;
+      if (schools.length > 0) {
+        const userSchoolId = currentUser?.schoolId;
+        if (!userSchoolId || !schools.includes(userSchoolId)) {
+          return false;
+        }
       }
     }
     return true;
