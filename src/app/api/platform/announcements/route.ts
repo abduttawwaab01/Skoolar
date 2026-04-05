@@ -81,8 +81,8 @@ export async function GET(request: NextRequest) {
 // POST /api/platform/announcements - Super Admin: create announcement
 export async function POST(request: NextRequest) {
   try {
-    const token = await getToken({ req: request });
-    if (!token || token.role !== 'SUPER_ADMIN') {
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
     }
 
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
         isActive: isActive !== undefined ? isActive : true,
         startsAt: startsAt ? new Date(startsAt) : new Date(),
         expiresAt: expiresAt ? new Date(expiresAt) : null,
-        createdBy: token.id as string,
+        createdBy: session.user.id,
       },
     });
 
