@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
-// Named export - NOT default
-export async function middleware(request: NextRequest) {
+// Named export - function MUST be named "proxy" for proxy.ts files
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public paths that don't require authentication
