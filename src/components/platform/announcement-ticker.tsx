@@ -1,16 +1,21 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Info, AlertTriangle, AlertCircle, CheckCircle2, Megaphone } from 'lucide-react';
 import { handleSilentError } from '@/lib/error-handler';
+import { useAppStore } from '@/store/app-store';
 
 interface PlatformAnnouncement {
   id: string;
   title: string | null;
   message: string;
   type: string;
+  targetRoles: string | null;
+  targetSchools: string | null;
   linkUrl?: string;
   isActive: boolean;
+  startsAt: string;
+  expiresAt: string | null;
 }
 
 const typeConfig: Record<string, { bg: string; iconBg: string; icon: typeof Info; textColor: string; borderColor: string }> = {
@@ -44,11 +49,59 @@ const typeConfig: Record<string, { bg: string; iconBg: string; icon: typeof Info
   },
 };
 
+function parseJsonArray(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    return JSON.parse(value);
+  } catch {
+    return [];
+  }
+}
+
+function shouldShowAnnouncement(announcement: PlatformAnnouncement, userRole: string, userSchoolId: string): boolean {
+  const now = new Date();
+  const startsAt = announcement.startsAt ? new Date(announcement.startsAt) : null;
+  const expiresAt = announcement.expiresAt ? new Date(announcement.expiresAt) : null;
+
+  // Check if announcement is active and within date range
+  if (!announcement.isActive) return false;
+  if (startsAt && startsAt > now) return false;
+  if (expiresAt && expiresAt < now) return false;
+
+  // Check school filtering - if targetSchools is set, user must be in one of those schools
+  const targetSchools = parseJsonArray(announcement.targetSchools);
+  if (targetSchools.length > 0 && userSchoolId) {
+    if (!targetSchools.includes(userSchoolId)) return false;
+  }
+
+  // Check role filtering - if targetRoles is set, user role must match one of those roles
+  const targetRoles = parseJsonArray(announcement.targetRoles);
+  if (targetRoles.length > 0 && userRole) {
+    // Map store roles to announcement target roles
+    const roleMapping: Record<string, string> = {
+      'SUPER_ADMIN': 'SUPER_ADMIN',
+      'SCHOOL_ADMIN': 'SCHOOL_ADMIN',
+      'TEACHER': 'TEACHER',
+      'STUDENT': 'STUDENT',
+      'PARENT': 'PARENT',
+      'ACCOUNTANT': 'ACCOUNTANT',
+      'LIBRARIAN': 'LIBRARIAN',
+      'DIRECTOR': 'DIRECTOR',
+    };
+    
+    const mappedRole = roleMapping[userRole];
+    if (!mappedRole || !targetRoles.includes(mappedRole)) return false;
+  }
+
+  return true;
+}
+
 export function AnnouncementTicker() {
   const [announcements, setAnnouncements] = useState<PlatformAnnouncement[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [isPaused, setIsPaused] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [offset, setOffset] = useState(0);
+  const { currentRole, currentUser } = useAppStore();
 
   useEffect(() => {
     let cancelled = false;
@@ -68,7 +121,11 @@ export function AnnouncementTicker() {
     return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
-  const visibleAnnouncements = announcements.filter((a) => !dismissed.has(a.id) && a.isActive);
+  // Filter announcements based on user role and school
+  const visibleAnnouncements = announcements.filter((a) => {
+    if (dismissed.has(a.id)) return false;
+    return shouldShowAnnouncement(a, currentRole, currentUser.schoolId);
+  });
 
   const handleDismiss = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -82,30 +139,32 @@ export function AnnouncementTicker() {
   const config = typeConfig[firstAnn?.type] || typeConfig.info;
   const Icon = config.icon;
 
-  // Create the display content - single set for clean display
-  const displayContent = visibleAnnouncements.map((ann) => {
-    const annConfig = typeConfig[ann.type] || typeConfig.info;
-    const AnnIcon = annConfig.icon;
-    
-    const content = (
-      <span key={ann.id} className="flex items-center gap-2 shrink-0">
-        <Megaphone className="h-3 w-3 shrink-0 opacity-70" />
-        {ann.title && <span className="font-bold">{ann.title}:</span>}
-        <span>{ann.message}</span>
-        {ann.linkUrl && (
-          <a href={ann.linkUrl} target="_blank" rel="noopener noreferrer" className="underline hover:opacity-80">
-            Learn more
-          </a>
-        )}
-      </span>
-    );
-    
-    return { content, config: annConfig, icon: AnnIcon };
-  });
+  // Create display content - duplicate for seamless looping
+  const displayContent = [
+    ...visibleAnnouncements,
+    ...visibleAnnouncements,
+  ];
 
-  // Calculate animation duration based on content length
-  const totalLength = displayContent.reduce((acc, item) => acc + 200, 0); // Approximate width
-  const duration = Math.max(15, Math.min(30, totalLength / 20)); // 15-30 seconds based on content
+  // Calculate animation duration
+  const totalWidth = visibleAnnouncements.length * 300;
+  const duration = Math.max(20, Math.min(60, totalWidth / 30));
+
+  // Animation loop
+  useEffect(() => {
+    if (visibleAnnouncements.length === 0 || isPaused) return;
+
+    const interval = setInterval(() => {
+      setOffset((prev) => {
+        const contentWidth = totalWidth;
+        if (prev <= -contentWidth) {
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 30);
+
+    return () => clearInterval(interval);
+  }, [visibleAnnouncements.length, isPaused, totalWidth]);
 
   return (
     <div
@@ -114,27 +173,47 @@ export function AnnouncementTicker() {
       onMouseLeave={() => setIsPaused(false)}
     >
       <div className="flex items-center gap-3 px-4 py-2 max-w-full">
-        {/* Icon - shows first announcement type */}
+        {/* Icon */}
         <div className={`shrink-0 w-7 h-7 rounded-full ${config.iconBg} flex items-center justify-center z-10`}>
           <Icon className="h-3.5 w-3.5 text-white" />
         </div>
 
-        {/* Marquee Container */}
-        <div className="flex-1 overflow-hidden mask-gradient">
+        {/* Marquee Container - starts from right, scrolls to left */}
+        <div className="flex-1 overflow-hidden relative">
           <div
-            ref={containerRef}
             className="flex items-center"
             style={{
-              animation: isPaused ? 'none' : `marquee ${duration}s linear infinite`,
+              transform: `translateX(${offset}px)`,
               width: 'max-content',
             }}
           >
-            {displayContent.map((item, idx) => (
-              <span key={idx} className={`${item.config.textColor} text-sm font-medium whitespace-nowrap px-4`}>
-                {item.content}
-              </span>
-            ))}
+            {displayContent.map((ann, idx) => {
+              const annConfig = typeConfig[ann.type] || typeConfig.info;
+              return (
+                <span
+                  key={`${ann.id}-${idx}`}
+                  className={`${annConfig.textColor} text-sm font-medium whitespace-nowrap flex items-center gap-2 px-6`}
+                >
+                  <Megaphone className="h-3 w-3 shrink-0 opacity-70" />
+                  {ann.title && <span className="font-bold">{ann.title}:</span>}
+                  <span>{ann.message}</span>
+                  {ann.linkUrl && (
+                    <a
+                      href={ann.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:opacity-80 ml-2"
+                    >
+                      Learn more
+                    </a>
+                  )}
+                </span>
+              );
+            })}
           </div>
+          
+          {/* Fade gradient on right edge */}
+          <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white to-transparent pointer-events-none" />
         </div>
 
         {/* Dismiss button */}
@@ -145,23 +224,6 @@ export function AnnouncementTicker() {
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-
-      {/* CSS for smooth marquee animation */}
-      <style jsx>{`
-        @keyframes marquee {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-        
-        .mask-gradient {
-          mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
-          -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
-        }
-      `}</style>
     </div>
   );
 }
