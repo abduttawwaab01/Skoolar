@@ -114,13 +114,12 @@ export function AnnouncementTicker() {
 
   if (visibleAnnouncements.length === 0) return null;
 
-  // Get the first announcement's config for styling
-  const firstAnn = visibleAnnouncements[0];
-  const config = typeConfig[firstAnn?.type] || typeConfig.info;
-  const Icon = config.icon;
+   // Get the first announcement's config for styling
+   const firstAnn = visibleAnnouncements[0];
+   const config = typeConfig[firstAnn?.type] || typeConfig.info;
+   const Icon = config.icon;
 
-   // Duplicate content for seamless looping
-   const marqueeContent = [...visibleAnnouncements, ...visibleAnnouncements];
+   // marqueeContent is already defined above for seamless looping
 
    return (
      <div
