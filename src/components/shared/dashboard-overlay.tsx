@@ -71,8 +71,8 @@ export function DashboardOverlay() {
   const [overlays, setOverlays] = useState<OverlayData[]>([]);
   const [currentOverlay, setCurrentOverlay] = useState<OverlayData | null>(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-  const confirm = useConfirm();
+   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+   const confirm = useConfirm() as (title: string, description?: string) => Promise<boolean>;
 
   useEffect(() => {
     if (!currentUser) return;

@@ -25,14 +25,17 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         messages: {
-          select: {
-            id: true,
-            isRead: true,
-            senderId: true,
-            content: true,
-            createdAt: true,
-          },
           orderBy: { createdAt: 'asc' },
+          include: {
+            sender: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+              },
+            },
+          },
         },
       },
       orderBy: { updatedAt: 'desc' },

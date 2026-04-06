@@ -29,10 +29,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
 
-    // Get messages (sender info fetched separately if needed)
+    // Get messages with sender info
     const messages = await db.message.findMany({
       where: { conversationId },
       orderBy: { createdAt: 'asc' },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+      },
     });
 
     // Mark messages as read for current user
