@@ -60,6 +60,8 @@ interface AppState {
   setSearchQuery: (query: string) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+  disabledFeatures: string[];
+  setDisabledFeatures: (features: string[]) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -95,6 +97,8 @@ export const useAppStore = create<AppState>()(
       setSearchQuery: (query) => set({ searchQuery: query }),
       isLoading: false,
       setIsLoading: (loading) => set({ isLoading: loading }),
+      disabledFeatures: [],
+      setDisabledFeatures: (features) => set({ disabledFeatures: features }),
     }),
     {
       name: 'skoolar-store',
