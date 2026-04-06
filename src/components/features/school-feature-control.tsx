@@ -10,7 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/app-store';
 import {
-  Building2, Shield, Users, GraduationCap, Lock, Unlock, Save, CheckCircle2, XCircle, School, UserCog, Calculator as CalcIcon, BookOpen, Video, ClipboardList, TrendingUp, BarChart3, MessageSquare, Bell, FileEdit, Award, Calendar, Wallet, Library, Eye, Heart, Settings, UserCheck
+  Building2, Shield, Users, GraduationCap, Lock, Unlock, Save, CheckCircle2, XCircle, School, UserCog, Calculator as CalcIcon, BookOpen, Video, ClipboardList, TrendingUp, BarChart3, MessageSquare, Bell, FileEdit, Award, Calendar, Wallet, Library, Eye, Heart, Settings, UserCheck,
+  FileText, ArrowUpCircle, Layers, Search, Mail, Palette, Sliders, Upload, ScanLine, IdCard, ClipboardCheck, Megaphone, Pin, LifeBuoy, ShieldAlert
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,7 +39,18 @@ const ALL_FEATURES: { id: string; label: string; icon: typeof Shield; category: 
   { id: 'ai-assistant', label: 'AI Assistant', icon: Settings, category: 'Academics', description: 'AI study assistant for students' },
   { id: 'notice-board', label: 'Notice Board', icon: FileEdit, category: 'Communication', description: 'School notice board' },
   { id: 'student-diary', label: 'Student Diary', icon: BookOpen, category: 'Student Life', description: 'Digital student diary' },
-  { id: 'entrance-exams', label: 'Entrance Exams', icon: UserCheck, category: 'Admissions', description: 'Manage entrance examinations and applications' },
+   { id: 'entrance-exams', label: 'Entrance Exams', icon: UserCheck, category: 'Admissions', description: 'Manage entrance examinations and applications' },
+  // --- Additional School-Controlled Features ---
+  { id: 'report-card-view', label: 'Generate Report Cards', icon: FileText, category: 'Academics', description: 'Generate and publish student report cards' },
+  { id: 'student-promotion', label: 'Student Promotions', icon: ArrowUpCircle, category: 'Academics', description: 'Promote students to next class/grade' },
+  { id: 'id-cards', label: 'ID Cards', icon: IdCard, category: 'Resources', description: 'Generate and manage student/staff ID cards' },
+  { id: 'class-monitoring', label: 'Class Monitoring', icon: Eye, category: 'Academics', description: 'Real-time class activity monitoring' },
+  { id: 'school-profile', label: 'School Profile', icon: Building2, category: 'Operations', description: 'Manage school public profile and information' },
+  { id: 'school-settings', label: 'School Settings', icon: Sliders, category: 'Operations', description: 'Configure school-wide settings' },
+  { id: 'advanced-search', label: 'Advanced Search', icon: Search, category: 'Operations', description: 'Advanced search across all records' },
+  { id: 'communication', label: 'Communication Center', icon: Mail, category: 'Communication', description: 'School-wide messaging and announcements' },
+  { id: 'subscription', label: 'Subscription & Billing', icon: Wallet, category: 'Finance', description: 'Manage subscription and billing details' },
+  { id: 'support', label: 'Support Requests', icon: LifeBuoy, category: 'Operations', description: 'Submit and manage support tickets' },
 ];
 
 const ALL_USER_ROLES: { id: string; label: string; description: string }[] = [
