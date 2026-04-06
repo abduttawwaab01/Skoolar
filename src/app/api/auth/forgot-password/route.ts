@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
+import { sendEmail, createPasswordResetEmail } from '@/lib/email';
 
 const SALT_ROUNDS = 10;
 const RESET_TOKEN_EXPIRY_HOURS = 1;
@@ -29,19 +30,28 @@ export async function POST(request: NextRequest) {
 
     await db.user.update({
       where: { id: user.id },
-      data: { resetToken, resetTokenExpiry },
+      data: { passwordResetToken: resetToken, passwordResetExpiry: resetTokenExpiry },
     });
 
     // In production, send email with reset link
     // For now, return the token (remove in production)
     const resetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
 
-    // TODO: Integrate with Resend/SendGrid to send actual email
-    // await sendEmail({ to: email, subject: 'Reset Password', html: `Click here: ${resetUrl}` });
+    // Send email with reset link
+    const emailResult = await sendEmail({
+      to: email,
+      ...createPasswordResetEmail(user.name, resetUrl),
+    });
+
+    if (!emailResult.success) {
+      // Log error but still return success to prevent email enumeration
+      console.error('Failed to send password reset email:', emailResult.error);
+    }
 
     return NextResponse.json({
       message: 'If an account exists with that email, a reset link has been sent.',
-      resetUrl: process.env.NODE_ENV === 'development' ? resetUrl : undefined,
+      // Only include resetUrl in development for debugging
+      ...(process.env.NODE_ENV === 'development' && { resetUrl }),
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -65,8 +75,8 @@ export async function PUT(request: NextRequest) {
 
     const user = await db.user.findFirst({
       where: {
-        resetToken: token,
-        resetTokenExpiry: { gt: new Date() },
+        passwordResetToken: token,
+        passwordResetExpiry: { gt: new Date() },
       },
     });
 
@@ -80,8 +90,8 @@ export async function PUT(request: NextRequest) {
       where: { id: user.id },
       data: {
         password: hashedPassword,
-        resetToken: null,
-        resetTokenExpiry: null,
+        passwordResetToken: null,
+        passwordResetExpiry: null,
       },
     });
 
@@ -103,7 +113,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const user = await db.user.findFirst({
-      where: { resetToken: token },
+      where: { emailVerificationToken: token },
     });
 
     if (!user) {
@@ -114,8 +124,8 @@ export async function PATCH(request: NextRequest) {
       where: { id: user.id },
       data: {
         emailVerified: new Date(),
-        resetToken: null,
-        resetTokenExpiry: null,
+        emailVerificationToken: null,
+        emailVerificationExpiry: null,
       },
     });
 

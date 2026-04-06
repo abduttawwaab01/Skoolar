@@ -17,12 +17,12 @@ export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email', placeholder: 'admin@skoolar.com' },
-        password: { label: 'Password', type: 'password' },
-        role: { label: 'Role', type: 'text' },
-        schoolId: { label: 'School ID', type: 'text' },
-      },
+        credentials: {
+          email: { label: 'Email', type: 'email', placeholder: process.env.SUPER_ADMIN_EMAIL || 'admin@skoolar.com' },
+          password: { label: 'Password', type: 'password' },
+          role: { label: 'Role', type: 'text' },
+          schoolId: { label: 'School ID', type: 'text' },
+        },
       async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           return null;
@@ -45,6 +45,11 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!user.isActive) {
+          return null;
+        }
+
+        // School admins must have verified email
+        if (user.role === 'SCHOOL_ADMIN' && !user.emailVerified) {
           return null;
         }
 

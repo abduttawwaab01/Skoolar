@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { CreditCard, Plus, Pencil, Trash2, Check, X, Crown, Zap, Building2, Users, GraduationCap, BookOpen, Video, HardDrive, Headphones, Globe, Code, Palette } from 'lucide-react';
 import { handleSilentError } from '@/lib/error-handler';
+import { useConfirm } from '@/components/confirm-dialog';
 
 interface Plan {
   id: string; name: string; displayName: string; price: number; yearlyPrice: number | null;
@@ -37,6 +38,7 @@ export function PlansManager() {
   });
   const [saving, setSaving] = useState(false);
   const [featureInput, setFeatureInput] = useState('');
+  const confirm = useConfirm();
 
   const fetchPlans = useCallback(async () => {
     try {
@@ -85,15 +87,16 @@ export function PlansManager() {
     } catch (error: unknown) { handleSilentError(error); toast.error('Failed to save'); } finally { setSaving(false); }
   };
 
-  const deletePlan = async (plan: Plan) => {
-    if (!confirm(`Delete plan "${plan.displayName}"?`)) return;
-    try {
-      const res = await fetch(`/api/plans-manager?id=${plan.id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) { toast.success('Plan deleted'); fetchPlans(); }
-      else toast.error(json.message || 'Failed to delete');
-    } catch (error: unknown) { handleSilentError(error); toast.error('Failed'); }
-  };
+   const deletePlan = async (plan: Plan) => {
+     const ok = await confirm('Delete Subscription Plan', `Are you sure you want to delete the plan "${plan.displayName}"? This action cannot be undone.`);
+     if (!ok) return;
+     try {
+       const res = await fetch(`/api/plans-manager?id=${plan.id}`, { method: 'DELETE' });
+       const json = await res.json();
+       if (json.success) { toast.success('Plan deleted'); fetchPlans(); }
+       else toast.error(json.message || 'Failed to delete');
+     } catch (error: unknown) { handleSilentError(error); toast.error('Failed'); }
+   };
 
   const toggleActive = async (plan: Plan) => {
     try {

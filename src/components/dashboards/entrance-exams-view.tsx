@@ -23,12 +23,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Plus, AlertCircle, Loader2, Copy, Eye, Trash2, ClipboardCheck,
   CheckCircle2, Users, FileQuestion, Shield, Link2, GraduationCap,
-  Briefcase, Timer, ToggleLeft, ArrowUpDown, RefreshCw
+  Briefcase, Timer, ToggleLeft, ArrowUpDown, RefreshCw, Pencil
 } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
 import { handleSilentError } from '@/lib/error-handler';
 import { motion } from 'framer-motion';
+ import { useConfirm } from '@/components/confirm-dialog';
+ import { sendEmail } from '@/lib/email';
 
 interface EntranceExamRecord {
   id: string;
@@ -50,11 +52,15 @@ interface AttemptRecord {
   applicantPhone: string | null;
   finalScore: number | null;
   autoScore: number | null;
+  manualScore: number | null;
   status: string;
   aiSuggestions: string | null;
   tabSwitchCount: number;
   timeTakenSeconds: number | null;
   submittedAt: string | null;
+  gradedAt: string | null;
+  securityViolations: string | null;
+  answers: string | null;
   createdAt: string;
 }
 
@@ -212,12 +218,14 @@ export function EntranceExamsView() {
   const [exams, setExams] = React.useState<EntranceExamRecord[]>([]);
   const [loading, setLoading] = React.useState(true);
 
-  // Create Dialog
-  const [createOpen, setCreateOpen] = React.useState(false);
-  const [creating, setCreating] = React.useState(false);
-  const [createForm, setCreateForm] = React.useState({
-    title: '', type: 'assessment', description: '', totalMarks: '100', passingMarks: '50', duration: '',
-  });
+   // Create Dialog
+   const [createOpen, setCreateOpen] = React.useState(false);
+   const [creating, setCreating] = React.useState(false);
+   const [createForm, setCreateForm] = React.useState({
+     title: '', type: 'assessment', description: '', totalMarks: '100', passingMarks: '50', duration: '',
+   });
+
+   const confirm = useConfirm();
 
   // Detail/Edit Dialog
   const [detailOpen, setDetailOpen] = React.useState(false);
@@ -236,9 +244,17 @@ export function EntranceExamsView() {
     blockRightClick: true,
     blockKeyboardShortcuts: false,
   });
-  const [savingSecurity, setSavingSecurity] = React.useState(false);
+   const [savingSecurity, setSavingSecurity] = React.useState(false);
 
-  React.useEffect(() => { fetchExams(); }, [selectedSchoolId]);
+   // Grading states
+   const [gradingOpen, setGradingOpen] = React.useState(false);
+   const [gradingAttempt, setGradingAttempt] = React.useState<AttemptRecord | null>(null);
+   const [manualScore, setManualScore] = React.useState<number | ''>('');
+   const [gradingStatus, setGradingStatus] = React.useState<string>('graded');
+   const [gradingComments, setGradingComments] = React.useState('');
+   const [savingGrading, setSavingGrading] = React.useState(false);
+
+   React.useEffect(() => { fetchExams(); }, [selectedSchoolId]);
 
   const fetchExams = async () => {
     if (!selectedSchoolId) { setLoading(false); return; }
@@ -303,6 +319,59 @@ export function EntranceExamsView() {
     finally { setDetailLoading(false); }
   };
 
+  const openGrading = (attempt: AttemptRecord) => {
+    setGradingAttempt(attempt);
+    setManualScore(attempt.manualScore ?? attempt.finalScore ?? '');
+    setGradingStatus(attempt.status);
+    setGradingComments('');
+    setGradingOpen(true);
+  };
+
+  const saveGrading = async () => {
+    if (!gradingAttempt || manualScore === '') return;
+    setSavingGrading(true);
+    try {
+      if (!examDetails) throw new Error('Exam details not loaded');
+      const res = await fetch(`/api/entrance-exams/${examDetails.id}/grade`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          attemptId: gradingAttempt.id,
+          manualScore: Number(manualScore),
+          status: gradingStatus,
+          comments: gradingComments,
+        }),
+      });
+      const json = await res.json();
+       if (!res.ok) throw new Error(json.error);
+       toast.success('Grading saved');
+       setGradingOpen(false);
+       // Send notification email if decision status and applicant email exists
+       if (gradingAttempt?.applicantEmail && ['approved', 'rejected', 'offered_admission', 'declined'].includes(gradingStatus)) {
+         try {
+           const subject = `Application Update: ${examDetails?.title} - Status: ${gradingStatus.charAt(0).toUpperCase() + gradingStatus.slice(1)}`;
+           const html = `
+             <p>Dear ${gradingAttempt.applicantName},</p>
+             <p>Your application for <strong>${examDetails?.title}</strong> has been updated to: <strong>${gradingStatus}</strong>.</p>
+             ${gradingComments ? `<p>Comments: ${gradingComments}</p>` : ''}
+             <p>Log in to your account to view details.</p>
+             <p>Best regards,<br/>${process.env.NEXTAUTH_URL || 'Skoolar Platform'}</p>
+           `;
+           await sendEmail({ to: gradingAttempt.applicantEmail, subject, html });
+         } catch (e) {
+           console.error('Failed to send notification email:', e);
+           // Do not throw - grading already saved
+         }
+       }
+       // Reload exam details to reflect changes
+       openExamDetails(examDetails.id);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to save grading');
+    } finally {
+      setSavingGrading(false);
+    }
+  };
+
   const saveQuestions = async () => {
     if (!examDetails) return;
     const valid = editedQuestions.every(q => q.questionText.trim());
@@ -349,16 +418,17 @@ export function EntranceExamsView() {
     } catch (error: unknown) { handleSilentError(error); toast.error('Failed to update status'); }
   };
 
-  const deleteExam = async (id: string) => {
-    if (!confirm('Delete this exam? Applicants with the code will no longer be able to access it.')) return;
-    try {
-      const res = await fetch(`/api/entrance-exams/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete');
-      toast.success('Exam deleted');
-      fetchExams();
-      setDetailOpen(false);
-    } catch (error: unknown) { handleSilentError(error); toast.error('Failed to delete'); }
-  };
+   const deleteExam = async (id: string) => {
+     const ok = await confirm('Delete Entrance Exam', 'Are you sure you want to delete this exam? Applicants with the code will no longer be able to access it. This action cannot be undone.');
+     if (!ok) return;
+     try {
+       const res = await fetch(`/api/entrance-exams/${id}`, { method: 'DELETE' });
+       if (!res.ok) throw new Error('Failed to delete');
+       toast.success('Exam deleted');
+       fetchExams();
+       setDetailOpen(false);
+     } catch (error: unknown) { handleSilentError(error); toast.error('Failed to delete'); }
+   };
 
   const copyCode = (code: string) => { navigator.clipboard.writeText(code); toast.success(`Code "${code}" copied!`); };
   const copyLink = (code: string) => {
@@ -668,6 +738,11 @@ export function EntranceExamsView() {
                                     {attempt.aiSuggestions}
                                   </div>
                                 )}
+                                <div className="mt-3 pt-3 border-t flex justify-end">
+                                  <Button size="sm" variant="outline" onClick={() => openGrading(attempt)}>
+                                    <Pencil className="h-3.5 w-3.5 mr-1" /> Grade
+                                  </Button>
+                                </div>
                               </CardContent>
                             </Card>
                           );
@@ -751,6 +826,69 @@ export function EntranceExamsView() {
               <AlertCircle className="h-8 w-8 mr-3 text-red-400" /> Failed to load exam data.
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Grading Dialog */}
+      <Dialog open={gradingOpen} onOpenChange={setGradingOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Grade Attempt - {gradingAttempt?.applicantName}</DialogTitle>
+            <DialogDescription>
+              Enter manual score and update status. The final score will be set to the manual score.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Manual Score (max: {examDetails?.totalMarks})</Label>
+              <Input
+                type="number"
+                min="0"
+                max={examDetails?.totalMarks}
+                value={manualScore}
+                onChange={e => setManualScore(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="Enter score"
+              />
+            </div>
+            <div>
+              <Label>Status</Label>
+              <Select value={gradingStatus} onValueChange={setGradingStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="graded">Graded</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="offered_admission">Offered Admission</SelectItem>
+                  <SelectItem value="declined">Declined</SelectItem>
+                  <SelectItem value="under_review">Under Review</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Comments (optional)</Label>
+              <Textarea
+                value={gradingComments}
+                onChange={e => setGradingComments(e.target.value)}
+                placeholder="Comments for applicant..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGradingOpen(false)} disabled={savingGrading}>
+              Cancel
+            </Button>
+            <Button onClick={saveGrading} disabled={savingGrading || manualScore === ''}>
+              {savingGrading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+              )}
+              Save Grading
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </motion.div>

@@ -17,6 +17,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useAppStore } from '@/store/app-store';
+import { useConfirm } from '@/components/confirm-dialog';
 
 interface OverlayData {
   id: string;
@@ -71,6 +72,7 @@ export function DashboardOverlay() {
   const [currentOverlay, setCurrentOverlay] = useState<OverlayData | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const confirm = useConfirm();
 
   useEffect(() => {
     if (!currentUser) return;
@@ -360,7 +362,8 @@ export function OverlayManager({ onClose }: OverlayManagerProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this overlay?')) return;
+    const ok = await confirm('Delete Overlay', 'Are you sure you want to delete this overlay? This action cannot be undone.');
+    if (!ok) return;
     try {
       await fetch(`/api/platform/overlays/${id}`, { method: 'DELETE' });
       fetchOverlays();

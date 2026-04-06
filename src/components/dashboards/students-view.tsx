@@ -30,9 +30,9 @@ import {
 } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { Plus, User, GraduationCap, BookOpen, BarChart3, CalendarCheck, Loader2 } from 'lucide-react';
-import { useAppStore } from '@/store/app-store';
-import { toast } from 'sonner';
-import { useStudents, useClasses, useCreateStudent } from '@/hooks/use-api';
+ import { useAppStore } from '@/store/app-store';
+ import { toast } from 'sonner';
+ import { useStudents, useClasses, useCreateStudent } from '@/hooks/use-api';
 
 interface StudentRecord {
   id: string;

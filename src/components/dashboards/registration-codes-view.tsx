@@ -25,7 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Copy, KeyRound, Plus, RefreshCw, XCircle } from 'lucide-react';
+ import { Copy, KeyRound, Plus, RefreshCw, XCircle, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface RegistrationCodeRecord {
@@ -72,11 +72,14 @@ export function RegistrationCodesView() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
-  const [open, setOpen] = React.useState(false);
-  const [formPlan, setFormPlan] = React.useState('');
-  const [formRegion, setFormRegion] = React.useState('');
-  const [formMaxUses, setFormMaxUses] = React.useState('1');
-  const [formExpiry, setFormExpiry] = React.useState('');
+   const [open, setOpen] = React.useState(false);
+   const [editOpen, setEditOpen] = React.useState(false);
+   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
+   const [formPlan, setFormPlan] = React.useState('');
+   const [formRegion, setFormRegion] = React.useState('');
+   const [formMaxUses, setFormMaxUses] = React.useState('1');
+   const [formExpiry, setFormExpiry] = React.useState('');
+   const [editingCode, setEditingCode] = React.useState<RegistrationCodeRecord | null>(null);
 
   const fetchCodes = React.useCallback(async () => {
     try {
@@ -95,42 +98,99 @@ export function RegistrationCodesView() {
 
   React.useEffect(() => { fetchCodes(); }, [fetchCodes]);
 
-  const handleGenerate = async () => {
-    if (!formPlan) {
-      toast.error('Please select a plan');
-      return;
-    }
-    try {
-      setSubmitting(true);
-      const res = await fetch('/api/registration-codes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plan: formPlan,
-          region: formRegion || null,
-          maxUses: parseInt(formMaxUses) || 1,
-          expiresAt: formExpiry || null,
-          count: 1,
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to generate code');
-      }
-      const json = await res.json();
-      toast.success(json.message || 'Registration code generated successfully');
-      setOpen(false);
-      setFormPlan('');
-      setFormRegion('');
-      setFormMaxUses('1');
-      setFormExpiry('');
-      fetchCodes();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to generate code');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+   const handleGenerate = async () => {
+     if (!formPlan) {
+       toast.error('Please select a plan');
+       return;
+     }
+     try {
+       setSubmitting(true);
+       const res = await fetch('/api/registration-codes', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           plan: formPlan,
+           region: formRegion || null,
+           maxUses: parseInt(formMaxUses) || 1,
+           expiresAt: formExpiry || null,
+           count: 1,
+         }),
+       });
+       if (!res.ok) {
+         const err = await res.json();
+         throw new Error(err.error || 'Failed to generate code');
+       }
+       const json = await res.json();
+       toast.success(json.message || 'Registration code generated successfully');
+       setOpen(false);
+       setFormPlan('');
+       setFormRegion('');
+       setFormMaxUses('1');
+       setFormExpiry('');
+       fetchCodes();
+     } catch (err) {
+       toast.error(err instanceof Error ? err.message : 'Failed to generate code');
+     } finally {
+       setSubmitting(false);
+     }
+   };
+
+   const handleEdit = (code: RegistrationCodeRecord) => {
+     setEditingCode(code);
+     setFormPlan(code.plan);
+     setFormRegion(code.region || '');
+     setFormMaxUses(String(code.maxUses));
+     setFormExpiry(code.expiresAt ? new Date(code.expiresAt).toISOString().split('T')[0] : '');
+     setEditOpen(true);
+   };
+
+   const handleUpdate = async () => {
+     if (!editingCode) return;
+     try {
+       setSubmitting(true);
+       const res = await fetch('/api/registration-codes', {
+         method: 'PUT',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           id: editingCode.id,
+           plan: formPlan,
+           region: formRegion || null,
+           maxUses: parseInt(formMaxUses) || 1,
+           expiresAt: formExpiry || null,
+         }),
+       });
+       if (!res.ok) {
+         const err = await res.json();
+         throw new Error(err.error || 'Failed to update code');
+       }
+       const json = await res.json();
+       toast.success(json.message || 'Registration code updated successfully');
+       setEditOpen(false);
+       setEditingCode(null);
+       fetchCodes();
+     } catch (err) {
+       toast.error(err instanceof Error ? err.message : 'Failed to update code');
+     } finally {
+       setSubmitting(false);
+     }
+   };
+
+   const handleDelete = async (id: string) => {
+     try {
+       const res = await fetch(`/api/registration-codes?id=${id}`, {
+         method: 'DELETE',
+       });
+       if (!res.ok) {
+         const err = await res.json();
+         throw new Error(err.error || 'Failed to delete code');
+       }
+       toast.success('Registration code deleted successfully');
+       setDeleteConfirmId(null);
+       fetchCodes();
+     } catch (err) {
+       toast.error(err instanceof Error ? err.message : 'Failed to delete code');
+     }
+   };
 
   const columns: ColumnDef<RegistrationCodeRecord>[] = [
     {
@@ -169,18 +229,35 @@ export function RegistrationCodesView() {
       header: 'Expires',
       cell: ({ row }) => <span className="text-sm">{row.original.expiresAt ? new Date(row.original.expiresAt).toISOString().split('T')[0] : 'Never'}</span>,
     },
-    {
-      accessorKey: 'isUsed',
-      header: 'Status',
-      cell: ({ row }) => {
-        const isUsed = row.original.isUsed;
-        const isExpired = row.original.expiresAt ? new Date(row.original.expiresAt) < new Date() : false;
-        if (isUsed) return <StatusBadge variant="neutral">Used</StatusBadge>;
-        if (isExpired) return <StatusBadge variant="warning">Expired</StatusBadge>;
-        return <StatusBadge variant="success">Active</StatusBadge>;
-      },
-    },
-  ];
+     {
+       accessorKey: 'isUsed',
+       header: 'Status',
+       cell: ({ row }) => {
+         const isUsed = row.original.isUsed;
+         const isExpired = row.original.expiresAt ? new Date(row.original.expiresAt) < new Date() : false;
+         if (isUsed) return <StatusBadge variant="neutral">Used</StatusBadge>;
+         if (isExpired) return <StatusBadge variant="warning">Expired</StatusBadge>;
+         return <StatusBadge variant="success">Active</StatusBadge>;
+       },
+     },
+     {
+       accessorKey: 'actions',
+       header: 'Actions',
+       cell: ({ row }) => {
+         const code = row.original;
+         return (
+           <div className="flex items-center gap-2">
+             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(code)} title="Edit">
+               <Edit className="size-4" />
+             </Button>
+             <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600" onClick={() => setDeleteConfirmId(code.id)} title="Delete">
+               <Trash2 className="size-4" />
+             </Button>
+           </div>
+         );
+       },
+     },
+   ];
 
   if (error && codes.length === 0) {
     return (
@@ -273,9 +350,88 @@ export function RegistrationCodesView() {
                 {submitting ? 'Generating...' : 'Generate Code'}
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+           </DialogContent>
+         </Dialog>
+
+         {/* Edit Code Dialog */}
+         <Dialog open={editOpen} onOpenChange={setEditOpen}>
+           <DialogContent>
+             <DialogHeader>
+               <DialogTitle className="flex items-center gap-2">
+                 <Edit className="size-5" />
+                 Edit Registration Code
+               </DialogTitle>
+               <DialogDescription>
+                 Update the settings for this registration code.
+               </DialogDescription>
+             </DialogHeader>
+             <div className="grid gap-4 py-4">
+               <div className="grid gap-2">
+                 <Label>Plan</Label>
+                 <Select value={formPlan} onValueChange={setFormPlan}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Select plan" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="enterprise">Enterprise</SelectItem>
+                     <SelectItem value="pro">Pro</SelectItem>
+                     <SelectItem value="basic">Basic</SelectItem>
+                   </SelectContent>
+                 </Select>
+               </div>
+               <div className="grid gap-2">
+                 <Label>Region</Label>
+                 <Input
+                   placeholder="e.g. Southwest (optional)"
+                   value={formRegion}
+                   onChange={(e) => setFormRegion(e.target.value)}
+                 />
+               </div>
+               <div className="grid gap-2">
+                 <Label>Max Uses</Label>
+                 <Input
+                   type="number"
+                   min="1"
+                   value={formMaxUses}
+                   onChange={(e) => setFormMaxUses(e.target.value)}
+                 />
+               </div>
+               <div className="grid gap-2">
+                 <Label>Expiry Date</Label>
+                 <Input
+                   type="date"
+                   value={formExpiry}
+                   onChange={(e) => setFormExpiry(e.target.value)}
+                 />
+               </div>
+             </div>
+             <DialogFooter>
+               <Button variant="outline" onClick={() => { setEditOpen(false); setEditingCode(null); }}>Cancel</Button>
+               <Button onClick={handleUpdate} disabled={submitting}>
+                 {submitting ? 'Updating...' : 'Update Code'}
+               </Button>
+             </DialogFooter>
+           </DialogContent>
+         </Dialog>
+
+         {/* Delete Confirmation Dialog */}
+         <Dialog open={!!deleteConfirmId} onOpenChange={(open) => { if (!open) setDeleteConfirmId(null); }}>
+           <DialogContent>
+             <DialogHeader>
+               <DialogTitle>Delete Registration Code</DialogTitle>
+               <DialogDescription>
+                 Are you sure you want to delete this registration code? This action cannot be undone.
+               </DialogDescription>
+             </DialogHeader>
+             <DialogFooter>
+               <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+               <Button variant="destructive" onClick={() => deleteConfirmId && handleDelete(deleteConfirmId)}>
+                 Delete
+               </Button>
+             </DialogFooter>
+           </DialogContent>
+         </Dialog>
+       </div>
 
       {loading ? (
         <div className="space-y-3">

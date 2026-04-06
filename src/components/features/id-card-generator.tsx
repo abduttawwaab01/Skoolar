@@ -82,8 +82,9 @@ function adjustColor(hex: string, amount: number): string {
 }
 
 export function IDCardGenerator() {
-  const { currentRole } = useAppStore();
+  const { currentRole, selectedSchoolId, currentUser } = useAppStore();
   const isTeacher = currentRole === 'TEACHER';
+  const schoolId = selectedSchoolId || currentUser.schoolId;
   
   // Data states
   const [students, setStudents] = useState<StudentData[]>([]);
@@ -124,7 +125,7 @@ export function IDCardGenerator() {
     setIsLoading(true);
     try {
       if (cardType === 'student') {
-        const res = await fetch('/api/students?limit=1000');
+        const res = await fetch(`/api/students?schoolId=${schoolId}&limit=1000`);
         if (res.ok) {
           const json = await res.json();
           const studentList: StudentData[] = (json.data || []).map((s: any) => ({
@@ -145,19 +146,30 @@ export function IDCardGenerator() {
           setStaff([]);
           return;
         }
-        const res = await fetch('/api/teachers?limit=1000');
+        const res = await fetch(`/api/users?schoolId=${schoolId}&limit=1000`);
         if (res.ok) {
           const json = await res.json();
-          const staffList: StaffData[] = (json.data || []).map((t: any) => ({
-            id: t.id,
-            name: t.name || t.user?.name || 'Unknown',
-            employeeNo: t.employeeNo || 'N/A',
-            role: t.qualification || 'Teacher',
-            phone: t.phone,
-            photo: t.photo,
-            userId: t.userId,
-            schoolId: t.schoolId,
-          }));
+          const staffList: StaffData[] = (json.data || [])
+            .filter((u: any) => !['STUDENT', 'PARENT'].includes(u.role))
+            .map((u: any) => {
+              let employeeNo = 'N/A';
+              if (u.teacherProfile?.employeeNo) employeeNo = u.teacherProfile.employeeNo;
+              else if (u.accountantProfile?.employeeNo) employeeNo = u.accountantProfile.employeeNo;
+              else if (u.librarianProfile?.employeeNo) employeeNo = u.librarianProfile.employeeNo;
+              else if (u.directorProfile?.employeeNo) employeeNo = u.directorProfile.employeeNo;
+              else if (u.role === 'SCHOOL_ADMIN') employeeNo = `ADMIN-${u.id.slice(0, 6)}`;
+              else employeeNo = `USR-${u.id.slice(0, 6)}`;
+              return {
+                id: u.id,
+                name: u.name,
+                employeeNo,
+                role: u.role,
+                phone: u.phone,
+                photo: u.avatar,
+                userId: u.id,
+                schoolId: u.schoolId,
+              };
+            });
           setStaff(staffList);
         }
       }

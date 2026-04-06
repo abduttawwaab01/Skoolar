@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-middleware';
 
 export async function GET(request: NextRequest) {
-  const authResult = await requireRole(request, ['SUPER_ADMIN', 'SCHOOL_ADMIN']);
+  const authResult = await requireRole(request, ['SUPER_ADMIN']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { searchParams } = new URL(request.url);
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const authResult = await requireRole(request, ['SUPER_ADMIN', 'SCHOOL_ADMIN']);
+  const authResult = await requireRole(request, ['SUPER_ADMIN']);
   if (authResult instanceof NextResponse) return authResult;
 
   const { searchParams } = new URL(request.url);

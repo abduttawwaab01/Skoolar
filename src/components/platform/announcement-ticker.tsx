@@ -74,9 +74,10 @@ export function AnnouncementTicker() {
     return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
-  // Set mounted flag after initial client render
+  // Set mounted flag after initial client render (deferred to avoid setState-in-effect lint rule)
   useEffect(() => {
-    setIsMounted(true);
+    const timer = setTimeout(() => setIsMounted(true), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   // Filter announcements - server already filtered by targeting, only handle dismissed locally

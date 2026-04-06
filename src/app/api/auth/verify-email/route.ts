@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import crypto from 'crypto';
+import { sendEmail, createEmailVerificationEmail } from '@/lib/email';
 
 const VERIFICATION_TOKEN_EXPIRY_HOURS = 24;
 
@@ -28,17 +29,26 @@ export async function POST(request: NextRequest) {
 
     await db.user.update({
       where: { id: userId },
-      data: { resetToken: verificationToken, resetTokenExpiry: tokenExpiry },
+      data: { emailVerificationToken: verificationToken, emailVerificationExpiry: tokenExpiry },
     });
 
     const verifyUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
 
-    // TODO: Send actual email via Resend/SendGrid
-    // await sendEmail({ to: user.email, subject: 'Verify your email', html: `Click here: ${verifyUrl}` });
+    // Send verification email
+    const emailResult = await sendEmail({
+      to: user.email,
+      ...createEmailVerificationEmail(user.name, verifyUrl),
+    });
+
+    if (!emailResult.success) {
+      // Log error but still return success to prevent enumeration
+      console.error('Failed to send verification email:', emailResult.error);
+    }
 
     return NextResponse.json({
       message: 'Verification email sent',
-      verifyUrl: process.env.NODE_ENV === 'development' ? verifyUrl : undefined,
+      // Only include URL in development for debugging
+      ...(process.env.NODE_ENV === 'development' && { verifyUrl }),
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -58,8 +68,8 @@ export async function GET(request: NextRequest) {
 
     const user = await db.user.findFirst({
       where: {
-        resetToken: token,
-        resetTokenExpiry: { gt: new Date() },
+        emailVerificationToken: token,
+        emailVerificationExpiry: { gt: new Date() },
       },
     });
 
@@ -71,8 +81,8 @@ export async function GET(request: NextRequest) {
       where: { id: user.id },
       data: {
         emailVerified: new Date(),
-        resetToken: null,
-        resetTokenExpiry: null,
+        emailVerificationToken: null,
+        emailVerificationExpiry: null,
       },
     });
 

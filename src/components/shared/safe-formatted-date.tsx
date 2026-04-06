@@ -39,8 +39,12 @@ export function SafeFormattedDate({
   const [formatted, setFormatted] = useState('');
 
   useEffect(() => {
-    setMounted(true);
-    setFormatted(formatDateValue(date, mode, locale, options));
+    // Defer state updates to avoid setState-in-effect rule violation
+    const timer = setTimeout(() => {
+      setMounted(true);
+      setFormatted(formatDateValue(date, mode, locale, options));
+    }, 0);
+    return () => clearTimeout(timer);
   }, [date, mode, locale, options]);
 
   if (!mounted) {

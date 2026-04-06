@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/app-store';
 import {
-  Building2, Shield, Users, GraduationCap, Lock, Unlock, Save, CheckCircle2, XCircle, School, UserCog, Calculator as CalcIcon, BookOpen, Video, ClipboardList, TrendingUp, BarChart3, MessageSquare, Bell, FileEdit, Award, Calendar, Wallet, Library, Eye, Heart, Settings
+  Building2, Shield, Users, GraduationCap, Lock, Unlock, Save, CheckCircle2, XCircle, School, UserCog, Calculator as CalcIcon, BookOpen, Video, ClipboardList, TrendingUp, BarChart3, MessageSquare, Bell, FileEdit, Award, Calendar, Wallet, Library, Eye, Heart, Settings, UserCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +38,7 @@ const ALL_FEATURES: { id: string; label: string; icon: typeof Shield; category: 
   { id: 'ai-assistant', label: 'AI Assistant', icon: Settings, category: 'Academics', description: 'AI study assistant for students' },
   { id: 'notice-board', label: 'Notice Board', icon: FileEdit, category: 'Communication', description: 'School notice board' },
   { id: 'student-diary', label: 'Student Diary', icon: BookOpen, category: 'Student Life', description: 'Digital student diary' },
+  { id: 'entrance-exams', label: 'Entrance Exams', icon: UserCheck, category: 'Admissions', description: 'Manage entrance examinations and applications' },
 ];
 
 const ALL_USER_ROLES: { id: string; label: string; description: string }[] = [
@@ -61,7 +62,7 @@ interface SchoolInfo {
 }
 
 export function SchoolFeatureControl() {
-  const { currentUser } = useAppStore();
+  const { currentUser, currentRole } = useAppStore();
   const [schools, setSchools] = useState<SchoolInfo[]>([]);
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const [disabledFeatures, setDisabledFeatures] = useState<string[]>([]);
@@ -84,6 +85,13 @@ export function SchoolFeatureControl() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    // For non-super admin, automatically set selected school to their own school
+    if (currentRole !== 'SUPER_ADMIN' && currentUser.schoolId) {
+      setSelectedSchoolId(currentUser.schoolId);
+    }
+  }, [currentRole, currentUser.schoolId]);
 
   useEffect(() => { fetchSchools(); }, [fetchSchools]);
 
@@ -157,47 +165,48 @@ export function SchoolFeatureControl() {
         <p className="text-sm text-muted-foreground">Select a school to manage which features and user roles are available</p>
       </div>
 
-      {/* School Selector */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Select School</CardTitle>
-          <CardDescription>Choose a school to configure</CardDescription>
-        </CardHeader>
-        <CardContent className="pb-4">
-          {loading ? (
-            <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-          ) : (
-            <>
-              <div className="relative mb-3">
-                <input
-                  type="text"
-                  placeholder="Search schools..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                />
-              </div>
-              <div className="max-h-64 overflow-y-auto space-y-1">
-                {filteredSchools.map(school => (
-                  <button
-                    key={school.id}
-                    onClick={() => handleSchoolSelect(school.id)}
-                    className={cn(
-                      'w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-colors',
-                      selectedSchoolId === school.id
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                        : 'hover:bg-muted/50'
-                    )}
-                  >
-                    <div
-                      className="size-10 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
-                      style={{ backgroundColor: '#059669' }}
+      {/* School Selector - Only for Super Admin */}
+      {currentRole === 'SUPER_ADMIN' && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Select School</CardTitle>
+            <CardDescription>Choose a school to configure</CardDescription>
+          </CardHeader>
+          <CardContent className="pb-4">
+            {loading ? (
+              <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+            ) : (
+              <>
+                <div className="relative mb-3">
+                  <input
+                    type="text"
+                    placeholder="Search schools..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
+                <div className="max-h-64 overflow-y-auto space-y-1">
+                  {filteredSchools.map(school => (
+                    <button
+                      key={school.id}
+                      onClick={() => handleSchoolSelect(school.id)}
+                      className={cn(
+                        'w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-colors',
+                        selectedSchoolId === school.id
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                          : 'hover:bg-muted/50'
+                      )}
                     >
-                      {school.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{school.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <div
+                        className="size-10 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
+                        style={{ backgroundColor: '#059669' }}
+                      >
+                        {school.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{school.name}</p>
+                        <p className="text-xs text-muted-foreground">
                         {school.region} · {school.plan} plan · {(school._count?.students || 0)} students
                       </p>
                     </div>
@@ -210,9 +219,10 @@ export function SchoolFeatureControl() {
             </>
           )}
         </CardContent>
-      </Card>
+        </Card>
+      )}
 
-      {/* Controls Panel */}
+    {/* Controls Panel */}
       {selectedSchool && selectedSchool && (
         <>
           {/* Features Toggle */}

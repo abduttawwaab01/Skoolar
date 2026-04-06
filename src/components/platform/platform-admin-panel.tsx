@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 import { handleSilentError } from '@/lib/error-handler';
 import { SafeFormattedDate } from '@/components/shared/safe-formatted-date';
 import { FileUploader } from '@/components/ui/file-uploader';
+import { useConfirm } from '@/components/confirm-dialog';
 
 // ============================================
 // Types
@@ -140,6 +141,7 @@ function generateSlug(title: string): string {
 // ============================================
 export function PlatformAdminPanel() {
   const [activeTab, setActiveTab] = useState('announcements');
+  const confirm: (title: string, description?: string) => Promise<boolean> = useConfirm();
 
   return (
     <div className="space-y-6">
@@ -215,6 +217,7 @@ function AnnouncementsTab() {
       startsAt: '', 
       expiresAt: '' 
     });
+    const confirm = useConfirm();
 
   const fetchItems = useCallback(async () => {
     try {
@@ -304,14 +307,15 @@ function AnnouncementsTab() {
      }
    };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this announcement?')) return;
-    try {
-      const res = await fetch(`/api/platform/announcements/${id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) { toast.success('Deleted'); fetchItems(); } else toast.error(json.message);
-    } catch { toast.error('Failed to delete'); }
-  };
+   const handleDelete = async (id: string) => {
+     const ok = await confirm('Delete Announcement', 'Are you sure you want to delete this announcement? This action cannot be undone.');
+     if (!ok) return;
+     try {
+       const res = await fetch(`/api/platform/announcements/${id}`, { method: 'DELETE' });
+       const json = await res.json();
+       if (json.success) { toast.success('Deleted'); fetchItems(); } else toast.error(json.message);
+     } catch { toast.error('Failed to delete'); }
+   };
 
   const typeColors: Record<string, string> = {
     info: 'bg-blue-100 text-blue-800', warning: 'bg-amber-100 text-amber-800',
@@ -491,12 +495,13 @@ function AdvertsTab() {
    const [editing, setEditing] = useState<PlatformAdvert | null>(null);
    const [schools, setSchools] = useState<{id: string; name: string}[]>([]);
    const ROLES = ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT', 'ACCOUNTANT', 'LIBRARIAN', 'DIRECTOR'];
-   const [form, setForm] = useState<AdvertForm>({
-     title: '', description: '', contentType: 'text', mediaUrl: '', mediaType: '', imageUrl: '',
-     linkUrl: '', linkText: '', ctaType: 'link', htmlContent: '', buttonColor: '#059669',
-     targetRoles: [], targetSchools: [],
-     position: 0, autoSwipeMs: 5000, isActive: true, startsAt: '', expiresAt: '',
-   });
+    const [form, setForm] = useState<AdvertForm>({
+      title: '', description: '', contentType: 'text', mediaUrl: '', mediaType: '', imageUrl: '',
+      linkUrl: '', linkText: '', ctaType: 'link', htmlContent: '', buttonColor: '#059669',
+      targetRoles: [], targetSchools: [],
+      position: 0, autoSwipeMs: 5000, isActive: true, startsAt: '', expiresAt: '',
+    });
+    const confirm = useConfirm();
 
   const fetchItems = useCallback(async () => {
     try {
@@ -563,14 +568,15 @@ function AdvertsTab() {
     } catch { toast.error('Failed'); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this advert?')) return;
-    try {
-      const res = await fetch(`/api/platform/adverts/${id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) { toast.success('Deleted'); fetchItems(); } else toast.error(json.message);
-    } catch { toast.error('Failed'); }
-  };
+   const handleDelete = async (id: string) => {
+     const ok = await confirm('Delete Advert', 'Are you sure you want to delete this advert? This action cannot be undone.');
+     if (!ok) return;
+     try {
+       const res = await fetch(`/api/platform/adverts/${id}`, { method: 'DELETE' });
+       const json = await res.json();
+       if (json.success) { toast.success('Deleted'); fetchItems(); } else toast.error(json.message);
+     } catch { toast.error('Failed'); }
+   };
 
   return (
     <Card>
@@ -766,6 +772,7 @@ function PreloaderTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PreloaderQuote | null>(null);
   const [form, setForm] = useState({ quote: '', author: '', isActive: true });
+  const confirm = useConfirm();
 
   const fetchItems = useCallback(async () => {
     try {
@@ -790,14 +797,15 @@ function PreloaderTab() {
     } catch { toast.error('Failed'); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this quote?')) return;
-    try {
-      const res = await fetch(`/api/platform/preloader/${id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) { toast.success('Deleted'); fetchItems(); } else toast.error(json.message);
-    } catch { toast.error('Failed'); }
-  };
+   const handleDelete = async (id: string) => {
+     const ok = await confirm('Delete Quote', 'Are you sure you want to delete this quote? This action cannot be undone.');
+     if (!ok) return;
+     try {
+       const res = await fetch(`/api/platform/preloader/${id}`, { method: 'DELETE' });
+       const json = await res.json();
+       if (json.success) { toast.success('Deleted'); fetchItems(); } else toast.error(json.message);
+     } catch { toast.error('Failed'); }
+   };
 
   return (
     <Card>
@@ -865,11 +873,12 @@ function BlogTab() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BlogPost | null>(null);
-  const [form, setForm] = useState({
-    title: '', slug: '', excerpt: '', content: '', coverImage: '',
-    authorName: 'Skoolar Team', category: 'General', tags: '',
-    isPublished: false, featured: false, readTime: 5,
-  });
+   const [form, setForm] = useState({
+     title: '', slug: '', excerpt: '', content: '', coverImage: '',
+     authorName: 'Skoolar Team', category: 'General', tags: '',
+     isPublished: false, featured: false, readTime: 5,
+   });
+   const confirm = useConfirm();
 
   const fetchItems = useCallback(async () => {
     try {
@@ -897,14 +906,15 @@ function BlogTab() {
     } catch { toast.error('Failed'); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this post?')) return;
-    try {
-      const res = await fetch(`/api/platform/blog/${id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) { toast.success('Deleted'); fetchItems(); } else toast.error(json.message);
-    } catch { toast.error('Failed'); }
-  };
+   const handleDelete = async (id: string) => {
+     const ok = await confirm('Delete Post', 'Are you sure you want to delete this blog post? This action cannot be undone.');
+     if (!ok) return;
+     try {
+       const res = await fetch(`/api/platform/blog/${id}`, { method: 'DELETE' });
+       const json = await res.json();
+       if (json.success) { toast.success('Deleted'); fetchItems(); } else toast.error(json.message);
+     } catch { toast.error('Failed'); }
+   };
 
   const togglePublish = async (post: BlogPost) => {
     try {
@@ -1037,11 +1047,12 @@ function StoriesTab() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PlatformStory | null>(null);
-  const [form, setForm] = useState({
-    title: '', excerpt: '', content: '', coverImage: '', level: '', grade: '',
-    category: 'General', tags: '', authorName: '', authorBio: '',
-    isFeatured: false, isPublished: false,
-  });
+   const [form, setForm] = useState({
+     title: '', excerpt: '', content: '', coverImage: '', level: '', grade: '',
+     category: 'General', tags: '', authorName: '', authorBio: '',
+     isFeatured: false, isPublished: false,
+   });
+   const confirm = useConfirm();
 
   const fetchItems = useCallback(async () => {
     try {
@@ -1069,14 +1080,15 @@ function StoriesTab() {
     } catch { toast.error('Failed'); }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this story?')) return;
-    try {
-      const res = await fetch(`/api/platform/stories/${id}`, { method: 'DELETE' });
-      const json = await res.json();
-      if (json.success) { toast.success('Deleted'); fetchItems(); } else toast.error(json.message);
-    } catch { toast.error('Failed'); }
-  };
+   const handleDelete = async (id: string) => {
+     const ok = await confirm('Delete Story', 'Are you sure you want to delete this story? This action cannot be undone.');
+     if (!ok) return;
+     try {
+       const res = await fetch(`/api/platform/stories/${id}`, { method: 'DELETE' });
+       const json = await res.json();
+       if (json.success) { toast.success('Deleted'); fetchItems(); } else toast.error(json.message);
+     } catch { toast.error('Failed'); }
+   };
 
   return (
     <Card>

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
+import { sendVerificationEmail } from '@/lib/email';
+import crypto from 'crypto';
 
 const SALT_ROUNDS = 10;
 const GOOGLE_SHEET_URL = process.env.GOOGLE_SHEET_URL || '';
@@ -327,51 +329,74 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Create user as SCHOOL_ADMIN
-    const user = await db.user.create({
-      data: {
-        name,
-        email: email.toLowerCase(),
-        password: hashedPassword,
-        role: 'SCHOOL_ADMIN',
-        schoolId,
-        isActive: true,
-      },
-    });
+     // For SCHOOL_ADMIN, require email verification
+     const isSchoolAdmin = true; // This registration is always for SCHOOL_ADMIN
+     const verificationToken = crypto.randomBytes(32).toString('hex');
+     const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
-    // Create academic structure if school was just created
-    if (schoolJustCreated) {
-      await createSchoolStructure(schoolId);
-    }
-
-    const planLabel = planName === 'free' ? 'Free Plan' : `${planName.charAt(0).toUpperCase() + planName.slice(1)} Plan`;
-
-    // Submit to Google Sheets
-    await submitToGoogleSheet({
-      timestamp: new Date().toISOString(),
-      name,
-      email: email.toLowerCase(),
-      schoolName: schoolName.trim(),
-      plan: planName,
-      registrationCode: registrationCode || 'Free',
-    });
-
-    return NextResponse.json(
-      {
-        message: registrationCode 
-          ? `Account created successfully with ${planLabel}. You can now sign in.` 
-          : 'Account created successfully with Free Plan. You can now sign in.',
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          schoolId: user.schoolId,
+      const user = await db.user.create({
+        data: {
+          name,
+          email: email.toLowerCase(),
+          password: hashedPassword,
+          role: 'SCHOOL_ADMIN',
+          schoolId,
+          isActive: true, // All users active upon registration
+          emailVerified: isSchoolAdmin ? null : new Date(),
+          emailVerificationToken: isSchoolAdmin ? verificationToken : null,
+          emailVerificationExpiry: isSchoolAdmin ? tokenExpiry : null,
         },
-        plan: planName,
-      },
-      { status: 201 }
-    );
+      });
+
+     // Create academic structure if school was just created
+     if (schoolJustCreated) {
+       await createSchoolStructure(schoolId);
+     }
+
+     const planLabel = planName === 'free' ? 'Free Plan' : `${planName.charAt(0).toUpperCase() + planName.slice(1)} Plan`;
+
+     // Submit to Google Sheets
+     await submitToGoogleSheet({
+       timestamp: new Date().toISOString(),
+       name,
+       email: email.toLowerCase(),
+       schoolName: schoolName.trim(),
+       plan: planName,
+       registrationCode: registrationCode || 'Free',
+     });
+
+      // Send verification email if SCHOOL_ADMIN
+      let verificationSent = false;
+      if (user.role === 'SCHOOL_ADMIN' && user.emailVerificationToken) {
+        const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+        const verifyUrl = `${baseUrl}/verify-email?token=${user.emailVerificationToken}`;
+        const emailResult = await sendVerificationEmail({
+          to: user.email,
+          name: user.name,
+          verifyUrl,
+        });
+        verificationSent = emailResult.success;
+      }
+
+     return NextResponse.json(
+       {
+         message: user.role === 'SCHOOL_ADMIN'
+           ? 'Account created successfully! Please check your email to verify your address before logging in.'
+           : registrationCode 
+             ? `Account created successfully with ${planLabel}. You can now sign in.`
+             : 'Account created successfully with Free Plan. You can now sign in.',
+         user: {
+           id: user.id,
+           name: user.name,
+           email: user.email,
+           role: user.role,
+           schoolId: user.schoolId,
+         },
+         plan: planName,
+         verificationSent: user.role === 'SCHOOL_ADMIN' ? verificationSent : null,
+       },
+       { status: 201 }
+     );
   } catch (error) {
     console.error('Registration error:', error);
     return NextResponse.json(

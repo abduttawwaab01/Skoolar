@@ -104,8 +104,8 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
     setIsLoading(true);
 
     try {
-      // Check if Super Admin - either email is admin@skoolar.com OR role is selected as Platform Admin
-      const isSuperAdmin = email.toLowerCase() === 'admin@skoolar.com' || selectedRole === 'SUPER_ADMIN';
+      // Check if Super Admin - either email matches super admin config OR role is selected as Platform Admin
+      const isSuperAdmin = email.toLowerCase() === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL?.toLowerCase() || selectedRole === 'SUPER_ADMIN';
 
       if (isSuperAdmin) {
         // Super Admin login directly

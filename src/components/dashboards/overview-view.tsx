@@ -11,10 +11,11 @@ import { SafeFormattedDate } from '@/components/shared/safe-formatted-date';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { fadeIn, slideUp, staggerContainer, scaleIn, hoverScale } from '@/lib/motion-variants';
-import { useAnalytics } from '@/hooks/use-api';
+ import { fadeIn, slideUp, staggerContainer, scaleIn, hoverScale } from '@/lib/motion-variants';
+ import { useAnalytics } from '@/hooks/use-api';
+ import { useAppStore } from '@/store/app-store';
 
-const quickActions = [
+ const quickActions = [
   { icon: Users, label: 'Manage Students', view: 'students' as const, color: 'bg-blue-50 border-blue-200 hover:bg-blue-100', iconColor: 'text-blue-600' },
   { icon: BookOpen, label: 'Academic', view: 'academic-structure' as const, color: 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100', iconColor: 'text-emerald-600' },
   { icon: Calendar, label: 'Attendance', view: 'attendance' as const, color: 'bg-amber-50 border-amber-200 hover:bg-amber-100', iconColor: 'text-amber-600' },
@@ -92,9 +93,9 @@ export function OverviewView() {
             <Clock className="size-3.5 mr-1.5 text-emerald-500" /> <SafeFormattedDate date={new Date()} options={{ month: 'short', day: 'numeric', year: 'numeric' }} mode="toLocaleDateString" />
           </Badge>
         </div>
-      </motion.div>
+       </motion.div>
 
-      {/* Stats Grid */}
+       {/* Stats Grid */}
       <motion.div 
         className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         variants={staggerContainer}

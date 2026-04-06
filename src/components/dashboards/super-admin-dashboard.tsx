@@ -122,7 +122,7 @@ function DashboardSkeleton() {
 
 export function SuperAdminDashboard() {
   const { setCurrentView, currentUser } = useAppStore();
-  const [selectedPeriod, setSelectedPeriod] = useState('7d');
+  const [selectedPeriod, setSelectedPeriod] = useState('6m');
   const [activeTab, setActiveTab] = useState('overview');
 
   // Data states
@@ -288,16 +288,32 @@ export function SuperAdminDashboard() {
    });
    const totalRevenue = Object.values(revenueByPlan).reduce((a, b) => a + b, 0);
    
-   // Revenue data - derive from actual payment data (to be implemented)
-   // For now, show actual revenue from registration codes distributed by recent codes
-   const revenueBars = registrationCodes.slice(0, 7).map((code, idx) => {
-     const price = planPriceMap[code.plan] || 0;
-     return {
-       month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'][idx] || 'Month',
-       value: code.usedCount * price
-     };
-   });
-   const maxRevenue = Math.max(...revenueBars.map(r => r.value), 1);
+    // Calculate revenue by month from registration codes (based on creation date)
+    const revenueByMonth: Record<string, number> = {};
+    registrationCodes.forEach(code => {
+      if (!code.createdAt) return;
+      const date = new Date(code.createdAt);
+      // Use year-month as key to group by month
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const price = planPriceMap[code.plan] || 0;
+      const revenue = code.usedCount * price;
+      revenueByMonth[monthKey] = (revenueByMonth[monthKey] || 0) + revenue;
+    });
+
+    // Convert to sorted array with display labels
+    const monthRevenueArray = Object.entries(revenueByMonth)
+      .map(([monthKey, value]) => {
+        const [year, month] = monthKey.split('-').map(Number);
+        const displayMonth = new Date(year, month - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+        return { month: displayMonth, year, monthNum: month, value };
+      })
+      .sort((a, b) => a.year - b.year || a.monthNum - b.monthNum);
+
+    // Determine number of months to show based on selectedPeriod
+    const monthsCountMap: Record<string, number> = { '3m': 3, '6m': 6, '12m': 12 };
+    const monthsToShow = monthsCountMap[selectedPeriod] || 6;
+    const recentMonths = monthRevenueArray.slice(-monthsToShow);
+    const maxRevenue = Math.max(...recentMonths.map(r => r.value), 1);
 
   // System status items - derived from real data
   const activeSchools = schools.filter(s => s.isActive).length;
@@ -466,16 +482,20 @@ export function SuperAdminDashboard() {
           <div className="grid gap-4 lg:grid-cols-3">
             {/* Revenue Trend - CSS Bars */}
             <Card className="lg:col-span-2">
-              <CardHeader className="pb-2">
+                <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-base">Monthly Revenue Trend</CardTitle>
-                    <CardDescription>Platform revenue over the past 7 months</CardDescription>
+                    <CardDescription>Platform revenue over the past {monthsToShow} months</CardDescription>
                   </div>
                   <div className="flex gap-1">
-                    {['7d', '30d', '90d'].map(p => (
-                      <Button key={p} variant={selectedPeriod === p ? 'default' : 'outline'} size="sm" className="text-xs h-7 px-2.5" onClick={() => setSelectedPeriod(p)}>
-                        {p}
+                    {[
+                      { value: '3m', label: '3M' },
+                      { value: '6m', label: '6M' },
+                      { value: '12m', label: '12M' },
+                    ].map(p => (
+                      <Button key={p.value} variant={selectedPeriod === p.value ? 'default' : 'outline'} size="sm" className="text-xs h-7 px-2.5" onClick={() => setSelectedPeriod(p.value)}>
+                        {p.label}
                       </Button>
                     ))}
                   </div>
@@ -483,11 +503,11 @@ export function SuperAdminDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="flex items-end gap-3 h-48">
-                  {revenueBars.map((bar, i) => (
+                  {recentMonths.map((bar, i) => (
                     <div key={bar.month} className="flex-1 flex flex-col items-center gap-2">
-                      <span className="text-xs font-semibold">₦{(bar.value / 10).toFixed(0)}M</span>
+                       <span className="text-xs font-semibold">₦{(bar.value / 1000000).toFixed(1)}M</span>
                       <div
-                        className={`w-full rounded-t-md transition-all duration-500 hover:opacity-80 cursor-pointer ${i === revenueBars.length - 1 ? 'bg-emerald-500' : 'bg-emerald-300 dark:bg-emerald-700'}`}
+                         className={`w-full rounded-t-md transition-all duration-500 hover:opacity-80 cursor-pointer ${i === recentMonths.length - 1 ? 'bg-emerald-500' : 'bg-emerald-300 dark:bg-emerald-700'}`}
                         style={{ height: `${(bar.value / maxRevenue) * 100}%` }}
                         title={`${bar.month}: ₦${(bar.value / 10).toFixed(0)}M`}
                       />

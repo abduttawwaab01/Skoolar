@@ -143,3 +143,94 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+// PUT /api/registration-codes - Update registration code
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, plan, maxUses, expiresAt, region, isUsed } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'Code ID is required' }, { status: 400 });
+    }
+
+    // Find existing code
+    const existingCode = await db.registrationCode.findUnique({
+      where: { id },
+    });
+
+    if (!existingCode) {
+      return NextResponse.json({ error: 'Registration code not found' }, { status: 404 });
+    }
+
+    // Prepare update data
+    const updateData: Record<string, unknown> = {};
+    if (plan !== undefined) updateData.plan = plan;
+    if (maxUses !== undefined) updateData.maxUses = maxUses;
+    if (expiresAt !== undefined) updateData.expiresAt = expiresAt ? new Date(expiresAt) : null;
+    if (region !== undefined) updateData.region = region;
+    if (isUsed !== undefined) updateData.isUsed = isUsed;
+
+    const updatedCode = await db.registrationCode.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        code: true,
+        plan: true,
+        region: true,
+        maxUses: true,
+        usedCount: true,
+        expiresAt: true,
+        isUsed: true,
+        createdBy: true,
+        createdAt: true,
+        updatedAt: true,
+        schoolId: true,
+        school: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+
+    return NextResponse.json({
+      data: updatedCode,
+      message: 'Registration code updated successfully',
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// DELETE /api/registration-codes - Delete registration code (soft delete)
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'Code ID is required' }, { status: 400 });
+    }
+
+    // Soft delete by setting deletedAt
+    const deletedCode = await db.registrationCode.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+      select: {
+        id: true,
+        code: true,
+        plan: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json({
+      data: deletedCode,
+      message: 'Registration code deleted successfully',
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

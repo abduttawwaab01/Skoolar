@@ -50,85 +50,102 @@ export function StaffAttendanceView() {
   const [showQRCode, setShowQRCode] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
 
-  // Fetch staff and attendance data
-  useEffect(() => {
-    let cancelled = false;
-    
-    async function fetchData() {
-      if (!selectedSchoolId || cancelled) {
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        const [staffRes, attRes] = await Promise.all([
-          fetch(`/api/teachers?schoolId=${selectedSchoolId}&limit=100`),
-          fetch(`/api/attendance?schoolId=${selectedSchoolId}&type=staff&date=${selectedDate}`)
-        ]);
-        
-        if (cancelled) return;
-        
-        const [staffJson, attJson] = await Promise.all([staffRes.json(), attRes.json()]);
-        
-        if (cancelled) return;
-        
-        const staff = staffJson.data || staffJson || [];
-        setStaffList(staff.map((t: Record<string, unknown>) => ({
-          id: t.id,
-          name: (t.user as Record<string, unknown>)?.name as string || 'Unknown',
-          employeeNo: t.employeeNo || '',
-          role: t.role || 'Teacher',
-          department: t.department as string || '',
-        })));
-        
-        const att = attJson.data || attJson || [];
-        setAttendanceRecords(att.map((a: Record<string, unknown>, idx: number) => ({
-          id: a.id || `att-${idx}`,
-          staffId: a.staffId || '',
-          staffName: a.staffName || '',
-          employeeNo: a.employeeNo || '',
-          role: a.role || 'Staff',
-          status: a.status || 'present',
-          date: a.date || selectedDate,
-          checkInTime: a.checkInTime as string || '',
-          checkOutTime: a.checkOutTime as string || '',
-        })));
-      } catch {
-        if (!cancelled) toast.error('Failed to load staff attendance');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    
-    fetchData();
-    
-    return () => { cancelled = true; };
-  }, [selectedSchoolId, selectedDate]);
+   // Fetch staff and attendance data
+   useEffect(() => {
+     let cancelled = false;
+     
+     async function fetchData() {
+       if (!selectedSchoolId || cancelled) {
+         setLoading(false);
+         return;
+       }
+       
+       try {
+         const [staffRes, attRes] = await Promise.all([
+           // Fetch all users with staff roles (not students/parents)
+           fetch(`/api/users?schoolId=${selectedSchoolId}&limit=100&includeProfiles=true`),
+           fetch(`/api/staff-attendance?schoolId=${selectedSchoolId}&date=${selectedDate}`)
+         ]);
+         
+         if (cancelled) return;
+         
+         const [staffJson, attJson] = await Promise.all([staffRes.json(), attRes.json()]);
+         
+         if (cancelled) return;
+         
+         // Filter staff users (exclude students and parents)
+         const allUsers = staffJson.data || [];
+         const staff = allUsers.filter((u: any) => !['STUDENT', 'PARENT'].includes(u.role));
+         
+         setStaffList(staff.map((u: any) => {
+           let employeeNo = 'N/A';
+           if (u.teacherProfile?.employeeNo) employeeNo = u.teacherProfile.employeeNo;
+           else if (u.accountantProfile?.employeeNo) employeeNo = u.accountantProfile.employeeNo;
+           else if (u.librarianProfile?.employeeNo) employeeNo = u.librarianProfile.employeeNo;
+           else if (u.directorProfile?.employeeNo) employeeNo = u.directorProfile.employeeNo;
+           else if (u.role === 'SCHOOL_ADMIN') employeeNo = `ADMIN-${u.id.slice(0, 6)}`;
+           else employeeNo = `USR-${u.id.slice(0, 6)}`;
+           
+           return {
+             id: u.id,
+             name: u.name,
+             employeeNo,
+             role: u.role,
+             department: u.department || '',
+           };
+         }));
+         
+         const att = attJson.data || [];
+         setAttendanceRecords(att.map((a: any) => ({
+           id: a.id || `att-${a.staffId}-${Math.random()}`,
+           staffId: a.staffId,
+           staffName: a.staffName,
+           employeeNo: a.employeeNo,
+           role: a.role,
+           status: a.status || 'not_marked',
+           date: a.date,
+           checkInTime: a.checkInTime,
+           checkOutTime: a.checkOutTime,
+         })));
+       } catch {
+         if (!cancelled) toast.error('Failed to load staff attendance');
+       } finally {
+         if (!cancelled) setLoading(false);
+       }
+     }
+     
+     fetchData();
+     
+     return () => { cancelled = true; };
+   }, [selectedSchoolId, selectedDate]);
 
   const filteredStaff = staffList.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.employeeNo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const presentCount = attendanceRecords.filter(a => a.status === 'present').length;
-  const absentCount = attendanceRecords.filter(a => a.status === 'absent').length;
-  const lateCount = attendanceRecords.filter(a => a.status === 'late').length;
-  const totalStaff = staffList.length || 1;
+   const presentCount = attendanceRecords.filter(a => a.status === 'present').length;
+   const absentCount = attendanceRecords.filter(a => a.status === 'absent').length;
+   const lateCount = attendanceRecords.filter(a => a.status === 'late').length;
+   const totalStaff = staffList.length || 1;
 
-  const pieData = [
-    { name: 'Present', value: presentCount },
-    { name: 'Absent', value: absentCount },
-    { name: 'Late', value: lateCount },
-    { name: 'Not Marked', value: Math.max(0, totalStaff - presentCount - absentCount - lateCount) },
-  ];
+   const pieData = [
+     { name: 'Present', value: presentCount },
+     { name: 'Absent', value: absentCount },
+     { name: 'Late', value: lateCount },
+     { name: 'Not Marked', value: Math.max(0, totalStaff - presentCount - absentCount - lateCount) },
+   ];
 
-  const weeklyData = [
-    { day: 'Mon', present: 45, absent: 5 },
-    { day: 'Tue', present: 48, absent: 2 },
-    { day: 'Wed', present: 42, absent: 8 },
-    { day: 'Thu', present: 50, absent: 0 },
-    { day: 'Fri', present: 47, absent: 3 },
-  ];
+   // Weekly data: will be computed from actual attendance if we store more days, for now we keep it simple
+   // We could fetch last 7 days of data and aggregate; but for now the chart shows placeholder
+   // TODO: Implement weekly trend from attendance records across dates
+   const weeklyData = [
+     { day: 'Mon', present: 0, absent: 0 },
+     { day: 'Tue', present: 0, absent: 0 },
+     { day: 'Wed', present: 0, absent: 0 },
+     { day: 'Thu', present: 0, absent: 0 },
+     { day: 'Fri', present: 0, absent: 0 },
+   ];
 
   if (loading) {
     return (

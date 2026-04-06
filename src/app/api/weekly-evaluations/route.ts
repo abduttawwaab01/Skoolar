@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Only teachers and admins can create evaluations
-    const allowedRoles = ['TEACHER', 'ADMIN', 'SUPER_ADMIN', 'DIRECTOR'];
+    const allowedRoles = ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'DIRECTOR'];
     if (!allowedRoles.includes(token.role || '')) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     let teacherId = token.id;
     
     // If admin or super admin, they must specify teacherId
-    if (token.role === 'ADMIN' || token.role === 'SUPER_ADMIN') {
+    if (token.role === 'SCHOOL_ADMIN' || token.role === 'SUPER_ADMIN') {
       if (!body.teacherId) {
         return NextResponse.json(
           { error: 'Teacher ID required for admin/super admin' },

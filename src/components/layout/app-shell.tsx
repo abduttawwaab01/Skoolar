@@ -827,9 +827,12 @@ function Header() {
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const { sidebarOpen, showNotifications, setShowNotifications, currentRole, selectedSchoolId } = useAppStore();
-  const [schoolTheme, setSchoolTheme] = useState<string>('default');
+ export function AppShell({ children }: { children: React.ReactNode }) {
+   const { sidebarOpen, showNotifications, setShowNotifications, currentRole, selectedSchoolId, currentView } = useAppStore();
+   const [schoolTheme, setSchoolTheme] = useState<string>('default');
+
+   // Determine if we should show the advert (only on primary dashboard for non-SUPER_ADMIN)
+   const isPrimaryDashboardView = currentRole !== 'SUPER_ADMIN' && currentView === 'overview';
 
   useEffect(() => {
     if (!selectedSchoolId || currentRole === 'SUPER_ADMIN') return;
@@ -857,28 +860,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarContent />
       </aside>
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col overflow-hidden relative min-w-0">
-        <div className="absolute inset-0 bg-mesh-bg opacity-30 pointer-events-none" />
-        <AnnouncementTicker />
-        {currentRole !== 'SUPER_ADMIN' && <AdvertCarousel />}
-        <Header />
-        <ScrollArea className="flex-1 bg-white/20 backdrop-blur-3xl relative z-10">
-          <main className="p-3 sm:p-4 lg:p-8 min-w-0">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={useAppStore.getState().currentView}
-                initial={{ opacity: 0, y: 10, filter: 'blur(10px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, y: -10, filter: 'blur(10px)' }}
-                transition={{ duration: 0.3, ease: "circOut" }}
-              >
-                {children}
-              </motion.div>
-            </AnimatePresence>
-          </main>
-        </ScrollArea>
-      </div>
+       {/* Main content */}
+       <div className="flex flex-1 flex-col overflow-hidden relative min-w-0">
+         <div className="absolute inset-0 bg-mesh-bg opacity-30 pointer-events-none" />
+         <AnnouncementTicker />
+         <Header />
+         <ScrollArea className="flex-1 bg-white/20 backdrop-blur-3xl relative z-10">
+           <main className="p-3 sm:p-4 lg:p-8 min-w-0">
+             {/* Show AdvertCarousel only on primary dashboard view for non-SUPER_ADMIN */}
+             {currentRole !== 'SUPER_ADMIN' && isPrimaryDashboardView && (
+               <AdvertCarousel />
+             )}
+             <AnimatePresence mode="wait">
+               <motion.div
+                 key={useAppStore.getState().currentView}
+                 initial={{ opacity: 0, y: 10, filter: 'blur(10px)' }}
+                 animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                 exit={{ opacity: 0, y: -10, filter: 'blur(10px)' }}
+                 transition={{ duration: 0.3, ease: "circOut" }}
+               >
+                 {children}
+               </motion.div>
+             </AnimatePresence>
+           </main>
+         </ScrollArea>
+       </div>
 
       {/* Notifications overlay */}
       {showNotifications && (

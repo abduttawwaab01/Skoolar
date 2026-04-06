@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { ConfirmProvider } from '@/components/confirm-dialog';
 
 // Map of view IDs to their components
 // Map of view IDs to their components - Using a loader function type to avoid TS component mismatch
@@ -230,6 +231,11 @@ export default function DashboardPage() {
       const userRole = (session.user.role as UserRole) || 'STUDENT';
       setCurrentRole(userRole);
       
+      // For non-super admin, automatically set selected school to their school
+      if (userRole !== 'SUPER_ADMIN' && session.user.schoolId) {
+        useAppStore.getState().setSelectedSchoolId(session.user.schoolId);
+      }
+      
       // Determine correct view based on role
       let viewToLoad: DashboardView;
       if (userRole === 'SUPER_ADMIN') {
@@ -300,11 +306,13 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      {ViewComponent ? <ViewComponent /> : (
-        <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
-          <Skeleton className="h-64 w-full max-w-4xl" />
-        </div>
-      )}
+      <ConfirmProvider>
+        {ViewComponent ? <ViewComponent /> : (
+          <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center">
+            <Skeleton className="h-64 w-full max-w-4xl" />
+          </div>
+        )}
+      </ConfirmProvider>
     </AppShell>
   );
 }

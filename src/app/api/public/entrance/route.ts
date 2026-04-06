@@ -11,40 +11,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Entrance code is required' }, { status: 400 });
     }
 
-    const exam = await db.entranceExam.findUnique({
-      where: { code },
-      include: {
-        school: {
-          select: {
-            id: true,
-            name: true,
-            logo: true,
-            primaryColor: true
-          }
-        },
-        questions: {
-          orderBy: { order: 'asc' },
-          select: {
-            id: true,
-            type: true,
-            questionText: true,
-            options: true,
-            marks: true,
-            mediaUrl: true,
-            order: true,
-            // DO NOT select correctAnswer or explanation here
-          }
-        }
-      }
-    });
+     const exam = await db.entranceExam.findUnique({
+       where: { code },
+       include: {
+         school: {
+           select: {
+             id: true,
+             name: true,
+             logo: true,
+             primaryColor: true,
+             isActive: true,
+           }
+         },
+         questions: {
+           orderBy: { order: 'asc' },
+           select: {
+             id: true,
+             type: true,
+             questionText: true,
+             options: true,
+             marks: true,
+             mediaUrl: true,
+             order: true,
+             // DO NOT select correctAnswer or explanation here
+           }
+         }
+       }
+     });
 
-    if (!exam || exam.deletedAt || !exam.isActive) {
-      return NextResponse.json({ error: 'Invalid or inactive exam code' }, { status: 404 });
-    }
+     if (!exam || exam.deletedAt || !exam.isActive) {
+       return NextResponse.json({ error: 'Invalid or inactive exam code' }, { status: 404 });
+     }
 
-    if (schoolId && exam.schoolId !== schoolId) {
-      return NextResponse.json({ error: 'The provided code does not match the selected school' }, { status: 400 });
-    }
+     // Check if the associated school is active
+     if (!exam.school.isActive) {
+       return NextResponse.json({ error: 'The school associated with this exam is inactive' }, { status: 403 });
+     }
+
+     if (schoolId && exam.schoolId !== schoolId) {
+       return NextResponse.json({ error: 'The provided code does not match the selected school' }, { status: 400 });
+     }
 
     return NextResponse.json({
       data: {

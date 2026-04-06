@@ -212,6 +212,7 @@ function ExamRoom({ exam, bio, onSubmitted }: {
   const [submitting, setSubmitting] = useState(false);
   const [showViolation, setShowViolation] = useState(false);
   const startTime = useRef(Date.now());
+  const handleSubmitRef = useRef<(() => void) | null>(null);
 
   const questions = exam.questions;
   const security = exam.securitySettings;
@@ -228,24 +229,67 @@ function ExamRoom({ exam, bio, onSubmitted }: {
     };
   }, [security]);
 
-  // Tab visibility monitoring
+   // Tab visibility monitoring
+   useEffect(() => {
+     if (!security?.tabSwitchWarning) return;
+     const handleVisibility = () => {
+       if (document.hidden) {
+         const newCount = tabSwitchCount + 1;
+         setTabSwitchCount(newCount);
+         const v = { type: 'tab_switch', timestamp: new Date().toISOString() };
+         setViolations(prev => [...prev, v]);
+         setShowViolation(true);
+         setTimeout(() => setShowViolation(false), 3000);
+         // Auto-submit if enabled
+         if (security?.tabSwitchAutoSubmit && handleSubmitRef.current) {
+           handleSubmitRef.current();
+         }
+       }
+     };
+     document.addEventListener('visibilitychange', handleVisibility);
+     return () => document.removeEventListener('visibilitychange', handleVisibility);
+    }, [security, tabSwitchCount]); // handleSubmitRef is stable
+
+  // Enforce copy/paste block
   useEffect(() => {
-    if (!security?.tabSwitchWarning) return;
-    const handleVisibility = () => {
-      if (document.hidden) {
-        const newCount = tabSwitchCount + 1;
-        setTabSwitchCount(newCount);
-        const v = { type: 'tab_switch', timestamp: new Date().toISOString() };
-        setViolations(prev => [...prev, v]);
-        setShowViolation(true);
-        setTimeout(() => setShowViolation(false), 3000);
+    if (!security?.blockCopyPaste) return;
+    const prevent = (e: Event) => e.preventDefault();
+    document.addEventListener('copy', prevent);
+    document.addEventListener('cut', prevent);
+    document.addEventListener('paste', prevent);
+    return () => {
+      document.removeEventListener('copy', prevent);
+      document.removeEventListener('cut', prevent);
+      document.removeEventListener('paste', prevent);
+    };
+  }, [security]);
+
+  // Enforce right-click block
+  useEffect(() => {
+    if (!security?.blockRightClick) return;
+    const prevent = (e: MouseEvent) => e.preventDefault();
+    document.addEventListener('contextmenu', prevent);
+    return () => document.removeEventListener('contextmenu', prevent);
+  }, [security]);
+
+  // Enforce keyboard shortcuts block
+  useEffect(() => {
+    if (!security?.blockKeyboardShortcuts) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Block Ctrl/Cmd + common keys
+      if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'x', 'a', 's', 'p', 'u', 'i'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+      }
+      // Block developer tools shortcuts
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'J', 'C', 'K'].includes(e.key.toUpperCase()))) {
+        e.preventDefault();
       }
     };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [security, tabSwitchCount]);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [security]);
 
-  // Timer countdown
+   // Timer countdown
   useEffect(() => {
     if (timeLeft === null) return;
     if (timeLeft <= 0) { handleSubmit(); return; }
@@ -290,6 +334,9 @@ function ExamRoom({ exam, bio, onSubmitted }: {
       setSubmitting(false);
     }
   }, [submitting, exam.id, bio, answers, violations, tabSwitchCount, onSubmitted]);
+
+  // Keep ref in sync for security auto-submit
+  handleSubmitRef.current = handleSubmit;
 
   const q = questions[currentQ];
   const progressPct = ((currentQ + 1) / questions.length) * 100;

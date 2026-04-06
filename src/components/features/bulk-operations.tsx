@@ -57,22 +57,24 @@ export default function BulkOperations() {
   const [attendanceStatus, setAttendanceStatus] = useState<'present' | 'absent'>('present');
   const [isMarkingAttendance, setIsMarkingAttendance] = useState(false);
   const [attendanceProgress, setAttendanceProgress] = useState(0);
-  const [recipientRole, setRecipientRole] = useState('');
-  const [recipientClass, setRecipientClass] = useState('');
-  const [messageContent, setMessageContent] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const [sendProgress, setSendProgress] = useState(0);
-  const [reportClass, setReportClass] = useState('');
-  const [reportTerm, setReportTerm] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [reportProgress, setReportProgress] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+   const [recipientRole, setRecipientRole] = useState('');
+   const [recipientClass, setRecipientClass] = useState('');
+   const [messageContent, setMessageContent] = useState('');
+   const [isSending, setIsSending] = useState(false);
+   const [sendProgress, setSendProgress] = useState(0);
+   const [reportClass, setReportClass] = useState('');
+   const [reportTerm, setReportTerm] = useState('');
+   const [isGenerating, setIsGenerating] = useState(false);
+   const [reportProgress, setReportProgress] = useState(0);
+   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetched data
-  const [students, setStudents] = useState<StudentData[]>([]);
-  const [classes, setClasses] = useState<ClassData[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [dataError, setDataError] = useState<string | null>(null);
+   // Fetched data
+   const [students, setStudents] = useState<StudentData[]>([]);
+   const [classes, setClasses] = useState<ClassData[]>([]);
+   const [terms, setTerms] = useState<Array<{id: string, name: string}>>([]);
+   const [exams, setExams] = useState<Array<{id: string, title: string}>>([]);
+   const [isLoadingData, setIsLoadingData] = useState(true);
+   const [dataError, setDataError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!schoolId) {
@@ -108,9 +110,43 @@ export default function BulkOperations() {
     }
   }, [schoolId]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+   useEffect(() => {
+     fetchData();
+   }, [fetchData]);
+
+   // Fetch terms for the school
+   useEffect(() => {
+     if (!schoolId) return;
+     const fetchTerms = async () => {
+       try {
+         const res = await fetch(`/api/terms?schoolId=${schoolId}&limit=20`);
+         if (res.ok) {
+           const json = await res.json();
+           setTerms(json.data || []);
+         }
+       } catch (error) {
+         handleSilentError(error, 'Failed to load terms');
+       }
+     };
+     fetchTerms();
+   }, [schoolId]);
+
+   // Fetch exams for the school
+   useEffect(() => {
+     if (!schoolId) return;
+     const fetchExams = async () => {
+       try {
+         const res = await fetch(`/api/exams?schoolId=${schoolId}&limit=100`);
+         if (res.ok) {
+           const json = await res.json();
+           setExams(json.data || []);
+         }
+       } catch (error) {
+         handleSilentError(error, 'Failed to load exams');
+       }
+     };
+     fetchExams();
+   }, [schoolId]);
 
   const classNames = classes.map(c => c.name);
   const getStudentCountForClass = (className: string) => {
@@ -461,18 +497,18 @@ export default function BulkOperations() {
               <CardDescription>Select an exam and edit scores for all students</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="max-w-sm">
-                <Select value={selectedExam} onValueChange={setSelectedExam}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Exam" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {['CA 1', 'CA 2', 'Mid-Term', 'Final Exam'].map(exam => (
-                      <SelectItem key={exam} value={exam}>{exam} - Second Term 2024/2025</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+               <div className="max-w-sm">
+                 <Select value={selectedExam} onValueChange={setSelectedExam}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Select Exam" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {exams.map(exam => (
+                       <SelectItem key={exam.id} value={exam.id}>{exam.title}</SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
 
               {selectedExam && (
                 <ScrollArea className="max-h-96">
@@ -725,9 +761,9 @@ export default function BulkOperations() {
                       <SelectValue placeholder="Select term" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="first">First Term 2024/2025</SelectItem>
-                      <SelectItem value="second">Second Term 2024/2025</SelectItem>
-                      <SelectItem value="third">Third Term 2024/2025</SelectItem>
+                      {terms.map(term => (
+                        <SelectItem key={term.id} value={term.id}>{term.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
