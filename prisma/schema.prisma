@@ -137,8 +137,9 @@ model User {
   pushSubscriptions PushSubscription[]
   studentProfile    Student?
   teacherProfile    Teacher?
-  school            School?            @relation(fields: [schoolId], references: [id])
-  sessions          UserSession[]
+   school            School?            @relation(fields: [schoolId], references: [id])
+   sessions          UserSession[]
+   sentMessages      Message[]          @relation("SentMessages")
 
   @@index([schoolId])
   @@index([role])
@@ -1828,27 +1829,28 @@ model Conversation {
   @@index([schoolId])
 }
 
-model Message {
-  id             String       @id @default(cuid())
-  conversationId String
-  schoolId       String
-  senderId       String
-  content        String
-  type           String       @default("text")
-  fileUrl        String?
-  fileName       String?
-  isRead         Boolean      @default(false)
-  readBy         String?
-  createdAt      DateTime     @default(now())
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  school         School       @relation(fields: [schoolId], references: [id])
+ model Message {
+   id             String       @id @default(cuid())
+   conversationId String
+   schoolId       String
+   senderId       String
+   content        String
+   type           String       @default("text")
+   fileUrl        String?
+   fileName       String?
+   isRead         Boolean      @default(false)
+   readBy         String?
+   createdAt      DateTime     @default(now())
+   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+   school         School       @relation(fields: [schoolId], references: [id])
+   sender         User         @relation("SentMessages", fields: [senderId], references: [id])
 
-  @@index([conversationId])
-  @@index([senderId])
-  @@index([schoolId])
-  @@index([createdAt])
-  @@index([conversationId, isRead, senderId])
-}
+   @@index([conversationId])
+   @@index([senderId])
+   @@index([schoolId])
+   @@index([createdAt])
+   @@index([conversationId, isRead, senderId])
+ }
 
 model EventRSVP {
   id        String      @id @default(cuid())
