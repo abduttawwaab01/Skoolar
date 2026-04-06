@@ -25,12 +25,14 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         messages: {
-          orderBy: { createdAt: 'asc' },
-          include: {
-            sender: {
-              select: { id: true, name: true, email: true, avatar: true },
-            },
+          select: {
+            id: true,
+            isRead: true,
+            senderId: true,
+            content: true,
+            createdAt: true,
           },
+          orderBy: { createdAt: 'asc' },
         },
       },
       orderBy: { updatedAt: 'desc' },
@@ -43,7 +45,7 @@ export async function GET(request: NextRequest) {
         const lastMessage = messages[messages.length - 1] || null;
         // Count unread messages (isRead = false and senderId !== current user)
         const unreadCount = messages.filter(
-          (m) => !m.isRead && m.senderId !== auth.id
+          (m) => !m.isRead && m.senderId !== auth.userId!
         ).length;
 
         // Parse participantIds JSON array
@@ -58,8 +60,8 @@ export async function GET(request: NextRequest) {
           participantIds = [];
         }
 
-        // Get other participants (exclude current user)
-        const otherParticipantIds = participantIds.filter((id) => id !== auth.id);
+         // Get other participants (exclude current user)
+         const otherParticipantIds = participantIds.filter((id) => id !== auth.userId!);
         let otherNames = '';
         if (otherParticipantIds.length > 0) {
           const users = await db.user.findMany({
@@ -104,33 +106,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure current user is included
-    if (!participantIds.includes(auth.id)) {
-      participantIds.push(auth.id);
-    }
+     // Ensure current user is included
+     if (!participantIds.includes(auth.userId!)) {
+       participantIds.push(auth.userId!);
+     }
 
-    // Create conversation
-    const conversation = await db.conversation.create({
-      data: {
-        schoolId,
-        participantIds: JSON.stringify(participantIds),
-        title: title || null,
-        createdBy: auth.id,
-      },
-    });
+     // Create conversation
+     const conversation = await db.conversation.create({
+       data: {
+         schoolId,
+         participantIds: JSON.stringify(participantIds),
+         title: title || null,
+         createdBy: auth.userId!,
+       },
+     });
 
-    // Optionally create initial message
-    if (initialMessage && typeof initialMessage === 'string') {
-      await db.message.create({
-        data: {
-          conversationId: conversation.id,
-          schoolId,
-          senderId: auth.id,
-          content: initialMessage,
-          type: 'text',
-        },
-      });
-    }
+     // Optionally create initial message
+     if (initialMessage && typeof initialMessage === 'string') {
+       await db.message.create({
+         data: {
+           conversationId: conversation.id,
+           schoolId,
+           senderId: auth.userId!,
+           content: initialMessage,
+           type: 'text',
+         },
+       });
+     }
 
     return NextResponse.json(
       { data: conversation },
