@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { requireAuth, requireRole } from '@/lib/auth-middleware';
+import { createAuditLogEntry } from '@/lib/audit-logger';
 
 const SALT_ROUNDS = 10;
 
@@ -305,6 +306,18 @@ export async function POST(request: NextRequest) {
         librarianProfile: { select: { id: true, employeeNo: true } },
         directorProfile: { select: { id: true, employeeNo: true } },
       },
+    });
+
+    // Log successful user creation
+    createAuditLogEntry({
+      schoolId: schoolId || 'SYSTEM',
+      userId: authResult.userId,
+      action: 'USER_CREATE',
+      entity: 'USER',
+      entityId: user.id,
+      details: JSON.stringify({ name, email, role }),
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+      userAgent: request.headers.get('user-agent'),
     });
 
     return NextResponse.json(

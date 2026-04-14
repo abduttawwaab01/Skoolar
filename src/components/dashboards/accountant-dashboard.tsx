@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import {
   Wallet, TrendingUp, CreditCard, Banknote, Landmark, ArrowUpRight,
   Plus, History, FileText, Download, CheckCircle2, Clock, Search,
-  Filter, ChevronRight, User, PieChart as PieChartIcon
+  Filter, ChevronRight, User, PieChart as PieChartIcon, BarChart3, Sparkles
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -68,10 +68,9 @@ export function AccountantDashboard() {
     );
   }
 
-  const overview = analytics?.overview || {};
-  const byGrade = analytics?.byGrade || [];
-  const trend = analytics?.trend || [];
-  const performance = analytics?.performance || {};
+  const summary = analytics?.summary || {};
+  const classBreakdown = analytics?.classBreakdown || [];
+  const monthlyTrend = analytics?.monthlyTrend || [];
 
   return (
     <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-8">
@@ -95,10 +94,10 @@ export function AccountantDashboard() {
 
       {/* Strategic Financial Kpis */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard title="Realized Revenue" value={`₦${(overview.realizedRevenue || 0).toLocaleString()}`} icon={Landmark} iconBgColor="bg-emerald-50" iconColor="text-emerald-700" changeLabel="Current Term" />
-        <KpiCard title="Efficiency" value={`${performance.collectionPercentage}%`} icon={TrendingUp} iconBgColor="bg-indigo-50" iconColor="text-indigo-700" changeLabel="Realization Rate" />
-        <KpiCard title="Outstanding" value={`₦${(performance.totalOutstanding || 0).toLocaleString()}`} icon={Banknote} iconBgColor="bg-amber-50" iconColor="text-amber-700" changeLabel="Pending Fees" />
-        <KpiCard title="Verified Invoices" value={overview.verifiedCount?.toString() || '0'} icon={CheckCircle2} iconBgColor="bg-blue-50" iconColor="text-blue-700" changeLabel="Transactions" />
+        <KpiCard title="Realized Revenue" value={`₦${(summary.collectedRevenue || 0).toLocaleString()}`} icon={Landmark} iconBgColor="bg-emerald-50" iconColor="text-emerald-700" changeLabel="Current Term" />
+        <KpiCard title="Efficiency" value={`${summary.collectionRate || 0}%`} icon={TrendingUp} iconBgColor="bg-indigo-50" iconColor="text-indigo-700" changeLabel="Realization Rate" />
+        <KpiCard title="Outstanding" value={`₦${(summary.pendingRevenue || 0).toLocaleString()}`} icon={Banknote} iconBgColor="bg-amber-50" iconColor="text-amber-700" changeLabel="Pending Fees" />
+        <KpiCard title="Verified Invoices" value={summary.transactionCount?.toString() || '0'} icon={CheckCircle2} iconBgColor="bg-blue-50" iconColor="text-blue-700" changeLabel="Transactions" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-12">
@@ -119,9 +118,9 @@ export function AccountantDashboard() {
           <CardContent className="p-8">
             <div className="h-[350px] w-full pt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={byGrade}>
+                <BarChart data={classBreakdown}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="grade" axisLine={false} tickLine={false} fontSize={10} tick={{ fill: '#64748b' }} dy={10} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} fontSize={10} tick={{ fill: '#64748b' }} dy={10} />
                   <YAxis axisLine={false} tickLine={false} fontSize={10} tick={{ fill: '#64748b' }} />
                   <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }} />
                   <Bar dataKey="collected" fill="#6366f1" radius={[10, 10, 0, 0]} name="Collected" />
@@ -148,8 +147,8 @@ export function AccountantDashboard() {
                    <PieChart>
                       <Pie
                         data={[
-                           { name: 'Collected', value: overview.realizedRevenue || 0 },
-                           { name: 'Pending', value: performance.totalOutstanding || 0 }
+                           { name: 'Collected', value: summary.collectedRevenue || 0 },
+                           { name: 'Pending', value: summary.pendingRevenue || 0 }
                         ]}
                         innerRadius={80}
                         outerRadius={105}
@@ -162,7 +161,7 @@ export function AccountantDashboard() {
                    </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                   <p className="text-4xl font-black text-white">{performance.collectionPercentage}%</p>
+                   <p className="text-4xl font-black text-white">{summary.collectionRate}%</p>
                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">Realized</p>
                 </div>
              </div>
@@ -172,14 +171,14 @@ export function AccountantDashboard() {
                       <div className="size-2.5 rounded-full bg-emerald-400" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-indigo-100">Realized</span>
                    </div>
-                   <span className="text-sm font-black text-white">₦{overview.realizedRevenue?.toLocaleString()}</span>
+                   <span className="text-sm font-black text-white">₦{summary.collectedRevenue?.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
                    <div className="flex items-center gap-2">
                       <div className="size-2.5 rounded-full bg-white/20" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-indigo-100">Expected</span>
                    </div>
-                   <span className="text-sm font-black text-white">₦{overview.totalTarget?.toLocaleString()}</span>
+                   <span className="text-sm font-black text-white">₦{summary.targetRevenue?.toLocaleString()}</span>
                 </div>
              </div>
           </CardContent>

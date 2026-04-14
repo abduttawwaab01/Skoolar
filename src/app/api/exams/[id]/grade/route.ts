@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth-middleware';
+import { createAuditLogEntry } from '@/lib/audit-logger';
 
 // Helper: safely parse a JSON string field
 function safeJsonParse(value: string | null | undefined): unknown {
@@ -213,6 +214,22 @@ export async function POST(
         score: finalScore,
         grade,
       },
+    });
+
+    // Log successful manual grading
+    createAuditLogEntry({
+      schoolId: authResult.schoolId || 'SYSTEM',
+      userId: authResult.userId,
+      action: 'EXAM_MANUAL_GRADE',
+      entity: 'EXAM_ATTEMPT',
+      entityId: attemptId,
+      details: JSON.stringify({
+        examId: id,
+        studentId: attempt.studentId,
+        finalScore
+      }),
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+      userAgent: request.headers.get('user-agent'),
     });
 
     return NextResponse.json({

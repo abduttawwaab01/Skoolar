@@ -1,5 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { createAuditLogEntry } from '@/lib/audit-logger';
+import { requireRole } from '@/lib/auth-middleware';
 
 // GET /api/exams/[id]/scores - List all scores for an exam
 export async function GET(
@@ -77,6 +79,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await requireRole(request, ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN']);
+    if (auth instanceof NextResponse) return auth;
+
     const { id } = await params;
     const body = await request.json();
 
@@ -194,6 +199,22 @@ export async function POST(
          updated.push(data);
        }
      }
+
+    // Log the successful bulk saving of scores
+    createAuditLogEntry({
+      schoolId: exam.schoolId,
+      userId: auth.userId,
+      action: 'EXAM_SCORES_UPSERT',
+      entity: 'EXAM',
+      entityId: id,
+      details: JSON.stringify({
+        createdCount: created.length,
+        updatedCount: updated.length,
+        examName: exam.name
+      }),
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+      userAgent: request.headers.get('user-agent'),
+    });
 
     return NextResponse.json({
       data: { created, updated },

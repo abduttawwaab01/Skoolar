@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
+import { createAuditLogEntry } from '@/lib/audit-logger';
 
 // GET /api/attendance - List attendance records with filters
 export async function GET(request: NextRequest) {
@@ -246,12 +247,27 @@ export async function POST(request: NextRequest) {
         })
       : [];
 
+    // Log the successful bulk saving of attendance
+    createAuditLogEntry({
+      schoolId: targetSchoolId,
+      userId: auth.userId,
+      action: 'ATTENDANCE_BULK_SAVE',
+      entity: 'ATTENDANCE',
+      details: JSON.stringify({
+        date: attendanceDate.toISOString().split('T')[0],
+        recordsCount: allCreated.length,
+        classId
+      }),
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+      userAgent: request.headers.get('user-agent'),
+    });
+
     return NextResponse.json({
       data: allCreated,
       errors: errors.length > 0 ? errors : undefined,
       createdCount: allCreated.length,
       errorCount: errors.length,
-      message: `Attendance marked for ${created.length} students`,
+      message: `Attendance marked for ${allCreated.length} students`,
     }, { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
