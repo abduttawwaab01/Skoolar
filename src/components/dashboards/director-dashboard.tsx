@@ -3,15 +3,19 @@
 import { useState, useEffect, useMemo } from 'react';
 import { KpiCard } from '@/components/shared/kpi-card';
 import { StatusBadge } from '@/components/shared/status-badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useAppStore } from '@/store/app-store';
-import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } = '@/components/ui/card';
+import { Badge } = '@/components/ui/badge';
+import { Button } = '@/components/ui/button';
+import { Progress } = '@/components/ui/progress';
+import { Skeleton } = '@/components/ui/skeleton';
+import { useAppStore } = '@/store/app-store';
+import { toast } = 'sonner';
+import { useTheme } = '@/hooks/use-theme';
+import { useSession, signOut } = 'next-auth/react';
 import {
   Users, GraduationCap, CalendarCheck, Wallet, TrendingUp, Award,
   Download, AlertTriangle, BarChart3, FileText,
+  Moon, Sun, LogOut
 } from 'lucide-react';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -90,6 +94,20 @@ export function DirectorDashboard() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [schools, setSchools] = useState<SchoolData[]>([]);
   const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
+  const { signOut: signOutFn } = useSession();
+  const { isDark, toggleTheme } = useTheme();
+
+  const handleSignOut = async () => {
+    try {
+      await signOutFn();
+      // Redirect to login page after sign out
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out. Please try again.');
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {

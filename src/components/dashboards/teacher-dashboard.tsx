@@ -13,12 +13,15 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
+import { useTheme } from '@/hooks/use-theme';
+import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { fadeIn, slideUp, staggerContainer, scaleIn } from '@/lib/motion-variants';
 import {
   Users, GraduationCap, FileEdit, CalendarCheck, Clock, BookOpen,
   AlertTriangle, Megaphone, Sparkles, ChevronRight, CheckCircle2,
-  XCircle, CircleDot, ClipboardCheck, Eye, BarChart3
+  XCircle, CircleDot, ClipboardCheck, Eye, BarChart3,
+  Moon, Sun, LogOut
 } from 'lucide-react';
 
 const quickActions = [
@@ -80,6 +83,20 @@ export function TeacherDashboard() {
   const [homeworkList, setHomeworkList] = useState<any[]>([]);
   const [totalPending, setTotalPending] = useState(0);
   const [teacherStats, setTeacherStats] = useState<TeacherStats | null>(null);
+  const { data: session, status } = useSession();
+  const { isDark, toggleTheme } = useTheme();
+  const { signOut: signOutFn } = useSession();
+
+  const handleSignOut = async () => {
+    try {
+      await signOutFn();
+      // Redirect to login page after sign out
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out. Please try again.');
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -187,23 +204,41 @@ export function TeacherDashboard() {
       animate="visible"
       variants={staggerContainer}
     >
-      {/* Welcome Header */}
-      <motion.div 
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
-        variants={slideUp}
-      >
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Welcome, <span className="text-emerald-600">{currentUser.name.split(' ')[0]}</span> 👋
-          </h1>
-          <p className="text-muted-foreground font-medium mt-1">{today}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="bg-white/50 backdrop-blur-sm border-gray-200 py-2 px-4 rounded-xl font-bold text-xs shadow-sm uppercase tracking-widest text-emerald-700">
-            <BookOpen className="size-4 mr-2" /> Academic Hub
-          </Badge>
-        </div>
-      </motion.div>
+        {/* Welcome Header */}
+        <motion.div 
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
+          variants={slideUp}
+        >
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+              Welcome, <span className="text-emerald-600">{currentUser.name.split(' ')[0]}</span> 👋
+            </h1>
+            <p className="text-muted-foreground font-medium mt-1">{today}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-white/50 backdrop-blur-sm border-gray-200 py-2 px-4 rounded-xl font-bold text-xs shadow-sm uppercase tracking-widest text-emerald-700">
+              <BookOpen className="size-4 mr-2" /> Academic Hub
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={toggleTheme}
+              title="Toggle Theme"
+            >
+              {isDark ? <Moon className="size-4" /> : <Sun className="size-4" />}
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={handleSignOut}
+              title="Sign Out"
+            >
+              <LogOut className="size-4" />
+            </Button>
+          </div>
+        </motion.div>
 
       {/* KPI Cards Row */}
        <motion.div 

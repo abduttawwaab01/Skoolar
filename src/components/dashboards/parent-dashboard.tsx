@@ -10,11 +10,14 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
 import { handleSilentError } from '@/lib/error-handler';
+import { useTheme } from '@/hooks/use-theme';
+import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { fadeIn, slideUp, staggerContainer, scaleIn, hoverScale } from '@/lib/motion-variants';
 import {
   GraduationCap, CalendarCheck, Wallet, Bell, CreditCard, Calendar, AlertTriangle,
-  CheckCircle2, Clock, ArrowRight, User, TrendingUp, RefreshCw, Sparkles, ChevronRight
+  CheckCircle2, Clock, ArrowRight, User, TrendingUp, RefreshCw, Sparkles, ChevronRight,
+  Moon, Sun, LogOut
 } from 'lucide-react';
 
 export function ParentDashboard() {
@@ -29,6 +32,20 @@ export function ParentDashboard() {
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<ApiCalendarEvent[]>([]);
   const [selectedChildIndex, setSelectedChildIndex] = useState(0);
+  const { data: session, status } = useSession();
+  const { isDark, toggleTheme } = useTheme();
+  const { signOut: signOutFn } = useSession();
+
+  const handleSignOut = async () => {
+    try {
+      await signOutFn();
+      // Redirect to login page after sign out
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out. Please try again.');
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,10 +68,13 @@ export function ParentDashboard() {
           studentsData = json.data || json || [];
         }
 
-        const myChildren = studentsData.filter(s =>
-          s.parentIds && s.parentIds.includes(currentUser.id)
-        );
-        setChildren(myChildren.length > 0 ? myChildren : studentsData.slice(0, 1));
+        const myChildren = studentsData.filter(s => {
+          if (!s.parentIds) return false;
+          // Splitting by comma if parentIds is a string list, or checking if it includes the ID
+          const ids = s.parentIds.split(',').map(id => id.trim());
+          return ids.includes(currentUser.id) || ids.includes(currentUser.name); // Checking both for legacy support
+        });
+        setChildren(myChildren);
 
         if (paymentsRes.ok) {
           const json = await paymentsRes.json();
@@ -189,40 +209,64 @@ export function ParentDashboard() {
       animate="visible"
       variants={staggerContainer}
     >
-      {/* Welcome Header */}
-      <motion.div variants={slideUp} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Welcome, <span className="text-indigo-600">{currentUser.name.split(' ').slice(-1)[0]}</span> 👋
-          </h1>
-          <div className="flex items-center gap-3 mt-1.5 overflow-x-auto pb-1 no-scrollbar">
-            {children.length > 0 && (
-              <>
-                <p className="text-muted-foreground font-medium whitespace-nowrap text-sm uppercase tracking-widest">Profiles:</p>
-                {children.map((child, i) => (
-                  <motion.button
-                    key={child.id}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelectedChildIndex(i)}
-                    className={cn(
-                      "px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all",
-                      i === selectedChildIndex 
-                        ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" 
-                        : "bg-white border text-gray-500 hover:border-indigo-200"
-                    )}
-                  >
-                    {child.user.name.split(' ')[0]}
-                  </motion.button>
-                ))}
-              </>
-            )}
-          </div>
-        </div>
-        <Badge variant="outline" className="bg-white/50 backdrop-blur-sm border-gray-100 py-2 px-4 rounded-xl font-bold text-xs shadow-sm text-indigo-700 uppercase tracking-[0.2em] self-start sm:self-center">
-          Monitoring Portal
-        </Badge>
-      </motion.div>
+       {/* Welcome Header */}
+       <motion.div variants={slideUp} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+         <div>
+           <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+             Welcome, <span className="text-indigo-600">{currentUser.name.split(' ').slice(-1)[0]}</span> 👋
+           </h1>
+           <div className="flex items-center gap-3 mt-1.5 overflow-x-auto pb-1 no-scrollbar">
+             {children.length > 0 ? (
+               <>
+                 <p className="text-muted-foreground font-medium whitespace-nowrap text-sm uppercase tracking-widest">Profiles:</p>
+                 {children.map((child, i) => (
+                   <motion.button
+                     key={child.id}
+                     whileHover={{ scale: 1.05 }}
+                     whileTap={{ scale: 0.95 }}
+                     onClick={() => setSelectedChildIndex(i)}
+                     className={cn(
+                       "px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all",
+                       i === selectedChildIndex 
+                         ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" 
+                         : "bg-white border text-gray-500 hover:border-indigo-200"
+                     )}
+                   >
+                     {child.user.name.split(' ')[0]}
+                   </motion.button>
+                 ))}
+               </>
+             ) : (
+               <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50 text-amber-700 rounded-full text-xs font-bold uppercase tracking-widest border border-amber-100">
+                 <AlertTriangle className="size-3.5" /> No children linked to profile
+               </div>
+             )}
+           </div>
+         </div>
+         <div className="flex items-center gap-2">
+           <Badge variant="outline" className="bg-white/50 backdrop-blur-sm border-gray-100 py-2 px-4 rounded-xl font-bold text-xs shadow-sm text-indigo-700 uppercase tracking-[0.2em] self-start sm:self-center">
+             Monitoring Portal
+           </Badge>
+         </div>
+         <div className="flex items-center gap-2">
+           <Button 
+             variant="outline" 
+             size="icon"
+             onClick={toggleTheme}
+             title="Toggle Theme"
+           >
+             {isDark ? <Moon className="size-4" /> : <Sun className="size-4" />}
+           </Button>
+           <Button 
+             variant="outline" 
+             size="icon"
+             onClick={handleSignOut}
+             title="Sign Out"
+           >
+             <LogOut className="size-4" />
+           </Button>
+         </div>
+       </motion.div>
 
       {/* KPI Cards Row */}
       <motion.div className="grid grid-cols-2 gap-4 lg:grid-cols-4" variants={staggerContainer}>

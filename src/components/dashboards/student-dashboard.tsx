@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { KpiCard } from '@/components/shared/kpi-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,17 +8,32 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
+import { useTheme } from '@/hooks/use-theme';
+import { useSession, signOut } from 'next-auth/react';
 import {
   GraduationCap, CalendarCheck, Award, Star, Trophy, Clock, BookOpen,
-  FileEdit, TrendingUp, Target, Medal, CheckCircle2, AlertTriangle, Info, Sparkles
+  FileEdit, TrendingUp, Target, CheckCircle2, Info, Sparkles, User,
+  Video, BrainCircuit, MessageSquare, BarChart3, ChevronRight,
+  Moon, Sun, LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { fadeIn, slideUp, staggerContainer, scaleIn } from '@/lib/motion-variants';
+import { cn } from '@/lib/utils';
 
+// Specialized Sub-Components
+import { StudentResults } from './student-results';
+import { StudentHomework } from './student-homework';
+import { StudentExams } from './student-exams';
+import { StudentVideoLessons } from './student-video-lessons';
+import { StudentAnalytics } from './student-analytics';
+import { StudentAchievements } from './student-achievements';
+import { StudentAiChat } from './student-ai-chat';
+import { MessagingCenter } from './messaging-center';
+
+// ---- Types ----
 interface ApiStudent {
   id: string;
   admissionNo: string;
@@ -27,7 +42,7 @@ interface ApiStudent {
   rank: number | null;
   behaviorScore: number | null;
   user: { name: string; email: string; avatar: string | null };
-  class: { id: string; name: string; section: string | null; grade: string | null } | null;
+  class: { id: string; name: string; section: string | null; grade: string | null; subjects?: ApiSubject[] } | null;
   attendanceSummary: {
     total: number;
     present: number;
@@ -36,7 +51,7 @@ interface ApiStudent {
     excused: number;
     percentage: number;
   } | null;
-  weeklyAttendance?: Array<{ day: string; present: number; absent: number; late: number; total: number }>;
+  weeklyAttendance?: Array<{ day: string; status: 'present' | 'absent' | 'late'; present: number; absent: number; late: number; total: number }>;
   nextExam?: {
     id: string;
     name: string;
@@ -54,6 +69,11 @@ interface ApiStudent {
   } | null;
 }
 
+interface ApiSubject {
+  id: string;
+  name: string;
+}
+
 interface ApiExamScore {
   id: string;
   score: number;
@@ -64,7 +84,6 @@ interface ApiExamScore {
     totalMarks: number;
     subject: { name: string } | null;
     term: { name: string } | null;
-    class: { name: string } | null;
   };
 }
 
@@ -72,514 +91,473 @@ interface ApiAnnouncement {
   id: string;
   title: string;
   content: string;
-  type: string;
-  priority: string;
-  publishedAt: string | null;
-  createdAt: string;
+  priority?: 'urgent' | 'normal' | 'low';
 }
 
 export function StudentDashboard() {
   const { currentUser, setCurrentView, selectedSchoolId } = useAppStore();
   const [activeTab, setActiveTab] = useState('overview');
-   const [studentProfile, setStudentProfile] = useState<ApiStudent | null>(null);
-   const [examScores, setExamScores] = useState<ApiExamScore[]>([]);
-   const [announcements, setAnnouncements] = useState<ApiAnnouncement[]>([]);
-   const [attendanceSummary, setAttendanceSummary] = useState<{ present: number; absent: number; late: number; total: number; percentage: number } | null>(null);
-   const [examStatsMap, setExamStatsMap] = useState<Record<string, { average: number; highest: number }>>({});
-   const [loading, setLoading] = useState(true);
+  const [studentProfile, setStudentProfile] = useState<ApiStudent | null>(null);
+  const [examScores, setExamScores] = useState<ApiExamScore[]>([]);
+  const [examStatsMap, setExamStatsMap] = useState<Record<string, { average: number; highest: number }>>({});
+  const [announcements, setAnnouncements] = useState<ApiAnnouncement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
+  const { isDark, toggleTheme } = useTheme();
+  const { signOut: signOutFn } = useSession();
 
   const schoolId = currentUser.schoolId || selectedSchoolId || '';
 
-   useEffect(() => {
+  const handleSignOut = async () => {
+    try {
+      await signOutFn();
+      // Redirect to login page after sign out
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+     let isMounted = true;
      const fetchData = async () => {
        try {
          setLoading(true);
 
-         // Find the student record by searching with their email
-         const studentsRes = await fetch(`/api/students?schoolId=${schoolId}&search=${encodeURIComponent(currentUser.email)}&limit=5`);
+         // Fetch student profile first
+         const studentsRes = await fetch(`/api/students?schoolId=${schoolId}&search=${encodeURIComponent(currentUser.email)}&limit=1`);
          let studentData: ApiStudent[] = [];
          if (studentsRes.ok) {
            const studentsJson = await studentsRes.json();
            studentData = studentsJson.data || studentsJson || [];
          }
 
-         if (studentData.length > 0) {
-           const currentStudent = studentData[0];
-           setStudentProfile(currentStudent);
+         if (!isMounted || studentData.length === 0) {
+           setLoading(false);
+           return;
+         }
 
-           // Fetch detailed student data with scores
-           const detailRes = await fetch(`/api/students/${currentStudent.id}`);
-           if (detailRes.ok) {
-             const detailJson = await detailRes.json();
-             const detail = detailJson.data;
-             if (detail) {
-               setAttendanceSummary(detail.attendanceSummary || null);
-               const scores = (detail.examScores || []).slice(0, 10);
-               setExamScores(scores);
+         const currentStudent = studentData[0];
+         setStudentProfile(currentStudent);
 
-               // Fetch exam stats (class average, highest) for each exam
-               if (scores.length > 0) {
-                 const statsPromises = scores.map(async (score: { exam: { id: string } }) => {
-                   try {
-                     const statsRes = await fetch(`/api/exams/${score.exam.id}/stats`);
-                     if (statsRes.ok) {
-                       const statsJson = await statsRes.json();
-                       if (statsJson.success) {
-                         return {
-                           examId: score.exam.id,
-                           average: statsJson.data.average || 0,
-                           highest: statsJson.data.highest || 0,
-                         };
-                       }
+         // Fetch announcements in parallel with detailed student data
+         const [detailRes, hwStatsRes, nextExamRes, announcementsRes] = await Promise.all([
+           fetch(`/api/students/${currentStudent.id}`),
+           fetch(`/api/homework/stats?studentId=${currentStudent.id}`),
+           fetch(`/api/exams?schoolId=${schoolId}&studentId=${currentStudent.id}&limit=1&status=upcoming`),
+           fetch(`/api/announcements?schoolId=${schoolId}&limit=10`)
+         ]);
+
+         if (!isMounted) {
+           setLoading(false);
+           return;
+         }
+
+         // Process detailed student data
+         if (detailRes.ok) {
+           const detailJson = await detailRes.json();
+           const detail = detailJson.data;
+           if (detail) {
+             setStudentProfile(prev => ({ ...prev!, ...detail }));
+             const scores = (detail.examScores || []).slice(0, 10);
+             setExamScores(scores);
+
+             // Fetch individual analytics for the overview chart
+             if (scores.length > 0) {
+               const statsPromises = scores.map(async (score: ApiExamScore) => {
+                 try {
+                   const sRes = await fetch(`/api/exams/${score.exam.id}/stats`);
+                   if (sRes.ok) {
+                     const sJson = await sRes.json();
+                     if (sJson.success) {
+                       return {
+                         examId: score.exam.id,
+                         average: sJson.data.average || 0,
+                         highest: sJson.data.highest || 0,
+                       };
                      }
-                   } catch (e) {
-                     // Ignore individual stats failures
                    }
-                   return null;
-                 });
-                 const statsResults = await Promise.all(statsPromises);
-                 const statsMap: Record<string, { average: number; highest: number }> = {};
-                 statsResults.forEach(stat => {
-                   if (stat) {
-                     statsMap[stat.examId] = {
-                       average: stat.average,
-                       highest: stat.highest,
-                     };
-                   }
-                 });
-                 setExamStatsMap(statsMap);
-               }
+                 } catch (e) {
+                   console.error(`Failed to fetch stats for exam ${score.exam.id}:`, e);
+                 }
+                 return null;
+               });
+               const statsResults = await Promise.all(statsPromises);
+               const statsMap: Record<string, { average: number; highest: number }> = {};
+               statsResults.forEach(stat => {
+                 if (stat) statsMap[stat.examId] = { average: stat.average, highest: stat.highest };
+               });
+               setExamStatsMap(statsMap);
              }
            }
          }
 
-         // Fetch announcements
-         const announcementsRes = await fetch(`/api/announcements?schoolId=${schoolId}&limit=10`);
+         // Process homework stats
+         if (hwStatsRes.ok) {
+           const hwJson = await hwStatsRes.json();
+           setStudentProfile(prev => ({ ...prev!, homeworkStats: hwJson.data }));
+         }
+
+         // Process next exam
+         if (nextExamRes.ok) {
+           const examJson = await nextExamRes.json();
+           if (examJson.data && examJson.data.length > 0) {
+             setStudentProfile(prev => ({ ...prev!, nextExam: examJson.data[0] }));
+           }
+         }
+
+         // Process announcements
          if (announcementsRes.ok) {
            const announcementsJson = await announcementsRes.json();
            setAnnouncements(announcementsJson.data || announcementsJson || []);
          }
        } catch (err) {
-         console.error(err);
-         toast.error('Failed to load dashboard data');
+         if (isMounted) {
+           console.error(err);
+           toast.error('Failed to load dashboard data');
+         }
        } finally {
-         setLoading(false);
+         if (isMounted) {
+           setLoading(false);
+         }
        }
      };
+
      fetchData();
-   }, [currentUser.id, currentUser.email, schoolId]);
 
-   const studentName = studentProfile?.user?.name || currentUser.name.split(' ')[0];
-   const gpa = studentProfile?.gpa || studentProfile?.cumulativeGpa || 0;
-   const attendanceRate = attendanceSummary?.percentage || 0;
-   const rank = studentProfile?.rank;
-   const behaviorScore = studentProfile?.behaviorScore || 0;
-
-   // Real homework stats
-   const homeworkTotal = studentProfile?.homeworkStats?.total || 0;
-   const homeworkCompleted = studentProfile?.homeworkStats?.completed || 0;
-
-   // Current term from API
-   const currentTermName = studentProfile?.currentTerm 
-     ? `${studentProfile.currentTerm.academicYear.name} - ${studentProfile.currentTerm.name}`
-     : 'No active term';
-
-   // Next exam date calculation
-   const nextExam = studentProfile?.nextExam;
-   const daysToExam = nextExam?.date 
-     ? Math.ceil((new Date(nextExam.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-     : null;
-
-   // Map exam scores to display format with class averages
-   const displayResults = examScores.map(score => {
-     const percentage = score.exam.totalMarks > 0 ? Math.round((score.score / score.exam.totalMarks) * 100) : 0;
-     let grade = score.grade || 'F';
-     if (percentage >= 80) grade = 'A';
-     else if (percentage >= 70) grade = 'B';
-     else if (percentage >= 60) grade = 'C';
-     
-     const stats = examStatsMap[score.exam.id];
-     return {
-       subject: score.exam.subject?.name || score.exam.name,
-       score: percentage,
-       grade,
-       classAvg: stats?.average || null,
-       highest: stats?.highest || null,
+     return () => {
+       isMounted = false;
      };
-   });
+   }, [currentUser.email, schoolId]);
 
-  // Achievements based on real data
+  // ---- Derived Data for Overview ----
+  const studentName = studentProfile?.user?.name || currentUser.name.split(' ')[0];
+  const gpa = studentProfile?.gpa || studentProfile?.cumulativeGpa || 0;
+  const attendanceRate = studentProfile?.attendanceSummary?.percentage || 0;
+  const rank = studentProfile?.rank;
+  const behaviorScore = studentProfile?.behaviorScore || 0;
+
+  const daysToExam = useMemo(() => {
+    if (!studentProfile?.nextExam?.date) return null;
+    const examDate = new Date(studentProfile.nextExam.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffTime = examDate.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }, [studentProfile?.nextExam?.date]);
+
+  const displayResults = useMemo(() => {
+    return examScores.map(score => {
+      const percentage = score.exam.totalMarks > 0 ? Math.round((score.score / score.exam.totalMarks) * 100) : 0;
+      const stats = examStatsMap[score.exam.id];
+      return {
+        subject: score.exam.subject?.name || score.exam.name,
+        score: percentage,
+        classAvg: stats?.average || 0,
+        highest: stats?.highest || 0,
+      };
+    });
+  }, [examScores, examStatsMap]);
+
+  const performanceTrends = useMemo(() => {
+    if (displayResults.length === 0) {
+      return [ { month: 'Jan', avg: 0 }, { month: 'Feb', avg: 0 }, { month: 'Mar', avg: 0 }, { month: 'Apr', avg: 0 } ];
+    }
+    return displayResults.map((r, i) => ({
+      month: r.subject.substring(0, 3).toUpperCase(),
+      avg: r.score
+    })).slice(0, 6);
+  }, [displayResults]);
+
   const achievements = [
-    { name: 'Perfect Attendance', earned: attendanceRate >= 90, icon: CheckCircle2 },
-    { name: 'Star Student', earned: gpa >= 4.0, icon: Star },
-    { name: 'Early Bird', earned: false, icon: Clock },
-    { name: 'Top Scorer', earned: displayResults.length > 0 && displayResults.some(r => r.score >= 90), icon: Trophy },
-    { name: 'Reader', earned: true, icon: BookOpen },
-    { name: 'Helper', earned: false, icon: Target },
+    { name: 'Perfect Attendance', earned: attendanceRate >= 95, icon: CheckCircle2 },
+    { name: 'Star Student', earned: gpa >= 4.5, icon: Star },
+    { name: 'Top Scorer', earned: displayResults.some(r => r.score >= 90), icon: Trophy },
+    { name: 'Fast Learner', earned: true, icon: BrainCircuit },
+    { name: 'Helpful', earned: behaviorScore >= 90, icon: Target },
+    { name: 'Active Participant', earned: true, icon: Award },
   ];
 
-   // Performance trends - will be calculated from exam scores if available
-   // For now, show empty or use actual historical data when available
-   const hasResults = displayResults.length > 0;
-   const performanceTrends = hasResults ? displayResults.map((result, idx) => ({
-     month: new Date().toLocaleDateString('en-US', { month: 'short' }),
-     avg: result.score,
-   })).slice(0, 6) : [];
+  const currentTermName = studentProfile?.currentTerm 
+    ? `${studentProfile.currentTerm.academicYear.name} - ${studentProfile.currentTerm.name}`
+    : 'No active term';
 
-   // Attendance stats with real weekly data
-   const attendanceStats = {
-     present: attendanceSummary?.present || 0,
-     absent: attendanceSummary?.absent || 0,
-     late: attendanceSummary?.late || 0,
-     total: attendanceSummary?.total || 0,
-     rate: attendanceRate,
-     weeklyData: studentProfile?.weeklyAttendance || [
-       { day: 'Mon', status: 'present' as const, present: 0, absent: 0, late: 0, total: 0 },
-       { day: 'Tue', status: 'present' as const, present: 0, absent: 0, late: 0, total: 0 },
-       { day: 'Wed', status: 'present' as const, present: 0, absent: 0, late: 0, total: 0 },
-       { day: 'Thu', status: 'present' as const, present: 0, absent: 0, late: 0, total: 0 },
-       { day: 'Fri', status: 'present' as const, present: 0, absent: 0, late: 0, total: 0 },
-     ],
-   };
-
-  // Reference to studentData (for backwards compatibility)
-  const studentData = studentProfile;
-
+  // ---- Skeleton ----
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-4 w-48 mt-2" />
-          </div>
-          <div className="flex gap-2"><Skeleton className="h-8 w-24" /><Skeleton className="h-8 w-24" /></div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <Skeleton className="h-10 w-64" /><Skeleton className="h-4 w-48 mt-2" />
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
-        <Skeleton className="h-10 w-full max-w-md" />
-        <div className="space-y-4">
-          <Skeleton className="h-60 rounded-xl" />
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Skeleton className="h-60 rounded-xl" />
-            <Skeleton className="h-60 rounded-xl" />
-          </div>
-        </div>
+        <Skeleton className="h-60 rounded-xl" />
       </div>
     );
   }
 
   return (
-    <motion.div 
-      initial="hidden"
-      animate="visible"
-      variants={staggerContainer}
-      className="space-y-6"
-    >
-      {/* Welcome */}
-      <motion.div 
-        variants={fadeIn}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-      >
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold tracking-tight">Welcome back, {studentName}! 🎓</h1>
-            <Sparkles className="size-5 text-amber-500 animate-pulse" />
-          </div>
-          <p className="text-muted-foreground">Keep up the great work! You&apos;re doing amazing this term.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="gap-1.5 text-sm py-1.5 px-3 bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100 transition-colors">
-            <GraduationCap className="size-4" /> GPA: {gpa.toFixed(1)}/5.0
-          </Badge>
-          {rank && (
-            <Badge variant="secondary" className="gap-1.5 text-sm py-1.5 px-3 bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100 transition-colors">
-              <TrendingUp className="size-4" /> Rank: #{rank}
-            </Badge>
-          )}
-        </div>
-      </motion.div>
+    <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="space-y-6">
+       {/* Header */}
+       <motion.div variants={fadeIn} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+         <div>
+           <h1 className="text-2xl font-bold tracking-tight text-gray-900 overflow-hidden">Welcome back, {studentName}! 🎓</h1>
+           <p className="text-muted-foreground">Everything you need for your academic journey is right here.</p>
+         </div>
+         <div className="flex items-center gap-2">
+           <Badge variant="secondary" className="gap-1.5 text-sm py-1.5 px-3 bg-emerald-50 text-emerald-700 border-emerald-100 font-bold">
+             <GraduationCap className="size-4" /> GPA: {gpa.toFixed(1)}/5.0
+           </Badge>
+           {rank && (
+             <Badge variant="secondary" className="gap-1.5 text-sm py-1.5 px-3 bg-blue-50 text-blue-700 border-blue-100 font-bold">
+               Rank: #{rank}
+             </Badge>
+           )}
+           <div className="flex items-center gap-2">
+             <Button 
+               variant="outline" 
+               size="icon"
+               onClick={toggleTheme}
+               title="Toggle Theme"
+             >
+               {isDark ? <Moon className="size-4" /> : <Sun className="size-4" />}
+             </Button>
+             <Button 
+               variant="outline" 
+               size="icon"
+               onClick={handleSignOut}
+               title="Sign Out"
+             >
+               <LogOut className="size-4" />
+             </Button>
+           </div>
+         </div>
+       </motion.div>
 
       {/* KPI Cards */}
-      <motion.div 
-        variants={staggerContainer}
-        className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-      >
-         <motion.div variants={scaleIn}>
-           <KpiCard title="GPA" value={`${gpa.toFixed(1)}/5.0`} icon={GraduationCap} iconBgColor="bg-emerald-100" iconColor="text-emerald-600" changeLabel="current" />
-           <KpiCard title="Attendance" value={`${attendanceStats.rate}%`} icon={CalendarCheck} iconBgColor="bg-blue-100" iconColor="text-blue-600" changeLabel="this term" />
-           <KpiCard title="Class Rank" value={rank ? `#${rank}` : '—'} icon={Award} iconBgColor="bg-purple-100" iconColor="text-purple-600" changeLabel={rank ? 'in class' : 'unranked'} />
-           <KpiCard title="Behavior Score" value={`${behaviorScore}/100`} icon={Star} iconBgColor="bg-amber-100" iconColor="text-amber-600" changeLabel="score" />
-         </motion.div>
-      </motion.div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <KpiCard title="GPA Metric" value={`${gpa.toFixed(1)}/5.0`} icon={GraduationCap} iconBgColor="bg-emerald-100" iconColor="text-emerald-600" />
+        <KpiCard title="Attendance" value={`${attendanceRate}%`} icon={CalendarCheck} iconBgColor="bg-blue-100" iconColor="text-blue-600" />
+        <KpiCard title="Class Stand" value={rank ? `#${rank}` : '—'} icon={Award} iconBgColor="bg-purple-100" iconColor="text-purple-600" />
+        <KpiCard title="Conduct" value={`${behaviorScore}/100`} icon={Star} iconBgColor="bg-amber-100" iconColor="text-amber-600" />
+      </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <motion.div variants={fadeIn}>
-          <TabsList className="bg-muted/50 p-1 rounded-xl">
-            <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Overview</TabsTrigger>
-            <TabsTrigger value="academics" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Academics</TabsTrigger>
-            <TabsTrigger value="schedule" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Schedule</TabsTrigger>
-          </TabsList>
-        </motion.div>
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="bg-muted/50 p-1.5 rounded-2xl flex flex-wrap h-auto gap-1 border-2 border-transparent">
+          {[
+            { id: 'overview', label: 'Overview' },
+            { id: 'results', label: 'Results' },
+            { id: 'homework', label: 'Homework' },
+            { id: 'exams', label: 'Exams' },
+            { id: 'lessons', label: 'Video Hub' },
+            { id: 'ai', label: 'AI Study' },
+            { id: 'messages', label: 'Messages' },
+            { id: 'analytics', label: 'Analytics' },
+            { id: 'achievements', label: 'Awards' },
+          ].map(tab => (
+            <TabsTrigger 
+              key={tab.id} 
+              value={tab.id} 
+              className="rounded-xl px-5 py-2.5 data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-indigo-600 font-bold text-xs uppercase tracking-tight transition-all"
+            >
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
         <AnimatePresence mode="wait">
-          {activeTab === 'overview' && (
-            <TabsContent value="overview" key="overview" className="mt-0 space-y-4">
-              <motion.div 
-                initial="hidden" animate="visible" exit="hidden" variants={staggerContainer}
-                className="space-y-4"
-              >
-                 <motion.div variants={slideUp}>
-                   <Card className="border-0 shadow-sm bg-gradient-to-br from-white to-gray-50/50">
-                     <CardHeader className="pb-3">
-                       <CardTitle className="text-base font-bold flex items-center gap-2">
-                         <Trophy className="size-4 text-amber-500" />
-                         Term Statistics — {currentTermName}
-                       </CardTitle>
-                     </CardHeader>
-                     <CardContent>
-                       <div className="grid gap-4 sm:grid-cols-4">
-                         <motion.div whileHover={{ y: -2 }} className="text-center p-4 rounded-xl bg-blue-50/50 border border-blue-100/50 transition-all">
-                           <BookOpen className="size-5 mx-auto mb-1.5 text-blue-600" />
-                           <p className="text-[10px] uppercase tracking-widest font-bold text-blue-600/70">Subjects</p>
-                           <p className="text-2xl font-bold text-blue-900">{displayResults.length || 0}</p>
-                         </motion.div>
-                         <motion.div whileHover={{ y: -2 }} className="text-center p-4 rounded-xl bg-emerald-50/50 border border-emerald-100/50 transition-all">
-                           <CheckCircle2 className="size-5 mx-auto mb-1.5 text-emerald-600" />
-                           <p className="text-[10px] uppercase tracking-widest font-bold text-emerald-600/70">Assignments</p>
-                           <p className="text-2xl font-bold text-emerald-900">{homeworkCompleted}/{homeworkTotal}</p>
-                           <Progress value={homeworkTotal > 0 ? (homeworkCompleted / homeworkTotal) * 100 : 0} className="h-1.5 mt-2 bg-emerald-100" />
-                         </motion.div>
-                         <motion.div whileHover={{ y: -2 }} className="text-center p-4 rounded-xl bg-indigo-50/50 border border-indigo-100/50 transition-all">
-                           <CalendarCheck className="size-5 mx-auto mb-1.5 text-indigo-600" />
-                           <p className="text-[10px] uppercase tracking-widest font-bold text-indigo-600/70">Days to Exam</p>
-                           <p className="text-2xl font-bold text-indigo-900">{daysToExam !== null ? daysToExam : '—'}</p>
-                         </motion.div>
-                         <motion.div whileHover={{ y: -2 }} className="text-center p-4 rounded-xl bg-amber-50/50 border border-amber-100/50 transition-all">
-                           <Trophy className="size-5 mx-auto mb-1.5 text-amber-600" />
-                           <p className="text-[10px] uppercase tracking-widest font-bold text-amber-600/70">Achievement</p>
-                           <p className="text-2xl font-bold text-amber-900">{achievements.filter(a => a.earned).length}/{achievements.length}</p>
-                         </motion.div>
-                       </div>
-                     </CardContent>
-                   </Card>
-                 </motion.div>
-
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <motion.div variants={slideUp}>
-                    <Card className="h-full">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base font-bold">Performance Analytics</CardTitle>
-                        <CardDescription>Monthly average across all subjects</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-end gap-2.5 h-48 pt-4">
-                          {performanceTrends.map((point, i) => {
-                            const min = Math.min(...performanceTrends.map(p => p.avg));
-                            const max = Math.max(...performanceTrends.map(p => p.avg));
-                            const height = ((point.avg - min) / (max - min || 1)) * 70 + 30;
-                            return (
-                              <div key={point.month} className="flex-1 flex flex-col items-center gap-2">
-                                <motion.div 
-                                  initial={{ height: 0 }}
-                                  animate={{ height: `${height}%` }}
-                                  transition={{ delay: i * 0.1, duration: 0.8, ease: "easeOut" }}
-                                  className={`w-full rounded-t-xl transition-all duration-300 relative group cursor-pointer ${
-                                    i === performanceTrends.length - 1 
-                                      ? 'bg-gradient-to-t from-emerald-600 to-emerald-400' 
-                                      : 'bg-gradient-to-t from-gray-200 to-gray-100 dark:from-gray-800 dark:to-gray-700 hover:from-emerald-200 hover:to-emerald-100'
-                                  }`}
-                                >
-                                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {point.avg.toFixed(1)}%
-                                  </div>
-                                </motion.div>
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{point.month}</span>
-                              </div>
-                            );
-                          })}
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {activeTab === 'overview' && (
+              <div className="grid gap-6 lg:grid-cols-12">
+                {/* Main Hub Area */}
+                <div className="lg:col-span-8 space-y-6">
+                  {/* Hero Card */}
+                  <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-indigo-600 via-indigo-600 to-indigo-700 text-white relative">
+                    <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12"><Sparkles className="size-48" /></div>
+                    <CardHeader className="pb-4 relative z-10">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-indigo-100 text-[10px] font-extrabold uppercase tracking-[0.25em] mb-1">{currentTermName}</p>
+                          <CardTitle className="text-4xl font-black mt-1 leading-tight tracking-tighter">Skyrocket Your <br />Results, {studentName}!</CardTitle>
+                          <CardDescription className="text-indigo-100 mt-3 font-medium text-sm max-w-md">Your average has improved by 4% since last week. Keep the momentum going!</CardDescription>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-
-                  <motion.div variants={slideUp}>
-                    <Card className="h-full">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base font-bold">Weekly Presence</CardTitle>
-                        <CardDescription>Visualizing your consistency</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center gap-3 mb-6 h-20">
-                          {attendanceStats.weeklyData.map((d, i) => (
-                            <motion.div key={d.day} variants={scaleIn} className="flex-1 flex flex-col items-center gap-2">
-                              <motion.div 
-                                whileHover={{ scale: 1.1, rotate: 5 }}
-                                className={`flex size-12 items-center justify-center rounded-2xl text-lg font-bold shadow-sm transition-all ${
-                                  d.status === 'present' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' :
-                                  d.status === 'absent' ? 'bg-red-100 text-red-700 border border-red-200' :
-                                  'bg-amber-100 text-amber-700 border border-amber-200'
-                                }`}
-                              >
-                                {d.status === 'present' ? '✓' : d.status === 'absent' ? '✗' : '~'}
-                              </motion.div>
-                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{d.day}</span>
-                            </motion.div>
-                          ))}
-                        </div>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="text-center p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-                            <p className="text-lg font-bold text-emerald-700">{attendanceStats.present}</p>
-                            <p className="text-[10px] font-bold tracking-tight text-emerald-600/70 uppercase">Present</p>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="relative z-10 pt-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {[
+                          { label: 'Subjects', value: studentProfile?.class?.subjects?.length || 0, icon: BookOpen },
+                          { label: 'Tasks Done', value: studentProfile?.homeworkStats ? `${studentProfile.homeworkStats.completed}/${studentProfile.homeworkStats.total}` : '0/0', icon: FileEdit },
+                          { label: 'Next Exam', value: daysToExam !== null ? (daysToExam === 0 ? 'Today' : daysToExam < 0 ? 'Recently' : `${daysToExam} Day${daysToExam !== 1 ? 's' : ''}`) : 'None', icon: CalendarCheck },
+                          { label: 'Rank', value: rank ? `#${rank}` : 'N/A', icon: Trophy },
+                        ].map((item, i) => (
+                          <div key={i} className="p-4 rounded-3xl bg-white/10 backdrop-blur-xl border border-white/10 shadow-lg hover:bg-white/15 transition-colors group cursor-default">
+                             <item.icon className="size-5 mb-2 text-indigo-100 group-hover:scale-110 transition-transform" />
+                             <p className="text-[10px] font-bold text-indigo-100 uppercase tracking-widest">{item.label}</p>
+                             <p className="text-2xl font-black text-white mt-0.5">{item.value}</p>
                           </div>
-                          <div className="text-center p-3 rounded-xl bg-red-50 border border-red-100">
-                            <p className="text-lg font-bold text-red-700">{attendanceStats.absent}</p>
-                            <p className="text-[10px] font-bold tracking-tight text-red-600/70 uppercase">Absent</p>
-                          </div>
-                          <div className="text-center p-3 rounded-xl bg-amber-50 border border-amber-100">
-                            <p className="text-lg font-bold text-amber-700">{attendanceStats.late}</p>
-                            <p className="text-[10px] font-bold tracking-tight text-amber-600/70 uppercase">Late</p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                </div>
-              </motion.div>
-            </TabsContent>
-          )}
-
-          {activeTab === 'academics' && (
-            <TabsContent value="academics" key="academics" className="mt-0 space-y-4">
-              <motion.div 
-                initial="hidden" animate="visible" exit="hidden" variants={staggerContainer}
-                className="grid gap-4 lg:grid-cols-2"
-              >
-                <motion.div variants={slideUp}>
-                  <Card>
-                    <CardHeader className="pb-3 text-sm font-bold border-b mb-4">Recent Exam Results</CardHeader>
-                    <CardContent className="space-y-3">
-                      {examScores.length > 0 ? (
-                        examScores.slice(0, 4).map((exam, i) => (
-                          <motion.div key={i} variants={fadeIn} whileHover={{ x: 5 }} className="flex items-center gap-3 rounded-xl border p-3 hover:bg-emerald-50 transition-all group">
-                            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700 group-hover:bg-amber-500 group-hover:text-white transition-colors shadow-sm">
-                              <FileEdit className="size-4" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-bold text-gray-900 truncate">{exam.exam?.subject?.name || 'Exam'}</p>
-                              <p className="text-[11px] text-muted-foreground font-medium flex items-center gap-1"><Clock className="size-3" /> {exam.exam?.term?.name || 'Current Term'}</p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider h-5 px-1.5">{exam.exam?.class?.name || 'Class'}</Badge>
-                              <p className="text-[11px] font-bold text-amber-600 mt-1">{exam.score}/{exam.exam?.totalMarks || 100}</p>
-                            </div>
-                          </motion.div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">No exam results available</p>
-                      )}
+                        ))}
+                      </div>
                     </CardContent>
                   </Card>
-                </motion.div>
 
-                <motion.div variants={slideUp}>
-                  <Card className="h-full">
-                    <CardHeader className="pb-3 border-b mb-4">Latest Scores</CardHeader>
-                    <CardContent>
-                      <ScrollArea className="h-[340px] pr-2">
-                        <div className="space-y-2">
-                          {displayResults.map((result, i) => (
-                            <motion.div key={i} variants={fadeIn} whileHover={{ x: 5 }} className="flex items-center gap-3 rounded-xl border p-3 hover:bg-blue-50 transition-all bg-white">
-                              <div className={`flex size-10 shrink-0 items-center justify-center rounded-xl text-lg font-bold shadow-sm ${
-                                result.grade === 'A' ? 'bg-emerald-100 text-emerald-700' :
-                                result.grade === 'B' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
-                              }`}>
-                                {result.grade}
-                              </div>
-                               <div className="min-w-0 flex-1">
-                                 <p className="text-sm font-bold text-gray-900">{result.subject}</p>
-                                 <div className="flex items-center gap-3 mt-1">
-                                   <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                     <motion.div initial={{ width: 0 }} animate={{ width: `${result.score}%` }} className={`h-full ${result.score >= 70 ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                  <div className="grid gap-6 md:grid-cols-2">
+                    {/* Performance Analytics Preview */}
+                    <Card className="glass-panel border-0 shadow-sm overflow-hidden group">
+                      <CardHeader className="pb-2 border-b bg-white/30">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center justify-between text-indigo-600">
+                          <span>Live Performance</span>
+                          <TrendingUp className="size-4" />
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-6 px-4">
+                         <div className="flex items-end gap-2 h-40">
+                           {performanceTrends.map((p, i) => (
+                             <div key={i} className="flex-1 flex flex-col items-center gap-2 group/bar">
+                               <div className="w-full relative flex items-end">
+                                 <motion.div 
+                                   initial={{ height: 0 }} 
+                                   animate={{ height: `${p.avg}%` }}
+                                   transition={{ delay: i * 0.1, type: 'spring', damping: 15 }}
+                                   className={cn(
+                                     "w-full rounded-t-xl transition-all relative overflow-hidden",
+                                     i === performanceTrends.length - 1 ? "bg-indigo-600 shadow-lg shadow-indigo-200" : "bg-indigo-100 group-hover/bar:bg-indigo-200"
+                                   )}
+                                 >
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+                                 </motion.div>
+                                 <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover/bar:opacity-100 transition-opacity text-[10px] font-bold bg-gray-900 text-white px-1.5 py-0.5 rounded">
+                                   {p.avg}%
+                                 </div>
+                               </div>
+                               <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{p.month}</span>
+                             </div>
+                           ))}
+                         </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Announcement Reel */}
+                    <Card className="glass-panel border-0 shadow-sm overflow-hidden">
+                       <CardHeader className="pb-2 border-b bg-white/30">
+                        <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center justify-between text-blue-600">
+                          <span>School Bulletin</span>
+                          <MessageSquare className="size-4" />
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                         <ScrollArea className="h-44">
+                           <div className="divide-y divide-gray-100">
+                             {announcements.length > 0 ? announcements.map(ann => (
+                               <div key={ann.id} className="p-4 hover:bg-white transition-colors cursor-pointer group">
+                                 <div className="flex items-start gap-3">
+                                   <div className={cn("size-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm", ann.priority === 'urgent' ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-500')}>
+                                      <Info className="size-4" />
+                                   </div>
+                                   <div className="min-w-0 flex-1">
+                                     <p className="text-xs font-bold text-gray-900 group-hover:text-indigo-600 transition-colors truncate uppercase tracking-tight">{ann.title}</p>
+                                     <p className="text-[10px] font-medium text-gray-500 mt-0.5 line-clamp-1">{ann.content}</p>
                                    </div>
                                  </div>
                                </div>
-                               <div className="text-right">
-                                 <p className="text-sm font-bold text-gray-900">{result.score}%</p>
-                                 {result.classAvg && (
-                                   <p className="text-xs text-muted-foreground">Avg: {result.classAvg}%</p>
-                                 )}
+                             )) : (
+                               <div className="py-16 text-center text-[10px] font-black uppercase tracking-[0.2em] text-gray-300 opacity-50">No Global Updates</div>
+                             )}
+                           </div>
+                         </ScrollArea>
+                         <Button variant="ghost" className="w-full h-10 rounded-none border-t text-[10px] font-black uppercase tracking-widest text-indigo-500 hover:bg-indigo-50" onClick={() => setCurrentView('announcements')}>
+                           See All Announcements <ChevronRight className="size-3 ml-1" />
+                         </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+
+                {/* Vertical Analytics Sidebar */}
+                <div className="lg:col-span-4 space-y-6">
+                   {/* Achievement Showcase */}
+                   <Card className="glass-panel border-0 shadow-sm overflow-hidden">
+                     <CardHeader className="pb-2">
+                       <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Badge Board</CardTitle>
+                     </CardHeader>
+                     <CardContent className="pt-2">
+                        <div className="grid grid-cols-3 gap-3">
+                          {achievements.map((ach, i) => (
+                            <div key={i} className={cn(
+                              "aspect-square rounded-2xl flex items-center justify-center transition-all relative overflow-hidden group",
+                              ach.earned ? "bg-emerald-50 text-emerald-600 shadow-inner" : "bg-gray-50 text-gray-300 contrast-50 grayscale opacity-40"
+                            )}>
+                               <ach.icon className="size-6 relative z-10" />
+                               {ach.earned && <div className="absolute inset-0 bg-gradient-to-br from-emerald-100/50 to-transparent" />}
+                               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center bg-black/60 z-20">
+                                 <span className="text-[8px] font-black text-white uppercase text-center px-1 leading-tight">{ach.name}</span>
                                </div>
-                            </motion.div>
+                            </div>
                           ))}
                         </div>
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              </motion.div>
-            </TabsContent>
-          )}
+                        <Button variant="outline" className="w-full mt-6 text-[10px] font-black uppercase tracking-widest border-2 border-indigo-100 text-indigo-600 h-10 rounded-xl hover:bg-indigo-50 hover:border-indigo-200" onClick={() => setActiveTab('achievements')}>
+                          Achievement Board
+                        </Button>
+                     </CardContent>
+                   </Card>
 
-          {activeTab === 'schedule' && (
-            <TabsContent value="schedule" key="schedule" className="mt-0">
-              <motion.div 
-                initial="hidden" animate="visible" exit="hidden" variants={staggerContainer}
-              >
-                <Card className="border-0 shadow-sm bg-gray-50/30">
-                  <CardHeader className="pb-3 border-b bg-white">
-                    <CardTitle className="text-sm font-bold flex items-center gap-2">
-                      <Clock className="size-4 text-emerald-500" />
-                      Daily Timetable
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    {studentData && studentData.class ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">Timetable data will be fetched from your class schedule</p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-4">Please select a class to view timetable</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </TabsContent>
-          )}
+                   {/* Progress Visualizers */}
+                   <Card className="glass-panel border-0 shadow-sm">
+                     <CardHeader className="pb-2">
+                       <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Core Metrics</CardTitle>
+                     </CardHeader>
+                     <CardContent className="pt-2 space-y-5">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-[10px] font-black uppercase tracking-tight">
+                            <span>Attendance Score</span>
+                            <span className="text-emerald-600 font-black">{attendanceRate}%</span>
+                          </div>
+                          <Progress value={attendanceRate} className="h-2 bg-emerald-50" />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-[10px] font-black uppercase tracking-tight">
+                            <span>Task Completion</span>
+                            <span className="text-indigo-600 font-black">{Math.round(((studentProfile?.homeworkStats?.completed || 0) / (studentProfile?.homeworkStats?.total || 1)) * 100)}%</span>
+                          </div>
+                          <Progress value={((studentProfile?.homeworkStats?.completed || 0) / (studentProfile?.homeworkStats?.total || 1)) * 100} className="h-2 bg-indigo-50" />
+                        </div>
+                        
+                        {/* Weekly Context Action */}
+                        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-3xl p-4 border-2 border-amber-100/50 mt-2 hover:shadow-md transition-all group flex items-center gap-4 cursor-pointer">
+                           <div className="size-10 rounded-2xl bg-white shadow-sm flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
+                             <Clock className="size-5" />
+                           </div>
+                           <div className="flex-1">
+                              <p className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Action Required</p>
+                              <p className="text-xs font-bold text-gray-900 mt-0.5">Prepare for Finals</p>
+                           </div>
+                           <ChevronRight className="size-4 text-amber-400" />
+                        </div>
+                     </CardContent>
+                   </Card>
+                </div>
+              </div>
+            )}
+
+            {/* Modular Views (Self-Contained) */}
+            {activeTab === 'results' && <StudentResults />}
+            {activeTab === 'homework' && <StudentHomework />}
+            {activeTab === 'exams' && <StudentExams />}
+            {activeTab === 'lessons' && <StudentVideoLessons />}
+            {activeTab === 'analytics' && <StudentAnalytics />}
+            {activeTab === 'achievements' && <StudentAchievements />}
+            {activeTab === 'ai' && <StudentAiChat />}
+            {activeTab === 'messages' && <MessagingCenter />}
+          </motion.div>
         </AnimatePresence>
       </Tabs>
-
-      {/* Achievements */}
-      <motion.div variants={slideUp}>
-        <Card className="border-0 shadow-sm bg-gradient-to-r from-gray-900 to-indigo-950 text-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <Trophy className="size-32" />
-          </div>
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between relative z-10">
-              <div>
-                <CardTitle className="text-lg font-bold">Badge Collection</CardTitle>
-                <CardDescription className="text-gray-400">Unlock more by staying active</CardDescription>
-              </div>
-              <Button variant="outline" size="sm" className="text-xs font-bold bg-white/10 border-white/20 text-white hover:bg-white/20" onClick={() => setCurrentView('achievements')}>Library</Button>
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="grid grid-cols-3 gap-4 sm:grid-cols-6 mb-2">
-              {achievements.map(ach => (
-                <motion.div key={ach.name} whileHover={{ y: -5, scale: 1.05 }} className="flex flex-col items-center gap-3">
-                  <div className={`flex size-14 items-center justify-center rounded-2xl transition-all shadow-lg ${
-                    ach.earned ? `bg-gradient-to-br from-emerald-400 to-emerald-600 ring-2 ring-emerald-400 ring-offset-2 ring-offset-indigo-950` : 'bg-white/5 border border-white/10 text-white/30 grayscale opacity-40'
-                  }`}>
-                    <ach.icon className={`size-7 ${ach.earned ? 'text-white' : ''}`} />
-                  </div>
-                  <p className={`text-[10px] text-center font-bold uppercase tracking-widest ${ach.earned ? 'text-white' : 'text-white/30'}`}>{ach.name.split(' ')[0]}</p>
-                </motion.div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
     </motion.div>
   );
 }

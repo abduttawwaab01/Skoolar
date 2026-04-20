@@ -14,11 +14,14 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
+import { useTheme } from '@/hooks/use-theme';
+import { useSession, signOut } from 'next-auth/react';
 import {
   Users, GraduationCap, CalendarCheck, Wallet, FileEdit, CreditCard,
   Megaphone, IdCard, TrendingUp, Clock, BookOpen,
   Award, AlertTriangle, CheckCircle2, UserCheck, Plus, ChevronRight,
-  BarChart3, ArrowUpRight, ArrowDownRight, CircleDot, RefreshCw, XCircle
+  BarChart3, ArrowUpRight, ArrowDownRight, CircleDot, RefreshCw, XCircle,
+  Moon, Sun, LogOut
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -109,6 +112,20 @@ function DashboardSkeleton() {
 export function SchoolAdminDashboard() {
   const { setCurrentView, selectedSchoolId, currentUser } = useAppStore();
   const [activeTab, setActiveTab] = useState('overview');
+  const { data: session, status } = useSession();
+  const { signOut: signOutFn } = useSession();
+  const { isDark, toggleTheme } = useTheme();
+
+  const handleSignOut = async () => {
+    try {
+      await signOutFn();
+      // Redirect to login page after sign out
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out. Please try again.');
+    }
+  };
 
   // Data states
   const [students, setStudents] = useState<StudentRecord[]>([]);
@@ -118,14 +135,14 @@ export function SchoolAdminDashboard() {
   const [announcements, setAnnouncements] = useState<AnnouncementRecord[]>([]);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEventRecord[]>([]);
   const [exams, setExams] = useState<{ id: string; title: string; termId: string | null }[]>([]);
-  
-   // Stats - using real current data only
-   const [stats, setStats] = useState({
-     previousStudents: 0, // Will be fetched from previous term when available
-     previousTeachers: 0,
-     previousAttendance: 0,
-     previousRevenue: 0,
-   });
+   
+  // Stats - using real current data only
+  const [stats, setStats] = useState({
+    previousStudents: 0, // Will be fetched from previous term when available
+    previousTeachers: 0,
+    previousAttendance: 0,
+    previousRevenue: 0,
+  });
 
   // Loading
   const [loading, setLoading] = useState(true);
@@ -323,25 +340,43 @@ export function SchoolAdminDashboard() {
       animate="visible"
       variants={staggerContainer}
     >
-      {/* Page Header */}
-      <motion.div 
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
-        variants={slideUp}
-      >
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Administrative <span className="text-blue-600">Command</span>
-          </h1>
-          <p className="text-muted-foreground font-medium mt-1">
-            {currentUser.schoolName} — Dashboard Overview
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 py-1.5 px-4 rounded-xl font-bold text-xs shadow-sm uppercase tracking-widest animate-pulse-glow">
-            <GraduationCap className="size-4 mr-2" /> Academic Year Active
-          </Badge>
-        </div>
-      </motion.div>
+       {/* Page Header */}
+       <motion.div 
+         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
+         variants={slideUp}
+       >
+         <div>
+           <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+             Administrative <span className="text-blue-600">Command</span>
+           </h1>
+           <p className="text-muted-foreground font-medium mt-1">
+             {currentUser.schoolName} — Dashboard Overview
+           </p>
+         </div>
+         <div className="flex items-center gap-3">
+           <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 py-1.5 px-4 rounded-xl font-bold text-xs shadow-sm uppercase tracking-widest animate-pulse-glow">
+             <GraduationCap className="size-4 mr-2" /> Academic Year Active
+           </Badge>
+         </div>
+         <div className="flex items-center gap-2">
+           <Button 
+             variant="outline" 
+             size="icon"
+             onClick={toggleTheme}
+             title="Toggle Theme"
+           >
+             {isDark ? <Moon className="size-4" /> : <Sun className="size-4" />}
+           </Button>
+           <Button 
+             variant="outline" 
+             size="icon"
+             onClick={handleSignOut}
+             title="Sign Out"
+           >
+             <LogOut className="size-4" />
+           </Button>
+         </div>
+       </motion.div>
 
       {/* KPI Row */}
       <motion.div 

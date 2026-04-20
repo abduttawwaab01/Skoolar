@@ -3,23 +3,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { KpiCard } from '@/components/shared/kpi-card';
 import { StatusBadge } from '@/components/shared/status-badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useAppStore } from '@/store/app-store';
-import { SafeFormattedDate } from '@/components/shared/safe-formatted-date';
-import { toast } from 'sonner';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } = '@/components/ui/card';
+import { Badge } = '@/components/ui/badge';
+import { Button } = '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } = '@/components/ui/tabs';
+import { Avatar, AvatarFallback } = '@/components/ui/avatar';
+import { Progress } = '@/components/ui/progress';
+import { ScrollArea } = '@/components/ui/scroll-area';
+import { Separator } = '@/components/ui/separator';
+import { Skeleton } = '@/components/ui/skeleton';
+import { useAppStore } = '@/store/app-store';
+import { SafeFormattedDate } = '@/components/shared/safe-formatted-date';
+import { toast } = 'sonner';
+import { useTheme } from '@/hooks/use-theme';
+import { useSession, signOut } from 'next-auth/react';
 import { cn } from "@/lib/utils";
 import {
   Building2, Users, GraduationCap, TrendingUp, ShieldCheck, UserPlus, Key,
   Activity, Clock, Database, HardDrive, Server, Zap, Globe,
-  Plus, BarChart3, Eye, ArrowUpRight, ArrowDownRight, AlertTriangle, CheckCircle2, Info, XCircle, RefreshCw
+  Plus, BarChart3, Eye, ArrowUpRight, ArrowDownRight, AlertTriangle, CheckCircle2, Info, XCircle, RefreshCw,
+  Moon, Sun, LogOut
 } from 'lucide-react';
 
 interface SchoolRecord {
@@ -124,6 +127,20 @@ export function SuperAdminDashboard() {
   const { setCurrentView, currentUser } = useAppStore();
   const [selectedPeriod, setSelectedPeriod] = useState('6m');
   const [activeTab, setActiveTab] = useState('overview');
+  const { data: session, status } = useSession();
+  const { signOut: signOutFn } = useSession();
+  const { isDark, toggleTheme } = useTheme();
+
+  const handleSignOut = async () => {
+    try {
+      await signOutFn();
+      // Redirect to login page after sign out
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error('Failed to sign out. Please try again.');
+    }
+  };
 
   // Data states
    const [schools, setSchools] = useState<SchoolRecord[]>([]);
@@ -131,18 +148,19 @@ export function SuperAdminDashboard() {
    const [auditLogs, setAuditLogs] = useState<AuditLogRecord[]>([]);
    const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
    const [plans, setPlans] = useState<Array<{ name: string; price: number }>>([]);
+   const [healthMetrics, setHealthMetrics] = useState<any>(null);
 
-  // Loading states
-  const [loadingSchools, setLoadingSchools] = useState(true);
-  const [loadingCodes, setLoadingCodes] = useState(true);
-  const [loadingLogs, setLoadingLogs] = useState(true);
-  const [loadingNotifs, setLoadingNotifs] = useState(true);
+   // Loading states
+   const [loadingSchools, setLoadingSchools] = useState(true);
+   const [loadingCodes, setLoadingCodes] = useState(true);
+   const [loadingLogs, setLoadingLogs] = useState(true);
+   const [loadingNotifs, setLoadingNotifs] = useState(true);
 
-  // Error states
-  const [errorSchools, setErrorSchools] = useState<string | null>(null);
-  const [errorCodes, setErrorCodes] = useState<string | null>(null);
-  const [errorLogs, setErrorLogs] = useState<string | null>(null);
-  const [errorNotifs, setErrorNotifs] = useState<string | null>(null);
+   // Error states
+   const [errorSchools, setErrorSchools] = useState<string | null>(null);
+   const [errorCodes, setErrorCodes] = useState<string | null>(null);
+   const [errorLogs, setErrorLogs] = useState<string | null>(null);
+   const [errorNotifs, setErrorNotifs] = useState<string | null>(null);
 
    const fetchSchools = useCallback(async () => {
      try {
@@ -223,13 +241,26 @@ export function SuperAdminDashboard() {
     }
   }, [currentUser?.id]);
 
+   const fetchHealthMetrics = useCallback(async () => {
+     try {
+       const res = await fetch('/api/platform/health');
+       if (res.ok) {
+         const json = await res.json();
+         if (json.success) setHealthMetrics(json.data);
+       }
+     } catch (err) {
+       console.error('Failed to fetch health metrics:', err);
+     }
+   }, []);
+
    useEffect(() => {
      fetchSchools();
      fetchCodes();
      fetchLogs();
      fetchNotifications();
      fetchPlans();
-   }, [fetchSchools, fetchCodes, fetchLogs, fetchNotifications, fetchPlans]);
+     fetchHealthMetrics();
+   }, [fetchSchools, fetchCodes, fetchLogs, fetchNotifications, fetchPlans, fetchHealthMetrics]);
 
   const isLoading = loadingSchools || loadingCodes || loadingLogs || loadingNotifs;
   const hasError = errorSchools || errorCodes || errorLogs || errorNotifs;
@@ -286,7 +317,7 @@ export function SuperAdminDashboard() {
      const price = planPriceMap[code.plan] || 0;
      revenueByPlan[code.plan] = (revenueByPlan[code.plan] || 0) + (code.usedCount * price);
    });
-   const totalRevenue = Object.values(revenueByPlan).reduce((a, b) => a + b, 0);
+   const totalRevenue = healthMetrics?.totalRevenue ?? Object.values(revenueByPlan).reduce((a, b) => a + b, 0);
    
     // Calculate revenue by month from registration codes (based on creation date)
     const revenueByMonth: Record<string, number> = {};
@@ -326,44 +357,64 @@ export function SuperAdminDashboard() {
     { label: 'Recent Activity', status: auditLogs.length > 0 ? 'healthy' : 'warning', detail: `${auditLogs.length} logged` },
   ];
 
-  // System health - derived from real data, with fallbacks for unavailable metrics
+  // System health - derived from real data and enriched with health API metrics
   const systemHealth = {
-    activeUsers: totalStudents + totalTeachers,
+    activeUsers: healthMetrics?.totalStudents != null
+      ? healthMetrics.totalStudents + (healthMetrics.totalTeachers || 0)
+      : totalStudents + totalTeachers,
     totalSchools: schools.length,
     totalCodes: registrationCodes.length,
     usedCodes: registrationCodes.filter(c => c.isUsed).length,
-    uptime: schools.length > 0 ? 99.9 : 0,
-    apiRequests: null as number | null,
-    avgResponseTime: null as number | null,
-    databaseSize: null as string | null,
-    storageUsed: null as number | null,
-    websocketConnections: null as number | null,
-    queuedJobs: null as number | null,
+    uptime: healthMetrics?.uptime ?? (schools.length > 0 ? 99.9 : 0),
+    apiRequests: healthMetrics?.apiRequestsToday ?? null,
+    avgResponseTime: healthMetrics?.avgResponseTime ?? null,
+    databaseSize: healthMetrics?.databaseSize ?? null,
+    storageUsed: healthMetrics?.storageUsed ?? null,
+    websocketConnections: healthMetrics?.websocketConnections ?? null,
+    queuedJobs: healthMetrics?.queuedJobs ?? null,
   };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Platform Overview</h1>
-          <p className="text-muted-foreground">Monitor all schools and system health across the Skoolar platform</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className={cn(
-            "gap-1 text-sm py-1",
-            activeSchools > 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"
-          )}>
-            <span className="relative flex size-2">
-              <span className={cn("absolute inset-0 rounded-full animate-ping opacity-75", activeSchools > 0 ? "bg-emerald-400" : "bg-amber-400")} />
-              <span className={cn("relative rounded-full size-2", activeSchools > 0 ? "bg-emerald-500" : "bg-amber-500")} />
-            </span>
-            {activeSchools > 0 ? 'Platform Active' : 'No Active Schools'}
-          </Badge>
-        </div>
-      </div>
+       {/* Page Header */}
+       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+         <div>
+           <h1 className="text-2xl font-bold tracking-tight">Platform Overview</h1>
+           <p className="text-muted-foreground">Monitor all schools and system health across the Skoolar platform</p>
+         </div>
+         <div className="flex items-center gap-2">
+           <Badge variant="outline" className={cn(
+             "gap-1 text-sm py-1",
+             activeSchools > 0 ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"
+           )}>
+             <span className="relative flex size-2">
+               <span className={cn("absolute inset-0 rounded-full animate-ping opacity-75", activeSchools > 0 ? "bg-emerald-400" : "bg-amber-400")} />
+               <span className={cn("relative rounded-full size-2", activeSchools > 0 ? "bg-emerald-500" : "bg-amber-500")} />
+             </span>
+             {activeSchools > 0 ? 'Platform Active' : 'No Active Schools'}
+           </Badge>
+         </div>
+         <div className="flex items-center gap-2">
+           <Button 
+             variant="outline" 
+             size="icon"
+             onClick={toggleTheme}
+             title="Toggle Theme"
+           >
+             {isDark ? <Moon className="size-4" /> : <Sun className="size-4" />}
+           </Button>
+           <Button 
+             variant="outline" 
+             size="icon"
+             onClick={handleSignOut}
+             title="Sign Out"
+           >
+             <LogOut className="size-4" />
+           </Button>
+         </div>
+       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
