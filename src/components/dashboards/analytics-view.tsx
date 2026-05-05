@@ -171,7 +171,8 @@ interface ClassOption {
 
   const gradeDistribution = React.useMemo(() => {
     if (!analytics?.studentRanking) return [];
-    const gpas = analytics.studentRanking.map(s => s.gpa || 0);
+    const ranking = Array.isArray(analytics.studentRanking) ? analytics.studentRanking : [];
+    const gpas = ranking.map(s => s.gpa || 0);
     if (gpas.length === 0) return [];
     const a = gpas.filter(g => g >= 3.5).length;
     const b = gpas.filter(g => g >= 3.0 && g < 3.5).length;

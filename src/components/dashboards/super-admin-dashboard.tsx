@@ -152,7 +152,7 @@ export function SuperAdminDashboard() {
        const res = await fetch('/api/schools?limit=50');
        if (!res.ok) throw new Error('Failed to fetch schools');
        const json = await res.json();
-       setSchools(json.data || []);
+       setSchools(Array.isArray(json.data) ? json.data : []);
      } catch (err) {
        setErrorSchools(err instanceof Error ? err.message : 'Unknown error');
        toast.error('Failed to load schools');

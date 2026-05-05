@@ -692,7 +692,7 @@ export function EntranceExamsView() {
                       </div>
                     ) : (
                       <div className="space-y-4 mt-4">
-                        {examDetails.attempts.map((attempt: AttemptRecord) => {
+                        {(examDetails.attempts || []).map((attempt: AttemptRecord) => {
                           const pct = attempt.finalScore !== null ? Math.round((attempt.finalScore / examDetails.totalMarks) * 100) : null;
                           const variant = getScoreBadgeColor(attempt.finalScore, examDetails.totalMarks, examDetails.passingMarks) as 'success' | 'warning' | 'neutral';
                           return (

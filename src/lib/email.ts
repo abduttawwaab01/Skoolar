@@ -1,6 +1,17 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization - only create Resend client when actually needed
+let resend: Resend | undefined;
+
+function getResend(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 export interface SendEmailOptions {
   to: string | string[];
@@ -12,21 +23,22 @@ export interface SendEmailOptions {
 
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; error?: string; data?: unknown }> {
   try {
-    if (!process.env.RESEND_API_KEY) {
+    const resendClient = getResend();
+    if (!resendClient) {
       console.warn('RESEND_API_KEY not set. Email sending disabled.');
       return { success: false, error: 'Email service not configured' };
     }
 
-     const from = options.from || `${process.env.EMAIL_FROM || 'noreply@skoolar.org'}`;
+    const from = options.from || `${process.env.EMAIL_FROM || 'noreply@skoolar.org'}`;
 
-     // Cast to any to avoid Resend type strictness; runtime works
-     const result = await resend.emails.send({
-       from,
-       to: Array.isArray(options.to) ? options.to : [options.to],
-       subject: options.subject,
-       html: options.html,
-       text: options.text,
-     } as any);
+    // Cast to any to avoid Resend type strictness; runtime works
+    const result = await resendClient.emails.send({
+      from,
+      to: Array.isArray(options.to) ? options.to : [options.to],
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
+    } as any);
 
     if ('error' in result && result.error) {
       console.error('Email sending failed:', result.error);
