@@ -194,10 +194,10 @@ function FloatingElement({ children, className, delay = 0 }: { children: React.R
 function CounterAnimation({ value, label, suffix }: { value: string; label: string; suffix: string }) {
   return (
     <div className="text-center">
-      <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-teal-600 to-emerald-500 bg-clip-text text-transparent">
+      <div className="text-4xl md:text-5xl font-bold text-white drop-shadow-md">
         {value}{suffix}
       </div>
-      <div className="text-teal-600/70 text-sm font-medium mt-1">{label}</div>
+      <div className="text-white/80 text-sm font-medium mt-1">{label}</div>
     </div>
   );
 }
@@ -212,6 +212,8 @@ function PublicNavbar() {
     { href: '/pricing', label: 'Pricing' },
     { href: '/blog', label: 'Blog' },
     { href: '/stories', label: 'Stories' },
+    { href: '/entrance', label: 'Entrance Exam' },
+    { href: '/careers', label: 'Jobs' },
   ];
 
   const mobileNavLinks = [
@@ -220,6 +222,7 @@ function PublicNavbar() {
     { href: '/blog', label: 'Blog' },
     { href: '/stories', label: 'Stories' },
     { href: '/entrance', label: 'Entrance Exam' },
+    { href: '/careers', label: 'Jobs' },
     { href: '/login', label: 'Log in' },
     { href: '/register', label: 'Get Started' },
   ];
@@ -375,7 +378,7 @@ function HeroSection() {
             </Link>
             <Link href="/login">
               <Button size="xl" variant="outline" className="border-2 border-teal-200 text-teal-700 hover:bg-teal-50 px-8">
-                Watch Demo <Play className="ml-2 h-4 w-4" />
+                Log in <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           </motion.div>

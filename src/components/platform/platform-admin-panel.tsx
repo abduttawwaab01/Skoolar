@@ -1532,6 +1532,54 @@ function SettingsTab() {
           </div>
         </div>
 
+        <Separator />
+
+        <div className="space-y-4">
+          <h4 className="text-sm font-semibold text-gray-700">Platform Assets</h4>
+          <p className="text-xs text-gray-500">Download platform assets for use in school documents and branding.</p>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="flex items-center justify-between p-4 rounded-lg border bg-gray-50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-white border flex items-center justify-center">
+                  <svg className="w-8 h-8 text-teal-600" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" strokeWidth="2"/>
+                    <polyline points="14 2 14 8 20 8" fill="none" stroke="currentColor" strokeWidth="2"/>
+                    <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" strokeWidth="2"/>
+                    <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Letterhead</p>
+                  <p className="text-xs text-gray-500">Official letterhead template</p>
+                </div>
+              </div>
+              <Button variant="outline" onClick={() => window.open('/Letterhead.png', '_blank')}>
+                Download
+              </Button>
+            </div>
+            <div className="flex items-center justify-between p-4 rounded-lg border bg-gray-50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-lg bg-white border flex items-center justify-center">
+                  <svg className="w-8 h-8 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Platform Logo</p>
+                  <p className="text-xs text-gray-500">Skoolar official logo</p>
+                </div>
+              </div>
+              {form.siteLogo && (
+                <Button variant="outline" onClick={() => window.open(form.siteLogo, '_blank')}>
+                  Download
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="flex justify-end pt-2">
           <Button onClick={handleSave} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

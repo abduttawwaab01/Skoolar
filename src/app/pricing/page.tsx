@@ -319,10 +319,19 @@ export default function PricingPage() {
     const fetchPlans = async () => {
       try {
         const res = await fetch('/api/plans');
+        const contentType = res.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          setPlans(defaultPlans);
+          return;
+        }
         const json = await res.json();
-        if (json.success) setPlans(json.data || []);
+        if (json.success && Array.isArray(json.data)) {
+          setPlans(json.data);
+        } else {
+          setPlans(defaultPlans);
+        }
       } catch {
-        /* silent */
+        setPlans(defaultPlans);
       } finally {
         setLoading(false);
       }

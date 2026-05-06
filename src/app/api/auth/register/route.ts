@@ -402,8 +402,10 @@ export async function POST(request: NextRequest) {
      );
   } catch (error) {
     console.error('Registration error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An error occurred during registration.';
+    console.error('Full error:', errorMessage);
     return NextResponse.json(
-      { error: 'An error occurred during registration.' },
+      { error: errorMessage },
       { status: 500 }
     );
   }
