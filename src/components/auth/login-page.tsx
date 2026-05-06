@@ -136,14 +136,20 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Require school selection first
+    if (!selectedSchool) {
+      setStep('school');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Check if Super Admin - either email matches super admin config OR role is selected as Platform Admin
-      const isSuperAdmin = email.toLowerCase() === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL?.toLowerCase() || selectedRole === 'SUPER_ADMIN';
+      // Check if Super Admin - either email matches super admin config
+      const isSuperAdmin = email.toLowerCase() === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL?.toLowerCase();
 
       if (isSuperAdmin) {
-        // Super Admin login directly
         const result = await signIn('credentials', {
           email,
           password,
@@ -165,41 +171,56 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
           router.push('/dashboard');
           router.refresh();
         }
-      } else {
-        // For other users, require school selection first
-        if (!selectedSchool) {
-          setStep('school');
-          setIsLoading(false);
-          return;
-        }
+        return;
+      }
 
-        const credentials: Record<string, string> = {
-          email,
-          password,
-          role: selectedRole,
-          schoolId: selectedSchool.id,
-        };
-
-        const result = await signIn('credentials', {
-          ...credentials,
-          redirect: false,
+      // Auto-detect role from database before login
+      const detectRes = await fetch('/api/auth/detect-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, schoolId: selectedSchool.id }),
+      });
+      
+      const detectJson = await detectRes.json();
+      
+      if (!detectRes.ok || !detectJson.role) {
+        setError(detectJson.error || 'User not found in this school. Please check your email.');
+        toast.error('Login failed', {
+          description: detectJson.error || 'User not found in this school.',
         });
+        playError();
+        return;
+      }
 
-        if (result?.error) {
-          setError('Invalid email or password. Please try again.');
-          toast.error('Login failed', {
-            description: 'Invalid email or password.',
-          });
-          playError();
-        } else if (result?.ok) {
-          const roleLabel = ROLES.find(r => r.value === selectedRole)?.label || 'User';
-          toast.success(`Welcome back, ${roleLabel}!`, {
-            description: 'Redirecting to dashboard...',
-          });
-          playLogin();
-          router.push('/dashboard');
-          router.refresh();
-        }
+      const detectedRole = detectJson.role;
+      
+      // Try to login with detected role
+      const credentials: Record<string, string> = {
+        email,
+        password,
+        role: detectedRole,
+        schoolId: selectedSchool.id,
+      };
+
+      const result = await signIn('credentials', {
+        ...credentials,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError('Invalid email or password. Please try again.');
+        toast.error('Login failed', {
+          description: 'Invalid email or password.',
+        });
+        playError();
+      } else if (result?.ok) {
+        const roleLabel = ROLES.find(r => r.value === detectedRole)?.label || 'User';
+        toast.success(`Welcome back, ${roleLabel}!`, {
+          description: 'Redirecting to dashboard...',
+        });
+        playLogin();
+        router.push('/dashboard');
+        router.refresh();
       }
     } catch {
       setError('An unexpected error occurred. Please try again.');
@@ -208,8 +229,7 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
     }
   };
 
-  const selectedRoleData = ROLES.find(r => r.value === selectedRole);
-  const RoleIcon = selectedRoleData?.icon || School;
+  
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-emerald-50 via-white to-teal-50">
@@ -464,55 +484,7 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
                             disabled={isLoading}
                           />
                         </div>
-                        {selectedSchool && email && (
-                          <button
-                            type="button"
-                            onClick={detectUserRole}
-                            disabled={detectingRole}
-                            className="text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
-                          >
-                            {detectingRole ? (
-                              <>
-                                <Loader2 className="size-3 animate-spin" />
-                                Detecting...
-                              </>
-                            ) : (
-                              <>
-                                <Search className="size-3" />
-                                Auto-detect my role
-                              </>
-                            )}
-                          </button>
-                        )}
                       </div>
-
-                      {/* Role Selection - Auto-detected or Manual override */}
-                      {selectedSchool && detectedRole && (
-                        <div className="space-y-2">
-                          <Label className="text-xs font-bold uppercase tracking-wider text-emerald-600">Portal Access (Detected)</Label>
-                          <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-                            {(() => {
-                              const roleData = ROLES.find(r => r.value === detectedRole);
-                              const Icon = roleData?.icon || UserCircle;
-                              return (
-                                <>
-                                  <div className="p-1.5 rounded-lg bg-emerald-500 text-white">
-                                    <Icon className="size-4" />
-                                  </div>
-                                  <span className="text-sm font-bold text-emerald-700">{roleData?.label || detectedRole}</span>
-                                </>
-                              );
-                            })()}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => { setDetectedRole(null); setSelectedRole(''); }}
-                            className="text-xs text-gray-500 hover:text-gray-700"
-                          >
-                            Not me? Click to change
-                          </button>
-                        </div>
-                      )}
 
                       {/* Password field */}
                       <div className="space-y-2">
