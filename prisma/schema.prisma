@@ -203,6 +203,45 @@ model Term {
   @@index([schoolId])
 }
 
+model Timetable {
+  id              String           @id @default(cuid())
+  schoolId        String
+  academicYearId  String
+  name            String
+  isActive        Boolean          @default(true)
+  isPublished     Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+
+  @@unique([schoolId, name])
+  @@index([schoolId])
+  @@index([academicYearId])
+}
+
+model TimetableSlot {
+  id            String       @id @default(cuid())
+  timetableId   String
+  termId        String
+  dayOfWeek     Int          // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  period       Int          // Period number (1, 2, 3, etc.)
+  startTime    String       // "08:00"
+  endTime      String       // "08:40"
+  classId      String
+  subjectId    String
+  teacherId    String?
+  room         String?
+  isBreak      Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([timetableId, dayOfWeek, period, classId])
+  @@index([timetableId])
+  @@index([classId])
+  @@index([teacherId])
+  @@index([termId])
+}
+
 model Class {
   id             String                 @id @default(cuid())
   schoolId       String

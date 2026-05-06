@@ -69,6 +69,7 @@ function PublicNavbar() {
     { href: '/learning-hub', label: 'Learning Hub' },
     { href: '/pricing', label: 'Pricing' },
     { href: '/entrance', label: 'Entrance Exam' },
+    { href: '/careers', label: 'Careers' },
   ];
 
   const mobileNavLinks = [
@@ -78,6 +79,7 @@ function PublicNavbar() {
     { href: '/learning-hub', label: 'Learning Hub' },
     { href: '/pricing', label: 'Pricing' },
     { href: '/entrance', label: 'Entrance Exam' },
+    { href: '/careers', label: 'Careers' },
     { href: '/login', label: 'Log in' },
     { href: '/register', label: 'Register School' },
   ];

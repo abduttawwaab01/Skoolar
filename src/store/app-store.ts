@@ -27,7 +27,7 @@ export type DashboardView =
   | 'platform-management' | 'school-controls' | 'overlay-management' | 'plans-manager' | 'danger-zone'
   | 'class-monitoring' | 'messaging-center' | 'weekly-evaluations'
   | 'entrance-exams' | 'payment-verification' | 'job-postings'
-  | 'teacher-grades';
+  | 'teacher-grades' | 'timetable';
 
 interface AppState {
   currentRole: UserRole;
@@ -156,7 +156,7 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
       { id: 'id-scanner', label: 'ID Scanner', icon: 'scan-line' },
       { id: 'exams', label: 'Examinations', icon: 'file-edit' },
 { id: 'entrance-exams', label: 'Entrance Exams', icon: 'clipboard-check' },
-      { id: 'job-postings', label: 'Job Postings', icon: 'briefcase' },
+      { id: 'job-postings', label: 'Careers', icon: 'briefcase' },
       { id: 'results', label: 'Results & Reports', icon: 'file-bar-chart' },
       { id: 'report-cards', label: 'Report Cards', icon: 'award' },
       { id: 'report-card-view', label: 'Generate Report Cards', icon: 'file-text' },
@@ -176,8 +176,9 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
       { id: 'class-monitoring', label: 'Class Monitoring', icon: 'eye' },
       { id: 'announcements', label: 'Announcements', icon: 'megaphone' },
       { id: 'notice-board', label: 'Notice Board', icon: 'pin' },
-      { id: 'calendar', label: 'Calendar', icon: 'calendar' },
-      { id: 'feedback', label: 'Feedback', icon: 'message-square' },
+{ id: 'calendar', label: 'Calendar', icon: 'calendar' },
+       { id: 'timetable', label: 'Timetable', icon: 'clock' },
+       { id: 'feedback', label: 'Feedback', icon: 'message-square' },
       { id: 'communication', label: 'Communication', icon: 'mail' },
       { id: 'school-profile', label: 'School Profile', icon: 'building' },
       { id: 'branding', label: 'Branding', icon: 'palette' },
@@ -266,7 +267,7 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
        { id: 'students', label: 'Student Overview', icon: 'user-graduate' },
        { id: 'teachers', label: 'Teacher Overview', icon: 'chalkboard-teacher' },
 { id: 'entrance-exams', label: 'Entrance & Interviews', icon: 'clipboard-check' },
-      { id: 'job-postings', label: 'Job Postings', icon: 'briefcase' },
+      { id: 'job-postings', label: 'Careers', icon: 'briefcase' },
        { id: 'weekly-evaluations', label: 'Weekly Evaluations', icon: 'clipboard-list' },
        { id: 'finance', label: 'Financial Overview', icon: 'wallet' },
        { id: 'attendance', label: 'Student Attendance', icon: 'calendar-check' },

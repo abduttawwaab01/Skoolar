@@ -38,7 +38,7 @@ import {
   LogOut, ChevronDown, X, Check, AlertTriangle, Info, AlertCircle,
   School, RefreshCw, Layers, ArrowUpCircle, GitCompare, Brain,
   Upload, Download, MessageCircle, BrainCircuit, Video, ClipboardList,
-  LifeBuoy, Pin, Sliders, Search as SearchIcon, Volume2, VolumeX,
+  LifeBuoy, Pin, Sliders, Search as SearchIcon, Volume2, VolumeX, Clock,
 } from 'lucide-react';
 import { AnnouncementTicker } from '@/components/platform/announcement-ticker';
 import { AdvertCarousel } from '@/components/platform/advert-carousel';
@@ -63,7 +63,7 @@ const iconMap: Record<string, React.ElementType> = {
   'message-circle': MessageCircle, 'brain-circuit': BrainCircuit,
   'video': Video, 'clipboard-list': ClipboardList,
   'life-buoy': LifeBuoy, 'pin': Pin, 'sliders': Sliders, 'search': SearchIcon,
-  'eye': Search,
+  'eye': Search, 'clock': Clock,
 };
 
 const roleConfig: Record<UserRole, { label: string; color: string; bg: string; emoji: string }> = {

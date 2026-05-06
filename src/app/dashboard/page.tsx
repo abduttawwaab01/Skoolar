@@ -45,6 +45,7 @@ const viewComponents: Record<DashboardView, () => Promise<any>> = {
   achievements: () => import('@/components/dashboards/student-achievements').then(m => m.StudentAchievements),
   announcements: () => import('@/components/dashboards/announcements-view').then(m => m.AnnouncementsView),
   calendar: () => import('@/components/dashboards/calendar-view').then(m => m.CalendarView),
+  timetable: () => import('@/components/dashboards/timetable-view').then(m => m.TimetableView),
   notifications: () => import('@/components/dashboards/notifications-view').then(m => m.NotificationsView),
   'audit-logs': () => import('@/components/dashboards/audit-logs-view').then(m => m.AuditLogsView),
   'system-health': () => import('@/components/dashboards/system-health-view').then(m => m.SystemHealthView),
