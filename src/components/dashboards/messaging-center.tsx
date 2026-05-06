@@ -149,12 +149,16 @@ export function MessagingCenter() {
 
   // ==================== FETCH ====================
   const fetchConversations = useCallback(async () => {
-    if (!schoolId || !currentUser.id) return;
+    if (!schoolId || !currentUser.id) {
+      setConversations([]);
+      setLoading(false);
+      return;
+    }
     try {
       const res = await fetch(`/api/messaging?action=conversations&userId=${currentUser.id}&schoolId=${schoolId}`);
       const json = await res.json();
       if (json.success) setConversations(json.data || []);
-    } catch (error: unknown) { handleSilentError(error); }
+    } catch (error: unknown) { handleSilentError(error); } finally { setLoading(false); }
   }, [schoolId, currentUser.id]);
 
   const fetchMessages = useCallback(async (convId: string) => {

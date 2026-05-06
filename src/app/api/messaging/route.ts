@@ -1,24 +1,43 @@
-import { db } from '@/lib/db';
-import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth-middleware';
+import { db } from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-middleware";
 
 export async function GET(request: NextRequest) {
   const authResult = await requireAuth(request);
   if (authResult instanceof NextResponse) return authResult;
 
   const { searchParams } = new URL(request.url);
-  const action = searchParams.get('action') || '';
+  const action = searchParams.get("action") || "";
 
   try {
     switch (action) {
-      case 'conversations': {
-        const userId = searchParams.get('userId') || '';
-        const schoolId = searchParams.get('schoolId') || '';
-        if (!userId || !schoolId) return NextResponse.json({ success: false, message: 'Missing params' }, { status: 400 });
+      case "conversations": {
+        const userId = searchParams.get("userId") || "";
+        const schoolId = searchParams.get("schoolId") || "";
+        const isSuperAdmin = authResult.role === "SUPER_ADMIN";
+
+        if (!userId)
+          return NextResponse.json(
+            { success: false, message: "Missing userId" },
+            { status: 400 },
+          );
+        if (!schoolId && !isSuperAdmin) {
+          return NextResponse.json(
+            { success: false, message: "Missing schoolId" },
+            { status: 400 },
+          );
+        }
+
+        const where: Record<string, unknown> = {
+          participantIds: { contains: userId },
+        };
+        if (schoolId) {
+          where.schoolId = schoolId;
+        }
 
         const conversations = await db.conversation.findMany({
-          where: { schoolId, participantIds: { contains: userId } },
-          orderBy: { lastMessageAt: 'desc' },
+          where,
+          orderBy: { lastMessageAt: "desc" },
         });
 
         if (conversations.length === 0) {
@@ -26,18 +45,22 @@ export async function GET(request: NextRequest) {
         }
 
         // ── BATCH: Fetch all last messages, unread counts, and participants in single queries ──
-        const convIds = conversations.map(c => c.id);
+        const convIds = conversations.map((c) => c.id);
 
         const [lastMessages, unreadCounts, allUsers] = await Promise.all([
           // Get last message for each conversation (single query with grouping)
           db.message.findMany({
             where: { conversationId: { in: convIds } },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: "desc" },
           }),
           // Get unread counts for each conversation
           db.message.groupBy({
-            by: ['conversationId'],
-            where: { conversationId: { in: convIds }, isRead: false, senderId: { not: userId } },
+            by: ["conversationId"],
+            where: {
+              conversationId: { in: convIds },
+              isRead: false,
+              senderId: { not: userId },
+            },
             _count: { id: true },
           }),
           // Collect all unique participant IDs and fetch users in one query
@@ -47,19 +70,32 @@ export async function GET(request: NextRequest) {
         ]);
 
         // Build lookup maps
-        const lastMsgMap = new Map<string, { content: string | null; type: string | null; createdAt: Date }>();
+        const lastMsgMap = new Map<
+          string,
+          { content: string | null; type: string | null; createdAt: Date }
+        >();
         for (const msg of lastMessages) {
           if (!lastMsgMap.has(msg.conversationId)) {
-            lastMsgMap.set(msg.conversationId, { content: msg.content, type: msg.type, createdAt: msg.createdAt });
+            lastMsgMap.set(msg.conversationId, {
+              content: msg.content,
+              type: msg.type,
+              createdAt: msg.createdAt,
+            });
           }
         }
 
-        const unreadMap = new Map(unreadCounts.map(u => [u.conversationId, u._count.id]));
-        const userMap = new Map(allUsers.map(u => [u.id, u]));
+        const unreadMap = new Map(
+          unreadCounts.map((u) => [u.conversationId, u._count.id]),
+        );
+        const userMap = new Map(allUsers.map((u) => [u.id, u]));
 
         const enriched = conversations.map((conv) => {
-          const participants = JSON.parse(conv.participantIds || '[]') as string[];
-          const participantUsers = participants.map(id => userMap.get(id)).filter(Boolean);
+          const participants = JSON.parse(
+            conv.participantIds || "[]",
+          ) as string[];
+          const participantUsers = participants
+            .map((id) => userMap.get(id))
+            .filter(Boolean);
           const lastMsg = lastMsgMap.get(conv.id);
 
           return {
@@ -75,16 +111,20 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, data: enriched });
       }
 
-      case 'messages': {
-        const conversationId = searchParams.get('conversationId') || '';
-        const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '50');
-        if (!conversationId) return NextResponse.json({ success: false, message: 'conversationId required' }, { status: 400 });
+      case "messages": {
+        const conversationId = searchParams.get("conversationId") || "";
+        const page = parseInt(searchParams.get("page") || "1");
+        const limit = parseInt(searchParams.get("limit") || "50");
+        if (!conversationId)
+          return NextResponse.json(
+            { success: false, message: "conversationId required" },
+            { status: 400 },
+          );
 
         const [messages, total] = await Promise.all([
           db.message.findMany({
             where: { conversationId },
-            orderBy: { createdAt: 'asc' },
+            orderBy: { createdAt: "asc" },
             skip: (page - 1) * limit,
             take: limit,
           }),
@@ -92,14 +132,14 @@ export async function GET(request: NextRequest) {
         ]);
 
         // ── BATCH: Fetch all senders in a single query ──
-        const senderIds = [...new Set(messages.map(m => m.senderId))];
+        const senderIds = [...new Set(messages.map((m) => m.senderId))];
         const senders = await db.user.findMany({
           where: { id: { in: senderIds } },
           select: { id: true, name: true, avatar: true, role: true },
         });
-        const senderMap = new Map(senders.map(s => [s.id, s]));
+        const senderMap = new Map(senders.map((s) => [s.id, s]));
 
-        const enriched = messages.map(msg => ({
+        const enriched = messages.map((msg) => ({
           ...msg,
           sender: senderMap.get(msg.senderId) || null,
         }));
@@ -107,57 +147,91 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           success: true,
           data: enriched,
-          pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+          },
         });
       }
 
-      case 'search-users': {
-        const schoolId = searchParams.get('schoolId') || '';
-        const query = searchParams.get('query') || '';
-        const role = searchParams.get('role') || '';
-        if (!schoolId) return NextResponse.json({ success: false, message: 'schoolId required' }, { status: 400 });
+      case "search-users": {
+        const schoolId = searchParams.get("schoolId") || "";
+        const query = searchParams.get("query") || "";
+        const role = searchParams.get("role") || "";
 
-        const where: Record<string, unknown> = { schoolId, isActive: true };
-        if (query) {
-          (where as Record<string, unknown>).user = { name: { contains: query } };
+        // For SUPER_ADMIN, allow searching across all schools if no schoolId provided
+        const isSuperAdmin = authResult.role === "SUPER_ADMIN";
+        if (!schoolId && !isSuperAdmin) {
+          return NextResponse.json(
+            { success: false, message: "schoolId required" },
+            { status: 400 },
+          );
         }
+
+        const where: Record<string, unknown> = query
+          ? { user: { name: { contains: query, mode: "insensitive" } } }
+          : {};
         if (role) {
-          (where as Record<string, string>).role = role;
+          where.role = role;
         }
+        if (schoolId) {
+          where.schoolId = schoolId;
+        }
+        where.isActive = true;
 
         // Search across students, teachers, parents
         const [students, teachers, parents] = await Promise.all([
           db.student.findMany({
-            where: { schoolId, isActive: true, user: query ? { name: { contains: query } } : undefined },
-            include: { user: { select: { id: true, name: true, avatar: true } }, class: { select: { name: true } } },
+            where: { ...where, ...(schoolId ? { schoolId } : {}) },
+            include: {
+              user: { select: { id: true, name: true, avatar: true } },
+              class: { select: { name: true } },
+            },
             take: 10,
           }),
           db.teacher.findMany({
-            where: { schoolId, isActive: true, user: query ? { name: { contains: query } } : undefined },
-            include: { user: { select: { id: true, name: true, avatar: true } } },
+            where: { ...where, ...(schoolId ? { schoolId } : {}) },
+            include: {
+              user: { select: { id: true, name: true, avatar: true } },
+            },
             take: 10,
           }),
           db.parent.findMany({
-            where: { schoolId, user: query ? { name: { contains: query } } : undefined },
-            include: { user: { select: { id: true, name: true, avatar: true } } },
+            where: { ...where, ...(schoolId ? { schoolId } : {}) },
+            include: {
+              user: { select: { id: true, name: true, avatar: true } },
+            },
             take: 10,
           }),
         ]);
 
         const users = [
-          ...students.map(s => ({ ...s.user, role: 'STUDENT', meta: s.class?.name })),
-          ...teachers.map(t => ({ ...t.user, role: 'TEACHER', meta: t.specialization })),
-          ...parents.map(p => ({ ...p.user, role: 'PARENT', meta: null })),
+          ...students.map((s) => ({
+            ...s.user,
+            role: "STUDENT",
+            meta: s.class?.name,
+          })),
+          ...teachers.map((t) => ({
+            ...t.user,
+            role: "TEACHER",
+            meta: t.specialization,
+          })),
+          ...parents.map((p) => ({ ...p.user, role: "PARENT", meta: null })),
         ];
 
         return NextResponse.json({ success: true, data: users });
       }
 
       default:
-        return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
+        return NextResponse.json(
+          { success: false, message: "Invalid action" },
+          { status: 400 },
+        );
     }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }
@@ -167,25 +241,37 @@ export async function POST(request: NextRequest) {
   if (authResult instanceof NextResponse) return authResult;
 
   const { searchParams } = new URL(request.url);
-  const action = searchParams.get('action') || '';
+  const action = searchParams.get("action") || "";
   const body = await request.json().catch(() => ({}));
 
   try {
     switch (action) {
-      case 'create-conversation': {
+      case "create-conversation": {
         const { schoolId, participantIds, type, title, createdBy } = body;
         if (!schoolId || !participantIds || participantIds.length < 2) {
-          return NextResponse.json({ success: false, message: 'schoolId and at least 2 participants required' }, { status: 400 });
+          return NextResponse.json(
+            {
+              success: false,
+              message: "schoolId and at least 2 participants required",
+            },
+            { status: 400 },
+          );
         }
         // Check if direct conversation already exists between these users
-        if (type === 'direct') {
+        if (type === "direct") {
           const sorted = [...participantIds].sort();
           const existing = await db.conversation.findFirst({
-            where: { schoolId, type: 'direct', participantIds: { contains: sorted[0] } },
+            where: {
+              schoolId,
+              type: "direct",
+              participantIds: { contains: sorted[0] },
+            },
           });
           if (existing) {
-            const parts = JSON.parse(existing.participantIds || '[]') as string[];
-            if (parts.sort().join(',') === sorted.join(',')) {
+            const parts = JSON.parse(
+              existing.participantIds || "[]",
+            ) as string[];
+            if (parts.sort().join(",") === sorted.join(",")) {
               return NextResponse.json({ success: true, data: existing });
             }
           }
@@ -193,22 +279,34 @@ export async function POST(request: NextRequest) {
         const conversation = await db.conversation.create({
           data: {
             schoolId,
-            type: type || 'direct',
+            type: type || "direct",
             title: title || null,
             participantIds: JSON.stringify(participantIds),
             createdBy: createdBy || null,
           },
         });
-        return NextResponse.json({ success: true, data: conversation }, { status: 201 });
+        return NextResponse.json(
+          { success: true, data: conversation },
+          { status: 201 },
+        );
       }
 
-      case 'send-message': {
+      case "send-message": {
         const { conversationId, senderId, schoolId, content, type } = body;
         if (!conversationId || !senderId || !content) {
-          return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 });
+          return NextResponse.json(
+            { success: false, message: "Missing required fields" },
+            { status: 400 },
+          );
         }
-        const conversation = await db.conversation.findUnique({ where: { id: conversationId } });
-        if (!conversation) return NextResponse.json({ success: false, message: 'Conversation not found' }, { status: 404 });
+        const conversation = await db.conversation.findUnique({
+          where: { id: conversationId },
+        });
+        if (!conversation)
+          return NextResponse.json(
+            { success: false, message: "Conversation not found" },
+            { status: 404 },
+          );
 
         const message = await db.message.create({
           data: {
@@ -216,14 +314,17 @@ export async function POST(request: NextRequest) {
             schoolId: schoolId || conversation.schoolId,
             senderId,
             content: String(content).slice(0, 10000),
-            type: type || 'text',
+            type: type || "text",
           },
         });
 
         // Update conversation last message
         await db.conversation.update({
           where: { id: conversationId },
-          data: { lastMessage: String(content).slice(0, 100), lastMessageAt: new Date() },
+          data: {
+            lastMessage: String(content).slice(0, 100),
+            lastMessageAt: new Date(),
+          },
         });
 
         const sender = await db.user.findUnique({
@@ -231,26 +332,39 @@ export async function POST(request: NextRequest) {
           select: { name: true, avatar: true, role: true },
         });
 
-        return NextResponse.json({ success: true, data: { ...message, sender } }, { status: 201 });
+        return NextResponse.json(
+          { success: true, data: { ...message, sender } },
+          { status: 201 },
+        );
       }
 
-      case 'mark-read': {
+      case "mark-read": {
         const { conversationId, userId } = body;
-        if (!conversationId || !userId) return NextResponse.json({ success: false, message: 'Missing fields' }, { status: 400 });
+        if (!conversationId || !userId)
+          return NextResponse.json(
+            { success: false, message: "Missing fields" },
+            { status: 400 },
+          );
 
         await db.message.updateMany({
           where: { conversationId, senderId: { not: userId }, isRead: false },
           data: { isRead: true },
         });
 
-        return NextResponse.json({ success: true, message: 'Messages marked as read' });
+        return NextResponse.json({
+          success: true,
+          message: "Messages marked as read",
+        });
       }
 
       default:
-        return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
+        return NextResponse.json(
+          { success: false, message: "Invalid action" },
+          { status: 400 },
+        );
     }
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }

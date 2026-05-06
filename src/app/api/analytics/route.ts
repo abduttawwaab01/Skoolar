@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth-middleware';
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { requireAuth } from "@/lib/auth-middleware";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-const CACHE_CONTROL = 'public, s-maxage=30, stale-while-revalidate=60';
+const CACHE_CONTROL = "public, s-maxage=30, stale-while-revalidate=60";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,15 +12,17 @@ export async function GET(request: NextRequest) {
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(request.url);
-    const schoolId = searchParams.get('schoolId') || '';
-    const termId = searchParams.get('termId') || '';
-    const isPlatformLevel = !schoolId && auth.role === 'SUPER_ADMIN';
+    const schoolId = searchParams.get("schoolId") || "";
+    const termId = searchParams.get("termId") || "";
+    const isPlatformLevel = !schoolId && auth.role === "SUPER_ADMIN";
 
-    const where: Record<string, unknown> = isPlatformLevel ? { deletedAt: null, isActive: true } : { schoolId, deletedAt: null, isActive: true };
+    const where: Record<string, unknown> = isPlatformLevel
+      ? { deletedAt: null, isActive: true }
+      : { schoolId, deletedAt: null, isActive: true };
     if (!schoolId && !isPlatformLevel) {
       return NextResponse.json(
-        { error: 'schoolId is required' },
-        { status: 400 }
+        { error: "schoolId is required" },
+        { status: 400 },
       );
     }
 
@@ -29,11 +31,35 @@ export async function GET(request: NextRequest) {
       totalTeachers,
       totalClasses,
       totalSubjects,
+      studentsForRanking,
     ] = await Promise.all([
-      db.student.count(where as any),
-      db.teacher.count({ where: { deletedAt: null, isActive: true, ...(isPlatformLevel ? {} : { schoolId }) } } as any),
-      db.class.count({ where: { deletedAt: null, ...(isPlatformLevel ? {} : { schoolId }) } } as any),
-      db.subject.count({ where: { deletedAt: null, ...(isPlatformLevel ? {} : { schoolId }) } } as any),
+      db.student.count({ where }),
+      db.teacher.count({
+        where: {
+          deletedAt: null,
+          isActive: true,
+          ...(isPlatformLevel ? {} : { schoolId }),
+        },
+      }),
+      db.class.count({
+        where: { deletedAt: null, ...(isPlatformLevel ? {} : { schoolId }) },
+      }),
+      db.subject.count({
+        where: { deletedAt: null, ...(isPlatformLevel ? {} : { schoolId }) },
+      }),
+      db.student.findMany({
+        where: isPlatformLevel
+          ? { deletedAt: null, isActive: true }
+          : { schoolId, deletedAt: null, isActive: true },
+        select: {
+          id: true,
+          admissionNo: true,
+          gpa: true,
+          user: { select: { name: true, avatar: true } },
+          class: { select: { name: true, section: true } },
+        },
+        take: 50,
+      }),
     ]);
 
     const schoolOverview = {
@@ -41,11 +67,16 @@ export async function GET(request: NextRequest) {
       totalTeachers,
       totalClasses,
       totalSubjects,
-      studentTeacherRatio: totalTeachers > 0 ? Math.round((totalStudents / totalTeachers) * 10) / 10 : 0,
+      studentTeacherRatio:
+        totalTeachers > 0
+          ? Math.round((totalStudents / totalTeachers) * 10) / 10
+          : 0,
     };
 
     const classes = await db.class.findMany({
-      where: isPlatformLevel ? { deletedAt: null } : { schoolId, deletedAt: null },
+      where: isPlatformLevel
+        ? { deletedAt: null }
+        : { schoolId, deletedAt: null },
       select: {
         id: true,
         name: true,
@@ -72,8 +103,10 @@ export async function GET(request: NextRequest) {
       percentage: number;
     }> = [];
 
-    const classIds = classes.map(c => c.id);
-    const attendanceWhere: Record<string, unknown> = isPlatformLevel ? {} : { schoolId };
+    const classIds = classes.map((c) => c.id);
+    const attendanceWhere: Record<string, unknown> = isPlatformLevel
+      ? {}
+      : { schoolId };
     if (termId) attendanceWhere.termId = termId;
     if (classIds.length > 0) attendanceWhere.classId = { in: classIds };
 
@@ -82,19 +115,30 @@ export async function GET(request: NextRequest) {
       select: { classId: true, status: true },
     });
 
-    const attendanceByClassId = new Map<string, { present: number; absent: number; late: number }>();
+    const attendanceByClassId = new Map<
+      string,
+      { present: number; absent: number; late: number }
+    >();
     for (const record of allAttendance) {
       if (!attendanceByClassId.has(record.classId)) {
-        attendanceByClassId.set(record.classId, { present: 0, absent: 0, late: 0 });
+        attendanceByClassId.set(record.classId, {
+          present: 0,
+          absent: 0,
+          late: 0,
+        });
       }
       const counts = attendanceByClassId.get(record.classId)!;
-      if (record.status === 'present') counts.present++;
-      else if (record.status === 'absent') counts.absent++;
-      else if (record.status === 'late') counts.late++;
+      if (record.status === "present") counts.present++;
+      else if (record.status === "absent") counts.absent++;
+      else if (record.status === "late") counts.late++;
     }
 
     for (const cls of classes) {
-      const counts = attendanceByClassId.get(cls.id) || { present: 0, absent: 0, late: 0 };
+      const counts = attendanceByClassId.get(cls.id) || {
+        present: 0,
+        absent: 0,
+        late: 0,
+      };
       const totalRecords = counts.present + counts.absent + counts.late;
 
       attendanceByClass.push({
@@ -107,11 +151,16 @@ export async function GET(request: NextRequest) {
         presentCount: counts.present,
         absentCount: counts.absent,
         lateCount: counts.late,
-        percentage: totalRecords > 0 ? Math.round((counts.present / totalRecords) * 100) : 0,
+        percentage:
+          totalRecords > 0
+            ? Math.round((counts.present / totalRecords) * 100)
+            : 0,
       });
     }
 
-    const examWhere: Record<string, unknown> = isPlatformLevel ? {} : { schoolId };
+    const examWhere: Record<string, unknown> = isPlatformLevel
+      ? {}
+      : { schoolId };
     if (termId) examWhere.termId = termId;
 
     const exams = await db.exam.findMany({
@@ -126,7 +175,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const examIds = exams.map(e => e.id);
+    const examIds = exams.map((e) => e.id);
     let examScores: Array<{ examId: string; score: number }> = [];
     if (examIds.length > 0) {
       examScores = await db.examScore.findMany({
@@ -159,23 +208,34 @@ export async function GET(request: NextRequest) {
     }> = [];
 
     for (const [subjectId, subjectExams] of subjectGroups) {
-      const subjectExamIds = subjectExams.map(e => e.id);
-      const subjectScores = examScores.filter(s => subjectExamIds.includes(s.examId));
-      const scoreValues = subjectScores.map(s => s.score);
+      const subjectExamIds = subjectExams.map((e) => e.id);
+      const subjectScores = examScores.filter((s) =>
+        subjectExamIds.includes(s.examId),
+      );
+      const scoreValues = subjectScores.map((s) => s.score);
       const passingMarks = subjectExams[0]?.passingMarks || 50;
 
       performanceBySubject.push({
         subjectId,
-        subjectName: subjectExams[0]?.subject.name || 'Unknown',
+        subjectName: subjectExams[0]?.subject.name || "Unknown",
         totalExams: subjectExams.length,
-        averageScore: scoreValues.length > 0
-          ? Math.round((scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length) * 100) / 100
-          : 0,
+        averageScore:
+          scoreValues.length > 0
+            ? Math.round(
+                (scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length) *
+                  100,
+              ) / 100
+            : 0,
         highestScore: scoreValues.length > 0 ? Math.max(...scoreValues) : 0,
         lowestScore: scoreValues.length > 0 ? Math.min(...scoreValues) : 0,
-        passRate: scoreValues.length > 0
-          ? Math.round((scoreValues.filter(s => s >= passingMarks).length / scoreValues.length) * 100)
-          : 0,
+        passRate:
+          scoreValues.length > 0
+            ? Math.round(
+                (scoreValues.filter((s) => s >= passingMarks).length /
+                  scoreValues.length) *
+                  100,
+              )
+            : 0,
       });
     }
 
@@ -187,7 +247,7 @@ export async function GET(request: NextRequest) {
     });
 
     const paymentsByStatus = await db.payment.groupBy({
-      by: ['status'],
+      by: ["status"],
       where: financialWhere,
       _sum: { amount: true },
       _count: true,
@@ -196,7 +256,7 @@ export async function GET(request: NextRequest) {
     const financialData = {
       totalRevenue: financialSummary._sum.amount || 0,
       totalTransactions: financialSummary._count,
-      byStatus: paymentsByStatus.map(p => ({
+      byStatus: paymentsByStatus.map((p) => ({
         status: p.status,
         total: p._sum.amount || 0,
         count: p._count,
@@ -214,17 +274,32 @@ export async function GET(request: NextRequest) {
       select: { date: true, status: true },
     });
 
-    const attendanceTrend = new Map<string, { date: string; present: number; absent: number; late: number; total: number }>();
+    const attendanceTrend = new Map<
+      string,
+      {
+        date: string;
+        present: number;
+        absent: number;
+        late: number;
+        total: number;
+      }
+    >();
     for (const record of recentAttendance) {
-      const dateKey = record.date.toISOString().split('T')[0];
+      const dateKey = record.date.toISOString().split("T")[0];
       if (!attendanceTrend.has(dateKey)) {
-        attendanceTrend.set(dateKey, { date: dateKey, present: 0, absent: 0, late: 0, total: 0 });
+        attendanceTrend.set(dateKey, {
+          date: dateKey,
+          present: 0,
+          absent: 0,
+          late: 0,
+          total: 0,
+        });
       }
       const dayData = attendanceTrend.get(dateKey)!;
       dayData.total++;
-      if (record.status === 'present') dayData.present++;
-      else if (record.status === 'absent') dayData.absent++;
-      else if (record.status === 'late') dayData.late++;
+      if (record.status === "present") dayData.present++;
+      else if (record.status === "absent") dayData.absent++;
+      else if (record.status === "late") dayData.late++;
     }
 
     const response = NextResponse.json({
@@ -233,16 +308,34 @@ export async function GET(request: NextRequest) {
         attendanceByClass,
         performanceBySubject,
         financialData,
-        attendanceTrend: Array.from(attendanceTrend.values()).sort((a, b) => a.date.localeCompare(b.date)),
+        studentRanking: studentsForRanking
+          .sort((a, b) => (b.gpa || 0) - (a.gpa || 0))
+          .slice(0, 50)
+          .map((s, i) => ({
+            rank: i + 1,
+            id: s.id,
+            admissionNo: s.admissionNo,
+            gpa: s.gpa || 0,
+            totalScore: s.gpa || 0,
+            examCount: 0,
+            user: s.user,
+            class: s.class,
+          })),
+        attendanceTrend: Array.from(attendanceTrend.values()).sort((a, b) =>
+          a.date.localeCompare(b.date),
+        ),
         generatedAt: new Date().toISOString(),
       },
     });
 
-    response.headers.set('Cache-Control', CACHE_CONTROL);
+    response.headers.set("Cache-Control", CACHE_CONTROL);
     return response;
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Analytics API Error:', error);
-    return NextResponse.json({ error: `Analytics error: ${message}` }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Analytics API Error:", error);
+    return NextResponse.json(
+      { error: `Analytics error: ${message}` },
+      { status: 500 },
+    );
   }
 }

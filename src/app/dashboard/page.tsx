@@ -91,7 +91,7 @@ const viewComponents: Record<DashboardView, () => Promise<any>> = {
   'plans-manager': () => import('@/components/dashboards/plans-manager').then(m => m.PlansManager),
   'danger-zone': () => import('@/components/dashboards/danger-zone').then(m => m.DangerZone),
   'class-monitoring': () => import('@/components/dashboards/class-monitoring').then(m => m.ClassMonitoring),
-  'messaging-center': () => import('@/components/features/in-app-chat').then(m => m.default),
+  'messaging-center': () => import('@/components/dashboards/messaging-center').then(m => m.MessagingCenter),
   'weekly-evaluations': () => import('@/components/features/weekly-evaluation').then(m => m.WeeklyEvaluation),
   'entrance-exams': () => import('@/components/dashboards/entrance-exams-view').then(m => m.EntranceExamsView),
   'job-postings': () => import('@/components/dashboards/job-postings-view').then(m => m.JobPostingsManagement),
