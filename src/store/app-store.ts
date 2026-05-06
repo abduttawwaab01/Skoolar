@@ -29,7 +29,8 @@ export type DashboardView =
   | 'entrance-exams' | 'payment-verification' | 'job-postings'
   | 'teacher-grades' | 'timetable'
   | 'teacher-tasks' | 'teacher-performance' | 'student-leaderboard'
-  | 'parent-analytics' | 'video-checkpoints';
+  | 'parent-analytics' | 'video-checkpoints'
+  | 'year-results';
 
 interface AppState {
   currentRole: UserRole;
