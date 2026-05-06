@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Briefcase, MapPin, Clock, DollarSign, Globe, ChevronRight, Send, Loader2, Building2 } from 'lucide-react';
+import { Briefcase, MapPin, Clock, DollarSign, Globe, ChevronRight, Send, Loader2, Building2, ArrowLeft, Home } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -331,18 +331,39 @@ export default function CareersPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       <div className="container mx-auto px-4 py-12">
+        {/* Back to Home Button */}
+        <div className="mb-6">
+          <Button 
+            variant="ghost" 
+            onClick={() => window.location.href = '/'}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Back to Home
+          </Button>
+        </div>
+        
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4 flex items-center justify-center gap-3">
             <Briefcase className="h-10 w-10" />
             Careers
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Explorejob opportunities at schools and apply directly online
+            Explore job opportunities at schools and apply directly online
           </p>
         </div>
 
         {selectedJob ? (
           <div className="max-w-2xl mx-auto">
+            <Button 
+              variant="ghost" 
+              onClick={() => setSelectedJob(null)}
+              className="text-muted-foreground hover:text-foreground mb-4"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Jobs
+            </Button>
+            
             <div className="rounded-lg border bg-card p-6 mb-6">
               <div className="flex items-center gap-4 mb-4">
                 {selectedJob.school.logo ? (

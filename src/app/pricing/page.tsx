@@ -6,7 +6,8 @@ import {
   Check, X, Sparkles, GraduationCap, Building2, Users, Shield, BarChart3,
   Clock, Headphones, Zap, Star, ArrowRight, ChevronDown, ChevronUp,
   Crown, Rocket, Gift, Lock, MessageCircle, BookOpen, CreditCard,
-  Smartphone, Globe, Database, Cpu, TrendingUp, Award, ShieldCheck
+  Smartphone, Globe, Database, Cpu, TrendingUp, Award, ShieldCheck,
+  MessageSquare, Settings2, SlidersHorizontal
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -432,7 +433,7 @@ export default function PricingPage() {
         </div>
       </motion.div>
 
-      {/* Plans Grid */}
+       {/* Plans Grid */}
       <div className="max-w-6xl mx-auto px-4 py-16">
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -441,7 +442,7 @@ export default function PricingPage() {
             ))}
           </div>
         ) : (
-          <motion.div 
+          <motion.div
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start"
             initial="hidden"
             whileInView="visible"
@@ -458,6 +459,66 @@ export default function PricingPage() {
             ))}
           </motion.div>
         )}
+      </div>
+
+      {/* Custom Plan Card */}
+      <div className="max-w-6xl mx-auto px-4 pb-16">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          variants={fadeIn}
+        >
+          <Card className="relative overflow-hidden border-2 border-dashed border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 hover:shadow-xl transition-all duration-300">
+            <div className="absolute top-4 right-4">
+              <Badge className="bg-amber-100 text-amber-700 border-amber-200 text-[10px]">
+                <Settings2 className="h-3 w-3 mr-1" />
+                TAILORED
+              </Badge>
+            </div>
+            <CardContent className="p-8 md:p-10">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-10">
+                <div className="flex-shrink-0">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-200/50">
+                    <SlidersHorizontal className="h-8 w-8 text-white" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Custom Plan</h3>
+                  <p className="text-gray-600 mb-4 max-w-2xl">
+                    Need specific features for your school? Get a tailored plan designed just for you.
+                    Pick and choose the features you need and pay only for what you use.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {['Custom Features', 'Flexible Limits', 'Dedicated Support', 'Tailored Pricing'].map((item, i) => (
+                      <Badge key={i} variant="outline" className="bg-white/60 border-amber-200 text-amber-700 text-[11px]">
+                        <Check className="h-3 w-3 mr-1 text-amber-500" />
+                        {item}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex-shrink-0 w-full md:w-auto">
+                  <a
+                    href="https://wa.me/2349152929772?text=Hello%20Skoolar%20Admin%2C%20I%27m%20interested%20in%20a%20Custom%20Plan%20for%20my%20school.%20Please%20provide%20me%20with%20a%20quote%20and%20more%20details."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full md:w-auto"
+                  >
+                    <Button
+                      size="lg"
+                      className="w-full md:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-200/50 gap-2"
+                    >
+                      <MessageSquare className="h-5 w-5" />
+                      Get Custom Quote on WhatsApp
+                    </Button>
+                  </a>
+                  <p className="text-[11px] text-gray-400 text-center mt-2">+234 915 292 9772</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Key Features Highlight */}

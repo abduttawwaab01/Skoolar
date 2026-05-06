@@ -242,6 +242,7 @@ export async function GET(request: NextRequest) {
     return response;
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Analytics API Error:', error);
+    return NextResponse.json({ error: `Analytics error: ${message}` }, { status: 500 });
   }
 }

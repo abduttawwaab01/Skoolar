@@ -107,18 +107,22 @@ export function AnalyticsView() {
        const classesQueryParam = effectiveSchoolId ? `?schoolId=${effectiveSchoolId}&limit=50` : '?limit=50';
        const termsQueryParam = effectiveSchoolId ? `?schoolId=${effectiveSchoolId}&isCurrent=true` : '';
 
-        const [analyticsRes, classesRes, termRes] = await Promise.allSettled([
-          fetch(`/api/analytics${schoolQueryParam}`),
-          fetch(`/api/classes${classesQueryParam}`),
-          termsQueryParam ? fetch(`/api/terms${termsQueryParam}`) : Promise.resolve(null),
-        ]);
+         const [analyticsRes, classesRes, termRes] = await Promise.allSettled([
+           fetch(`/api/analytics${schoolQueryParam}`),
+           fetch(`/api/classes${classesQueryParam}`),
+           termsQueryParam ? fetch(`/api/terms${termsQueryParam}`) : Promise.resolve(null),
+         ]);
 
-       if (analyticsRes.status === 'fulfilled' && analyticsRes.value.ok) {
-         const json = await analyticsRes.value.json();
-         setAnalytics(json.data || null);
-       } else {
-         throw new Error('Failed to fetch analytics');
-       }
+         if (analyticsRes.status === 'fulfilled' && analyticsRes.value.ok) {
+           const json = await analyticsRes.value.json();
+           if (json.error) throw new Error(json.error);
+           setAnalytics(json.data || null);
+         } else if (analyticsRes.status === 'fulfilled') {
+           const json = await analyticsRes.value.json();
+           throw new Error(json.error || `Failed to fetch analytics (${analyticsRes.value.status})`);
+         } else {
+           throw new Error('Failed to fetch analytics');
+         }
 
        if (classesRes.status === 'fulfilled' && classesRes.value.ok) {
          const json = await classesRes.value.json();

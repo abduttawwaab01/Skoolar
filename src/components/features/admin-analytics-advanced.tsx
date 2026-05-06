@@ -133,10 +133,10 @@ export default function AdminAnalyticsAdvanced() {
       setIsRefreshing(true);
       const queryParam = schoolId ? `?schoolId=${schoolId}` : '';
       const res = await fetch(`/api/analytics${queryParam}`);
-      if (!res.ok) {
-        throw new Error('Failed to fetch analytics');
-      }
       const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || `Server error: ${res.status}`);
+      }
       if (json.error) {
         throw new Error(json.error);
       }

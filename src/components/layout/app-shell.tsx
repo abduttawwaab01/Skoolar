@@ -860,7 +860,7 @@ function Header() {
 }
 
  export function AppShell({ children }: { children: React.ReactNode }) {
-   const { sidebarOpen, showNotifications, setShowNotifications, currentRole, selectedSchoolId, currentView } = useAppStore();
+   const { sidebarOpen, showNotifications, setShowNotifications, currentRole, selectedSchoolId, currentView, setDisabledFeatures } = useAppStore();
    const [schoolTheme, setSchoolTheme] = useState<string>('default');
 
    // Determine if we should show the advert (only on primary dashboard for non-SUPER_ADMIN)
@@ -869,18 +869,21 @@ function Header() {
   useEffect(() => {
     if (!selectedSchoolId || currentRole === 'SUPER_ADMIN') return;
     let cancelled = false;
-    const fetchSchoolTheme = async () => {
+    const fetchSchoolSettings = async () => {
       try {
-        const res = await fetch(`/api/school-settings?schoolId=${selectedSchoolId}`);
+        const res = await fetch(`/api/schools/${selectedSchoolId}/controls`);
         if (res.ok) {
           const json = await res.json();
-          if (!cancelled && json.data?.theme) setSchoolTheme(json.data.theme);
+          if (!cancelled) {
+            if (json.data?.theme) setSchoolTheme(json.data.theme);
+            if (json.data?.disabledFeatures) setDisabledFeatures(json.data.disabledFeatures);
+          }
         }
       } catch (error: unknown) { handleSilentError(error); /* silent */ }
     };
-    fetchSchoolTheme();
+    fetchSchoolSettings();
     return () => { cancelled = true; };
-  }, [selectedSchoolId, currentRole]);
+  }, [selectedSchoolId, currentRole, setDisabledFeatures]);
 
   return (
     <div className={`flex min-h-[100dvh] overflow-hidden bg-muted/30 ${schoolTheme !== 'default' ? `theme-${schoolTheme}` : ''}`}>

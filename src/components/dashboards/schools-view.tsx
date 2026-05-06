@@ -51,6 +51,7 @@ import {
   Palette,
   KeyRound,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -417,6 +418,20 @@ export function SchoolsView() {
     }
   };
 
+  const deleteSchool = async (schoolId: string) => {
+    const school = schoolList.find(s => s.id === schoolId);
+    if (!school) return;
+    if (!confirm(`Are you sure you want to delete "${school.name}"? This action cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/schools/${schoolId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete school');
+      toast.success(`${school.name} has been deleted`);
+      fetchSchools();
+    } catch (err) {
+      toast.error('Failed to delete school');
+    }
+  };
+
   const columns: ColumnDef<SchoolRecord>[] = [
     {
       accessorKey: 'name',
@@ -500,6 +515,10 @@ export function SchoolsView() {
               <DropdownMenuItem onClick={() => toggleStatus(school.id)}>
                 {school.isActive ? <XCircle className="size-4" /> : <CheckCircle2 className="size-4" />}
                 {school.isActive ? 'Deactivate' : 'Activate'}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => deleteSchool(school.id)} className="text-red-600 focus:text-red-600">
+                <Trash2 className="size-4" /> Delete School
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
