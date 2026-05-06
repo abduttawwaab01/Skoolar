@@ -1,103 +1,63 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { handleSilentError } from '@/lib/error-handler';
+import { requireAuth } from '@/lib/auth-middleware';
 
-export async function POST(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !['SCHOOL_ADMIN', 'SUPER_ADMIN'].includes(session.user?.role as string)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+
+    const { searchParams } = new URL(request.url);
+    const type = searchParams.get('type') || 'all';
+    const schoolId = auth.schoolId;
+
+    if (!schoolId) {
+      return NextResponse.json({ error: 'School context required' }, { status: 400 });
     }
 
-    const { type, format, schoolId, from, to } = await req.json();
+    let data: Record<string, unknown> = {};
 
-    if (!type || !schoolId) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (type === 'all' || type === 'students') {
+      const students = await db.student.findMany({
+        where: { schoolId },
+        include: { user: { select: { name: true, email: true, phone: true } } },
+      });
+      data.students = students;
     }
 
-    let data: unknown[] = [];
-    let filename = '';
-
-    switch (type) {
-      case 'students':
-        data = await db.student.findMany({
-          where: { schoolId },
-          include: { user: true, class: true },
-          take: 5000,
-        });
-        filename = 'students_export';
-        break;
-      case 'teachers':
-        data = await db.teacher.findMany({
-          where: { schoolId },
-          include: { user: true },
-          take: 5000,
-        });
-        filename = 'teachers_export';
-        break;
-      case 'attendance':
-        data = await db.attendance.findMany({
-          where: {
-            schoolId,
-            date: {
-              gte: from ? new Date(from) : undefined,
-              lte: to ? new Date(to) : undefined,
-            },
-          },
-          include: { student: { include: { user: true } } },
-          take: 10000,
-        });
-        filename = 'attendance_export';
-        break;
-      case 'payments':
-        data = await db.payment.findMany({
-          where: {
-            schoolId,
-            createdAt: {
-              gte: from ? new Date(from) : undefined,
-              lte: to ? new Date(to) : undefined,
-            },
-          },
-          include: { student: { include: { user: true } } },
-          take: 10000,
-        });
-        filename = 'payments_export';
-        break;
-      case 'exams':
-        data = await db.exam.findMany({
-          where: { schoolId },
-          include: { scores: true, subject: true, class: true },
-          take: 5000,
-        });
-        filename = 'exams_export';
-        break;
-      case 'report-cards':
-        data = await db.reportCard.findMany({
-          where: { schoolId },
-          include: { student: { include: { user: true } } },
-          take: 5000,
-        });
-        filename = 'report_cards_export';
-        break;
-      default:
-        return NextResponse.json({ error: 'Invalid export type' }, { status: 400 });
+    if (type === 'all' || type === 'teachers') {
+      const teachers = await db.teacher.findMany({
+        where: { schoolId },
+        include: { user: { select: { name: true, email: true, phone: true } } },
+      });
+      data.teachers = teachers;
     }
 
-    const exportId = `export-${Date.now()}`;
+    if (type === 'all' || type === 'results') {
+      const results = await db.exam.findMany({
+        where: { schoolId },
+        select: { id: true, name: true, termId: true, classId: true, createdAt: true },
+      });
+      data.results = results;
+    }
 
-    return NextResponse.json({
-      success: true,
-      id: exportId,
-      downloadUrl: `/api/export/download/${exportId}?type=${type}&format=${format}&schoolId=${schoolId}`,
-      size: `${JSON.stringify(data).length} bytes`,
-      count: data.length,
-      message: `Exported ${data.length} ${type} records`,
-    });
+    if (type === 'all' || type === 'classes') {
+      const classes = await db.class.findMany({
+        where: { schoolId },
+      });
+      data.classes = classes;
+    }
 
+    if (type === 'all' || type === 'subjects') {
+      const subjects = await db.subject.findMany({
+        where: { schoolId },
+      });
+      data.subjects = subjects;
+    }
+
+    return NextResponse.json({ data });
   } catch (error: unknown) {
-    handleSilentError(error);
-    return NextResponse.json({ error: 'Export failed' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

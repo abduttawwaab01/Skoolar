@@ -165,7 +165,7 @@ export async function PUT(
   }
 }
 
-// DELETE /api/schools/[id] - Soft delete school
+// DELETE /api/schools/[id] - Hard delete school and ALL associated users
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -190,15 +190,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'School already deleted' }, { status: 410 });
     }
 
-    const school = await db.school.update({
-      where: { id },
-      data: {
-        deletedAt: new Date(),
-        isActive: false,
-      },
+    // First, hard-delete ALL users associated with this school so they can re-register
+    await db.user.deleteMany({
+      where: { schoolId: id },
     });
 
-    return NextResponse.json({ data: school, message: 'School deleted successfully' });
+    // Hard delete the school
+    await db.school.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ message: 'School and all associated users permanently deleted. Users can now re-register with the same email.' });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

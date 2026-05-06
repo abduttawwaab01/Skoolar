@@ -38,6 +38,9 @@ export function SettingsView() {
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [isChangingPassword, setIsChangingPassword] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
+  const [preferences, setPreferences] = React.useState<Record<string, unknown>>({});
+
   const [emailNotifs, setEmailNotifs] = React.useState({
     announcements: true,
     grades: true,
@@ -60,6 +63,11 @@ export function SettingsView() {
     system: false,
   });
   const [twoFA, setTwoFA] = React.useState(false);
+  const [language, setLanguage] = React.useState('en');
+  const [timezone, setTimezone] = React.useState('lagos');
+  const [currency, setCurrency] = React.useState('ngn');
+  const [dateFormat, setDateFormat] = React.useState('dd-mm-yyyy');
+  const [sessions, setSessions] = React.useState<Array<{ id: string; userAgent: string | null; ipAddress: string | null; loginAt: Date; isActive: boolean }>>([]);
 
   const notifTypes = [
     { key: 'announcements', label: 'Announcements', desc: 'New school announcements', emoji: '📢' },
@@ -68,6 +76,58 @@ export function SettingsView() {
     { key: 'payments', label: 'Payment Updates', desc: 'Fee payment confirmations', emoji: '💳' },
     { key: 'system', label: 'System Updates', desc: 'Maintenance and updates', emoji: '🔧' },
   ] as const;
+
+  React.useEffect(() => {
+    async function loadPreferences() {
+      try {
+        const [prefRes, sessRes] = await Promise.all([
+          fetch('/api/user-preferences'),
+          fetch('/api/user-sessions'),
+        ]);
+        const prefData = await prefRes.json();
+        const sessData = await sessRes.json();
+        
+        if (prefData.data) {
+          setPreferences(prefData.data);
+          setLanguage(prefData.data.language || 'en');
+          setTimezone(prefData.data.timezone || 'lagos');
+          setCurrency(prefData.data.currency || 'ngn');
+          setDateFormat(prefData.data.dateFormat || 'dd-mm-yyyy');
+          setTwoFA(prefData.data.twoFactorEnabled || false);
+          setEmailNotifs(prev => ({ ...prev, announcements: prefData.data.emailNotifications !== false }));
+          setPushNotifs(prev => ({ ...prev, announcements: prefData.data.pushNotifications !== false }));
+          setSmsNotifs(prev => ({ ...prev, payments: prefData.data.smsNotifications || false }));
+        }
+        
+        if (sessData.data) {
+          setSessions(sessData.data);
+        }
+      } catch {
+        // Use defaults
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadPreferences();
+  }, []);
+
+  const savePreferences = async (updates: Record<string, unknown>) => {
+    try {
+      const res = await fetch('/api/user-preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to save preferences');
+        return;
+      }
+      toast.success('Preferences saved');
+    } catch {
+      toast.error('Failed to save preferences');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -100,7 +160,6 @@ export function SettingsView() {
               <CardTitle className="text-base">🌍 General Settings</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
-              {/* Sound Toggle */}
               <div className="sm:col-span-2 flex items-center justify-between p-3 rounded-lg border bg-gradient-to-r from-emerald-50/50 to-transparent">
                 <div>
                   <p className="text-sm font-medium flex items-center gap-1.5">
@@ -111,6 +170,7 @@ export function SettingsView() {
                 <button
                   onClick={() => {
                     const enabled = toggleSounds();
+                    savePreferences({ soundEnabled: enabled });
                     if (enabled) {
                       soundEffects.toggleOn();
                       toast.success('UI sounds enabled 🔊');
@@ -125,7 +185,7 @@ export function SettingsView() {
               </div>
               <div className="grid gap-2">
                 <Label>Language</Label>
-                <Select defaultValue="en">
+                <Select value={language} onValueChange={(val) => { setLanguage(val); savePreferences({ language: val }); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="en">English</SelectItem>
@@ -139,7 +199,7 @@ export function SettingsView() {
               </div>
               <div className="grid gap-2">
                 <Label>Timezone</Label>
-                <Select defaultValue="lagos">
+                <Select value={timezone} onValueChange={(val) => { setTimezone(val); savePreferences({ timezone: val }); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="lagos">West Africa Time (WAT)</SelectItem>
@@ -151,7 +211,7 @@ export function SettingsView() {
               </div>
               <div className="grid gap-2">
                 <Label>Currency</Label>
-                <Select defaultValue="ngn">
+                <Select value={currency} onValueChange={(val) => { setCurrency(val); savePreferences({ currency: val }); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ngn">Nigerian Naira (₦)</SelectItem>
@@ -163,7 +223,7 @@ export function SettingsView() {
               </div>
               <div className="grid gap-2">
                 <Label>Date Format</Label>
-                <Select defaultValue="dd-mm-yyyy">
+                <Select value={dateFormat} onValueChange={(val) => { setDateFormat(val); savePreferences({ dateFormat: val }); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="dd-mm-yyyy">DD/MM/YYYY</SelectItem>
@@ -192,10 +252,11 @@ export function SettingsView() {
                       <p className="text-xs text-muted-foreground">{type.desc}</p>
                     </div>
                     <Switch
-                      checked={emailNotifs[type.key]}
-                      onCheckedChange={(checked) =>
-                        setEmailNotifs({ ...emailNotifs, [type.key]: checked })
-                      }
+                      checked={emailNotifs[type.key as keyof typeof emailNotifs]}
+                      onCheckedChange={(checked) => {
+                        setEmailNotifs({ ...emailNotifs, [type.key]: checked });
+                        savePreferences({ emailNotifications: checked });
+                      }}
                     />
                   </div>
                 ))}
@@ -216,10 +277,11 @@ export function SettingsView() {
                       <p className="text-xs text-muted-foreground">{type.desc}</p>
                     </div>
                     <Switch
-                      checked={pushNotifs[type.key]}
-                      onCheckedChange={(checked) =>
-                        setPushNotifs({ ...pushNotifs, [type.key]: checked })
-                      }
+                      checked={pushNotifs[type.key as keyof typeof pushNotifs]}
+                      onCheckedChange={(checked) => {
+                        setPushNotifs({ ...pushNotifs, [type.key]: checked });
+                        savePreferences({ pushNotifications: checked });
+                      }}
                     />
                   </div>
                 ))}
@@ -240,10 +302,11 @@ export function SettingsView() {
                       <p className="text-xs text-muted-foreground">{type.desc}</p>
                     </div>
                     <Switch
-                      checked={smsNotifs[type.key]}
-                      onCheckedChange={(checked) =>
-                        setSmsNotifs({ ...smsNotifs, [type.key]: checked })
-                      }
+                      checked={smsNotifs[type.key as keyof typeof smsNotifs]}
+                      onCheckedChange={(checked) => {
+                        setSmsNotifs({ ...smsNotifs, [type.key]: checked });
+                        savePreferences({ smsNotifications: checked });
+                      }}
                     />
                   </div>
                 ))}
@@ -330,7 +393,7 @@ export function SettingsView() {
                     <p className="text-sm">Enable 2FA</p>
                     <p className="text-xs text-muted-foreground">Add an extra layer of security to your account</p>
                   </div>
-                  <Switch checked={twoFA} onCheckedChange={setTwoFA} />
+                  <Switch checked={twoFA} onCheckedChange={(checked) => { setTwoFA(checked); savePreferences({ twoFactorEnabled: checked }); }} />
                 </div>
               </CardContent>
             </Card>
@@ -340,20 +403,24 @@ export function SettingsView() {
                 <CardTitle className="text-base">📱 Active Sessions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-lg border">
-                  <div>
-                    <p className="text-sm font-medium">Chrome on Windows</p>
-                    <p className="text-xs text-muted-foreground">192.168.1.1 &middot; Active now</p>
+                {sessions.length === 0 && <p className="text-sm text-muted-foreground">Loading sessions...</p>}
+                {sessions.map((sess, idx) => (
+                  <div key={sess.id} className="flex items-center justify-between p-3 rounded-lg border">
+                    <div>
+                      <p className="text-sm font-medium">{sess.userAgent || 'Unknown Device'}</p>
+                      <p className="text-xs text-muted-foreground">{sess.ipAddress || 'Unknown IP'} · {sess.loginAt ? new Date(sess.loginAt).toLocaleString() : 'Unknown time'}</p>
+                    </div>
+                    {sess.isActive ? (
+                      <Badge className="bg-emerald-100 text-emerald-700 text-xs">Current</Badge>
+                    ) : (
+                      <Button variant="outline" size="sm" className="text-xs" onClick={async () => {
+                        await fetch(`/api/user-sessions?sessionId=${sess.id}`, { method: 'DELETE' });
+                        setSessions(sessions.filter(s => s.id !== sess.id));
+                        toast.success('Session revoked');
+                      }}>Revoke</Button>
+                    )}
                   </div>
-                  <Badge className="bg-emerald-100 text-emerald-700 text-xs">Current</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg border">
-                  <div>
-                    <p className="text-sm font-medium">Safari on iPhone</p>
-                    <p className="text-xs text-muted-foreground">192.168.1.45 &middot; 2 hours ago</p>
-                  </div>
-                  <Button variant="outline" size="sm" className="text-xs" onClick={() => toast.success('Session revoked')}>Revoke</Button>
-                </div>
+                ))}
               </CardContent>
             </Card>
           </div>
@@ -367,38 +434,88 @@ export function SettingsView() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-3 sm:flex-row">
-                  <Button variant="outline" className="gap-2" onClick={() => toast.success('Import started')}>
+                  <Button variant="outline" className="gap-2" onClick={() => toast.success('Import feature coming soon')}>
                     <Upload className="size-4" />
                     Import Data
                   </Button>
-                  <Button variant="outline" className="gap-2" onClick={() => toast.success('Export started')}>
+                  <Button variant="outline" className="gap-2" onClick={async () => {
+                    try {
+                      const res = await fetch('/api/export?type=students');
+                      const data = await res.json();
+                      if (data.students) {
+                        const blob = new Blob([JSON.stringify(data.students, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'students.json';
+                        a.click();
+                        toast.success('Students exported');
+                      }
+                    } catch {
+                      toast.error('Export failed');
+                    }
+                  }}>
                     <Download className="size-4" />
                     Export All Data
                   </Button>
                 </div>
                 <Separator />
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Button variant="outline" size="sm" className="gap-2" onClick={() => toast.success('Exporting students...')}>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={async () => {
+                    try {
+                      const res = await fetch('/api/export?type=students');
+                      const data = await res.json();
+                      if (data.students) {
+                        const blob = new Blob([JSON.stringify(data.students, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'students.json';
+                        a.click();
+                        toast.success('Students exported');
+                      }
+                    } catch { toast.error('Export failed'); }
+                  }}>
                     <Download className="size-3.5" />
                     Export Students
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-2" onClick={() => toast.success('Exporting teachers...')}>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={async () => {
+                    try {
+                      const res = await fetch('/api/export?type=teachers');
+                      const data = await res.json();
+                      if (data.teachers) {
+                        const blob = new Blob([JSON.stringify(data.teachers, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'teachers.json';
+                        a.click();
+                        toast.success('Teachers exported');
+                      }
+                    } catch { toast.error('Export failed'); }
+                  }}>
                     <Download className="size-3.5" />
                     Export Teachers
                   </Button>
-                  <Button variant="outline" size="sm" className="gap-2" onClick={() => toast.success('Exporting results...')}>
+                  <Button variant="outline" size="sm" className="gap-2" onClick={async () => {
+                    try {
+                      const res = await fetch('/api/export?type=results');
+                      const data = await res.json();
+                      if (data.results) {
+                        const blob = new Blob([JSON.stringify(data.results, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'results.json';
+                        a.click();
+                        toast.success('Results exported');
+                      }
+                    } catch { toast.error('Export failed'); }
+                  }}>
                     <Download className="size-3.5" />
                     Export Results
                   </Button>
                 </div>
-                <Separator />
-                <Button variant="outline" className="gap-2" onClick={() => {
-                  window.open('/api/download-codebase', '_blank');
-                  toast.success('Codebase download started');
-                }}>
-                  <Download className="size-3.5" />
-                  Download Source Code (.zip)
-                </Button>
               </CardContent>
             </Card>
 
@@ -409,10 +526,10 @@ export function SettingsView() {
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-lg border">
                   <div>
-                    <p className="text-sm font-medium">Last Backup</p>
-                    <p className="text-xs text-muted-foreground">March 28, 2025 at 2:00 AM</p>
+                    <p className="text-sm font-medium">Database Backup</p>
+                    <p className="text-xs text-muted-foreground">Cloudflare Workers - Automatic</p>
                   </div>
-                  <Badge className="bg-emerald-100 text-emerald-700 text-xs">Completed</Badge>
+                  <Badge className="bg-emerald-100 text-emerald-700 text-xs">Active</Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 rounded-lg border">
                   <div>
@@ -420,13 +537,6 @@ export function SettingsView() {
                     <p className="text-xs text-muted-foreground">Daily at 2:00 AM (WAT)</p>
                   </div>
                   <Badge className="bg-emerald-100 text-emerald-700 text-xs">Enabled</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 rounded-lg border">
-                  <div>
-                    <p className="text-sm font-medium">Backup Size</p>
-                    <p className="text-xs text-muted-foreground">1.2 GB compressed</p>
-                  </div>
-                  <Button variant="outline" size="sm" className="text-xs" onClick={() => toast.success('Restore started')}>Restore</Button>
                 </div>
                 <Button className="gap-2 mt-2" onClick={() => toast.success('Manual backup created')}>
                   <Database className="size-4" />

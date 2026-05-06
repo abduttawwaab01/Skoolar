@@ -202,9 +202,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email already exists
-    const existingUser = await db.user.findUnique({
-      where: { email: email.toLowerCase() },
+    // Check if email already exists (exclude soft-deleted users)
+    const existingUser = await db.user.findFirst({
+      where: { 
+        email: email.toLowerCase(),
+        deletedAt: null,
+      },
     });
 
     if (existingUser) {

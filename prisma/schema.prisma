@@ -1557,6 +1557,25 @@ model PlatformSettings {
   updatedAt              DateTime @updatedAt
 }
 
+model UserPreferences {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  language              String   @default("en")
+  timezone              String   @default("lagos")
+  currency              String   @default("ngn")
+  dateFormat            String   @default("dd-mm-yyyy")
+  emailNotifications   Boolean  @default(true)
+  pushNotifications    Boolean  @default(true)
+  smsNotifications     Boolean  @default(false)
+  soundEnabled        Boolean  @default(true)
+  twoFactorEnabled     Boolean  @default(false)
+  theme               String   @default("system")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([userId])
+}
+
 model BlogPost {
   id           String    @id @default(cuid())
   title        String
