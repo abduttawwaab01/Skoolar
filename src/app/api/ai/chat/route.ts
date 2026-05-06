@@ -7,9 +7,9 @@ const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || 'https://openrout
 // Priority: minimax first, then other free models as fallbacks
 // These are verified working free models on OpenRouter
 const FREE_MODELS = [
-  'minimax/minimax-chat-completion:free',  // Primary - minimax
+  'minimax/minimax-m2.5:free',     // Primary - minimax M2.5
   'qwen/qwen3-8b:free',            // Fallback 1 - Qwen
-  'deepseek/deepseek-r1:free',         // Fallback 2 - DeepSeek R1  
+  'deepseek/deepseek-r1:free',     // Fallback 2 - DeepSeek R1  
   'meta-llama/llama-3.2-3b-instruct:free', // Fallback 3 - Llama
   'google/gemma-3n-e4b-it:free',     // Fallback 4 - Gemma
 ];

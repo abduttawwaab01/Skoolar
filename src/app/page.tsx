@@ -68,7 +68,6 @@ function PublicNavbar() {
     { href: '/stories', label: 'Stories' },
     { href: '/learning-hub', label: 'Learning Hub' },
     { href: '/pricing', label: 'Pricing' },
-    { href: '/entrance', label: 'Entrance Exam' },
     { href: '/careers', label: 'Careers' },
   ];
 
@@ -78,7 +77,6 @@ function PublicNavbar() {
     { href: '/stories', label: 'Stories' },
     { href: '/learning-hub', label: 'Learning Hub' },
     { href: '/pricing', label: 'Pricing' },
-    { href: '/entrance', label: 'Entrance Exam' },
     { href: '/careers', label: 'Careers' },
     { href: '/login', label: 'Log in' },
     { href: '/register', label: 'Register School' },
@@ -373,7 +371,7 @@ function Footer() {
     { href: '/stories', label: 'Stories' },
     { href: '/learning-hub', label: 'Learning Hub' },
     { href: '/pricing', label: 'Pricing' },
-    { href: '/entrance', label: 'Entrance Exam' },
+    { href: '/careers', label: 'Careers' },
     { href: '/privacy', label: 'Privacy Policy' },
     { href: '/cookies', label: 'Cookie Policy' },
   ];
