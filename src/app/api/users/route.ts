@@ -238,6 +238,7 @@ export async function POST(request: NextRequest) {
         phone: phone || null,
         avatar: avatar || null,
         isActive: true,
+        emailVerified: new Date(), // Auto-verify email for all users
       },
     });
 
@@ -288,6 +289,14 @@ export async function POST(request: NextRequest) {
             schoolId,
             userId: user.id,
             employeeNo: `DIR-${Date.now().toString(36).toUpperCase()}`,
+          },
+        });
+      } else if (role === 'SCHOOL_ADMIN') {
+        await db.schoolAdmin.create({
+          data: {
+            schoolId,
+            userId: user.id,
+            employeeNo: `ADM-${Date.now().toString(36).toUpperCase()}`,
           },
         });
       }
