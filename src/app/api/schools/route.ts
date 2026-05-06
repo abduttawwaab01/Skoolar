@@ -1,13 +1,57 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth-middleware';
+import { requireRole, requireAuth } from '@/lib/auth-middleware';
 
 // GET /api/schools - List all schools with pagination, search, and filters
+// Also available via /api/public/schools for unauthenticated access
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const isPublic = searchParams.get('public') === 'true';
+    
+    // For public access (login page), only return basic school info without auth
+    if (isPublic) {
+      const page = parseInt(searchParams.get('page') || '1');
+      const limit = parseInt(searchParams.get('limit') || '100');
+      const search = searchParams.get('search') || '';
+      const isActive = searchParams.get('isActive');
+
+      const where: Record<string, unknown> = { deletedAt: null };
+      if (isActive !== null && isActive !== undefined && isActive !== '') {
+        where.isActive = isActive === 'true';
+      } else {
+        where.isActive = true;
+      }
+      if (search) {
+        where.OR = [
+          { name: { contains: search, mode: 'insensitive' } },
+          { slug: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+
+      const [data, total] = await Promise.all([
+        db.school.findMany({
+          where,
+          skip: (page - 1) * limit,
+          take: limit,
+          orderBy: { name: 'asc' },
+          select: { id: true, name: true, slug: true, logo: true, isActive: true },
+        }),
+        db.school.count({ where }),
+      ]);
+
+      return NextResponse.json({
+        data,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      });
+    }
+
+    // Authenticated access - require SUPER_ADMIN
     const auth = await requireRole(request, ['SUPER_ADMIN']);
     if (auth instanceof NextResponse) return auth;
-    const { searchParams } = new URL(request.url);
+
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const search = searchParams.get('search') || '';

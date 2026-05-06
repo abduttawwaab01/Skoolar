@@ -86,7 +86,7 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
   async function fetchSchools() {
     setSchoolLoading(true);
     try {
-      const res = await fetch('/api/schools?limit=100&isActive=true');
+      const res = await fetch('/api/schools?public=true&limit=100&isActive=true');
       const json = await res.json();
       if (json.data) {
         setSchools(json.data);
