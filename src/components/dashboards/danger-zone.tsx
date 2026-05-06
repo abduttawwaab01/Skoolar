@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, Trash2, RefreshCw, ShieldAlert, School, Database, Users, GraduationCap, ClipboardList, Calendar, BookOpen, DollarSign, MessageSquare, BarChart3, FileText, Activity, AlertOctagon, CheckCircle, XCircle, Clock, ChevronDown } from 'lucide-react';
+import { AlertTriangle, Trash2, RefreshCw, ShieldAlert, School, Database, Users, GraduationCap, ClipboardList, Calendar, BookOpen, DollarSign, MessageSquare, BarChart3, FileText, Activity, AlertOctagon, CheckCircle, XCircle, Clock, ChevronDown, Trophy, Award } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
 interface DataSummary { [key: string]: number; }
@@ -41,6 +41,16 @@ const DATA_TYPES = [
   { key: 'messages', label: 'Messages', icon: MessageSquare, color: 'text-rose-600', bgColor: 'bg-rose-50' },
   { key: 'conversations', label: 'Conversations', icon: Users, color: 'text-fuchsia-600', bgColor: 'bg-fuchsia-50' },
   { key: 'users', label: 'All Users', icon: Users, color: 'text-gray-600', bgColor: 'bg-gray-50' },
+  // New features for deletion
+  { key: 'video_checkpoints', label: 'Video Checkpoints', icon: ClipboardList, color: 'text-cyan-600', bgColor: 'bg-cyan-50' },
+  { key: 'video_checkpoint_progress', label: 'Checkpoint Progress', icon: Activity, color: 'text-teal-600', bgColor: 'bg-teal-50' },
+  { key: 'teacher_tasks', label: 'Teacher Tasks', icon: ClipboardList, color: 'text-orange-600', bgColor: 'bg-orange-50' },
+  { key: 'teacher_task_completions', label: 'Task Completions', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-50' },
+  { key: 'teacher_performance', label: 'Teacher Performance', icon: BarChart3, color: 'text-purple-600', bgColor: 'bg-purple-50' },
+  { key: 'student_snapshots', label: 'Performance Snapshots', icon: Activity, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+  { key: 'leaderboards', label: 'Leaderboards', icon: Trophy, color: 'text-yellow-600', bgColor: 'bg-yellow-50' },
+  { key: 'performance_badges', label: 'Performance Badges', icon: Award, color: 'text-amber-600', bgColor: 'bg-amber-50' },
+  { key: 'encouragement_messages', label: 'Encouragement Messages', icon: MessageSquare, color: 'text-pink-600', bgColor: 'bg-pink-50' },
 ];
 
 export function DangerZone() {

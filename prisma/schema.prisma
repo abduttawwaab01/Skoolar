@@ -8,78 +8,84 @@ datasource db {
 }
 
 model School {
-  id                  String                   @id @default(cuid())
-  name                String
-  slug                String                   @unique
-  logo                String?
-  address             String?
-  motto               String?
-  phone               String?
-  email               String?
-  website             String?
-  primaryColor        String                   @default("#059669")
-  secondaryColor      String                   @default("#10B981")
-  region              String?
-  plan                String                   @default("basic")
-  isActive            Boolean                  @default(true)
-  maxStudents         Int                      @default(500)
-  maxTeachers         Int                      @default(50)
-  foundedDate         DateTime?
-  createdAt           DateTime                 @default(now())
-  updatedAt           DateTime                 @updatedAt
-  deletedAt           DateTime?
-  planId              String?
-  academicYears       AcademicYear[]
-  accountants         Accountant[]
-  achievements        Achievement[]
-  announcements       Announcement[]
-  attendances         Attendance[]
-  attendanceScanLogs  AttendanceScanLog[]
-  auditLogs           AuditLog[]
-  behaviorLogs        BehaviorLog[]
-  borrowRecords       BorrowRecord[]
-  classes             Class[]
-  conversations       Conversation[]
-  directors           Director[]
-  domainGrades        DomainGrade[]
-  entranceExams       EntranceExam[]
-  exams               Exam[]
-  exportLogs          ExportLog[]
-  feeStructures       FeeStructure[]
-  feedbacks           Feedback[]
-  healthRecords       HealthRecord[]
-  homeworks           Homework[]
-  homeworkQuestions   HomeworkQuestion[]
-  homeworkAnswers     HomeworkQuestionAnswer[]
-  homeworkSubmissions HomeworkSubmission[]
-  idCardTemplates     IDCardTemplate[]
-  jobPostings          JobPosting[]
-  librarians          Librarian[]
-  books               LibraryBook[]
-  messages            Message[]
-  notificationList    Notification[]
-  parents             Parent[]
-  payments            Payment[]
-  platformPayments    PlatformPayment[]
-  registrationCodes   RegistrationCode[]
-  reportCards         ReportCard[]
-  reportTemplates     ReportCardTemplate[]
-  subscriptionPlan    SubscriptionPlan?        @relation("SchoolPlan", fields: [planId], references: [id])
-  events              SchoolEvent[]
-  schoolNotices       SchoolNotice[]
-  settings            SchoolSettings?
-  scoreTypes          ScoreType[]
-  students            Student[]
-  studentDiaries      StudentDiary[]
-  subjects            Subject[]
-  supportTickets      SupportTicket[]
-  teachers            Teacher[]
-  teacherComments     TeacherComment[]
-  terms               Term[]
-  transportRoutes     TransportRoute[]
-  users               User[]
-  videoLessons        VideoLesson[]
-  weeklyEvaluations   WeeklyEvaluation[]
+  id                     String                     @id @default(cuid())
+  name                   String
+  slug                   String                     @unique
+  logo                   String?
+  address                String?
+  motto                  String?
+  phone                  String?
+  email                  String?
+  website                String?
+  primaryColor           String                     @default("#059669")
+  secondaryColor         String                     @default("#10B981")
+  region                 String?
+  plan                   String                     @default("basic")
+  isActive               Boolean                    @default(true)
+  maxStudents            Int                        @default(500)
+  maxTeachers            Int                        @default(50)
+  foundedDate            DateTime?
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  deletedAt              DateTime?
+  planId                 String?
+  academicYears          AcademicYear[]
+  accountants            Accountant[]
+  achievements           Achievement[]
+  announcements          Announcement[]
+  attendances            Attendance[]
+  attendanceScanLogs     AttendanceScanLog[]
+  auditLogs              AuditLog[]
+  behaviorLogs           BehaviorLog[]
+  borrowRecords          BorrowRecord[]
+  classes                Class[]
+  conversations          Conversation[]
+  directors              Director[]
+  domainGrades           DomainGrade[]
+  entranceExams          EntranceExam[]
+  exams                  Exam[]
+  exportLogs             ExportLog[]
+  feeStructures          FeeStructure[]
+  feedbacks              Feedback[]
+  healthRecords          HealthRecord[]
+  homeworks              Homework[]
+  homeworkQuestions      HomeworkQuestion[]
+  homeworkAnswers        HomeworkQuestionAnswer[]
+  homeworkSubmissions    HomeworkSubmission[]
+  idCardTemplates        IDCardTemplate[]
+  jobPostings            JobPosting[]
+  librarians             Librarian[]
+  books                  LibraryBook[]
+  messages               Message[]
+  notificationList       Notification[]
+  parents                Parent[]
+  payments               Payment[]
+  platformPayments       PlatformPayment[]
+  registrationCodes      RegistrationCode[]
+  reportCards            ReportCard[]
+  reportTemplates        ReportCardTemplate[]
+  subscriptionPlan       SubscriptionPlan?          @relation("SchoolPlan", fields: [planId], references: [id])
+  events                 SchoolEvent[]
+  schoolNotices          SchoolNotice[]
+  settings               SchoolSettings?
+  scoreTypes             ScoreType[]
+  students               Student[]
+  studentDiaries         StudentDiary[]
+  subjects               Subject[]
+  supportTickets         SupportTicket[]
+  teachers               Teacher[]
+  teacherComments        TeacherComment[]
+  terms                  Term[]
+  transportRoutes        TransportRoute[]
+  users                  User[]
+  videoLessons           VideoLesson[]
+  weeklyEvaluations      WeeklyEvaluation[]
+  teacherTasks           TeacherTask[]
+  teacherPerformance     TeacherPerformance[]
+  performanceSnapshots   StudentPerformanceSnapshot[]
+  leaderboards           Leaderboard[]
+  performanceBadges      PerformanceBadge[]
+  encouragements         EncouragementMessage[]
 
   @@index([slug])
   @@index([region])
@@ -180,24 +186,25 @@ model AcademicYear {
 }
 
 model Term {
-  id              String           @id @default(cuid())
-  academicYearId  String
-  schoolId        String
-  name            String
-  order           Int
-  startDate       DateTime
-  endDate         DateTime
-  isCurrent       Boolean          @default(false)
-  isLocked        Boolean          @default(false)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  deletedAt       DateTime?
-  attendance      Attendance[]
-  exams           Exam[]
-  reportCards     ReportCard[]
-  teacherComments TeacherComment[]
-  academicYear    AcademicYear     @relation(fields: [academicYearId], references: [id])
-  school          School           @relation(fields: [schoolId], references: [id])
+  id                  String                 @id @default(cuid())
+  academicYearId      String
+  schoolId            String
+  name                String
+  order               Int
+  startDate           DateTime
+  endDate             DateTime
+  isCurrent           Boolean                @default(false)
+  isLocked            Boolean                @default(false)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  deletedAt           DateTime?
+  attendance          Attendance[]
+  exams               Exam[]
+  reportCards         ReportCard[]
+  teacherComments     TeacherComment[]
+  teacherPerformance  TeacherPerformance[]
+  academicYear        AcademicYear           @relation(fields: [academicYearId], references: [id])
+  school              School                 @relation(fields: [schoolId], references: [id])
 
   @@unique([academicYearId, order])
   @@index([schoolId])
@@ -261,6 +268,7 @@ model Class {
   students       Student[]
   attendances    Attendance[]
   feeStructures  FeeStructureClass[]
+  leaderboards   Leaderboard[]
 
   @@unique([schoolId, name, section])
   @@index([schoolId])
@@ -301,43 +309,47 @@ model ClassSubject {
 }
 
 model Student {
-  id                  String               @id @default(cuid())
-  schoolId            String
-  userId              String               @unique
-  admissionNo         String
-  classId             String?
-  dateOfBirth         DateTime?
-  gender              String?
-  address             String?
-  bloodGroup          String?
-  allergies           String?
-  emergencyContact    String?
-  photo               String?
-  house               String?
-  isPromoted          Boolean              @default(true)
-  gpa                 Float                @default(0.0)
-  cumulativeGpa       Float                @default(0.0)
-  rank                Int?
-  behaviorScore       Int                  @default(100)
-  isActive            Boolean              @default(true)
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-  deletedAt           DateTime?
-  achievements        Achievement[]
-  attendance          Attendance[]
-  behaviorLogs        BehaviorLog[]
-  borrowRecords       BorrowRecord[]
-  examAttempts        ExamAttempt[]
-  examScores          ExamScore[]
-  homeworkSubmissions HomeworkSubmission[]
-  payments            Payment[]
-  reportCards         ReportCard[]
-  class               Class?               @relation(fields: [classId], references: [id])
-  school              School               @relation(fields: [schoolId], references: [id])
-  user                User                 @relation(fields: [userId], references: [id])
-  teacherComments     TeacherComment[]
-  weeklyEvaluations   WeeklyEvaluation[]
-  studentParents      StudentParent[]      @relation("StudentParents")
+  id                     String                     @id @default(cuid())
+  schoolId               String
+  userId                 String                     @unique
+  admissionNo            String
+  classId                String?
+  dateOfBirth            DateTime?
+  gender                 String?
+  address                String?
+  bloodGroup             String?
+  allergies              String?
+  emergencyContact       String?
+  photo                  String?
+  house                  String?
+  isPromoted             Boolean                    @default(true)
+  gpa                    Float                      @default(0.0)
+  cumulativeGpa          Float                      @default(0.0)
+  rank                   Int?
+  behaviorScore          Int                        @default(100)
+  isActive               Boolean                    @default(true)
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  deletedAt              DateTime?
+  achievements           Achievement[]
+  attendance             Attendance[]
+  behaviorLogs           BehaviorLog[]
+  borrowRecords          BorrowRecord[]
+  examAttempts           ExamAttempt[]
+  examScores             ExamScore[]
+  homeworkSubmissions    HomeworkSubmission[]
+  payments               Payment[]
+  reportCards            ReportCard[]
+  class                  Class?                     @relation(fields: [classId], references: [id])
+  school                 School                     @relation(fields: [schoolId], references: [id])
+  user                   User                       @relation(fields: [userId], references: [id])
+  teacherComments        TeacherComment[]
+  weeklyEvaluations      WeeklyEvaluation[]
+  studentParents         StudentParent[]            @relation("StudentParents")
+  videoCheckpointProgress VideoCheckpointProgress[]
+  performanceSnapshots   StudentPerformanceSnapshot[]
+  badges                 PerformanceBadge[]
+  encouragements         EncouragementMessage[]
 
   @@unique([schoolId, admissionNo])
   @@index([schoolId])
@@ -345,31 +357,34 @@ model Student {
 }
 
 model Teacher {
-  id                 String              @id @default(cuid())
-  schoolId           String
-  userId             String              @unique
-  employeeNo         String
-  specialization     String?
-  qualification      String?
-  dateOfJoining      DateTime?
-  gender             String?
-  phone              String?
-  address            String?
-  photo              String?
-  salary             Float?
-  isActive           Boolean             @default(true)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  deletedAt          DateTime?
-  attendanceScanLogs AttendanceScanLog[]
-  classes            Class[]             @relation("ClassTeacher")
-  classSubjects      ClassSubject[]
-  exams              Exam[]
-  homeworks          Homework[]
-  school             School              @relation(fields: [schoolId], references: [id])
-  user               User                @relation(fields: [userId], references: [id])
-  comments           TeacherComment[]
-  weeklyEvaluations  WeeklyEvaluation[]
+  id                   String                     @id @default(cuid())
+  schoolId             String
+  userId               String                     @unique
+  employeeNo           String
+  specialization       String?
+  qualification        String?
+  dateOfJoining        DateTime?
+  gender               String?
+  phone                String?
+  address              String?
+  photo                String?
+  salary               Float?
+  isActive             Boolean                    @default(true)
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
+  deletedAt            DateTime?
+  attendanceScanLogs   AttendanceScanLog[]
+  classes              Class[]                    @relation("ClassTeacher")
+  classSubjects        ClassSubject[]
+  exams                Exam[]
+  homeworks            Homework[]
+  school               School                     @relation(fields: [schoolId], references: [id])
+  user                 User                       @relation(fields: [userId], references: [id])
+  comments             TeacherComment[]
+  weeklyEvaluations    WeeklyEvaluation[]
+  tasks                TeacherTask[]
+  taskCompletions      TeacherTaskCompletion[]
+  performances         TeacherPerformance[]
 
   @@unique([schoolId, employeeNo])
   @@index([schoolId])
@@ -812,25 +827,26 @@ model Payment {
 }
 
 model LibraryBook {
-  id              String         @id @default(cuid())
-  schoolId        String
-  title           String
-  author          String?
-  isbn            String?
-  category        String?
-  publisher       String?
-  year            Int?
-  totalCopies     Int            @default(1)
-  availableCopies Int            @default(1)
-  location        String?
-  barcode         String?
-  coverImage      String?
-  description     String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  deletedAt       DateTime?
-  borrowRecords   BorrowRecord[]
-  school          School         @relation(fields: [schoolId], references: [id])
+  id                    String                   @id @default(cuid())
+  schoolId              String
+  title                 String
+  author                String?
+  isbn                  String?
+  category              String?
+  publisher             String?
+  year                  Int?
+  totalCopies           Int                      @default(1)
+  availableCopies       Int                      @default(1)
+  location              String?
+  barcode               String?
+  coverImage            String?
+  description           String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  deletedAt             DateTime?
+  borrowRecords         BorrowRecord[]
+  readingAssignments    TeacherReadingAssignment[]
+  school                School                   @relation(fields: [schoolId], references: [id])
 
   @@index([schoolId])
   @@index([category])
@@ -1079,29 +1095,30 @@ model Feedback {
 }
 
 model VideoLesson {
-  id           String       @id @default(cuid())
+  id           String            @id @default(cuid())
   schoolId     String
   title        String
   description  String?
   subjectId    String?
   classId      String?
-  contentType  String       @default("video")
+  contentType  String            @default("video")
   content      String?
   videoUrl     String?
   audioUrl     String?
   imageUrl     String?
   thumbnailUrl String?
-  duration     Int          @default(0)
+  duration     Int               @default(0)
   tags         String?
-  viewCount    Int          @default(0)
-  isFeatured   Boolean      @default(false)
-  isPublished  Boolean      @default(true)
+  viewCount    Int               @default(0)
+  isFeatured   Boolean           @default(false)
+  isPublished  Boolean           @default(true)
   uploadedBy   String?
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
   deletedAt    DateTime?
   quizzes      LessonQuiz[]
-  school       School       @relation(fields: [schoolId], references: [id])
+  checkpoints  VideoCheckpoint[]
+  school       School            @relation(fields: [schoolId], references: [id])
 
   @@index([schoolId])
   @@index([subjectId])
@@ -2105,8 +2122,8 @@ model JobApplication {
   id                  String      @id @default(cuid())
   jobPostingId        String
   applicantName      String
-  applicantEmail     String
-  applicantPhone     String?
+  applicantEmail      String
+  applicantPhone      String?
   applicantAddress   String?
   resumeUrl         String?
   coverLetter       String?
@@ -2123,11 +2140,248 @@ model JobApplication {
   offeredSalary    Int?
   rejectedAt       DateTime?
   hiredAt          DateTime?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
   jobPosting        JobPosting   @relation("JobPostingApplications", fields: [jobPostingId], references: [id])
 
   @@index([jobPostingId])
   @@index([status])
   @@index([applicantEmail])
+}
+
+// ============================================
+// FEATURE 2: VIDEO LESSON CHECKPOINTS
+// ============================================
+
+model VideoCheckpoint {
+  id            String                      @id @default(cuid())
+  lessonId      String
+  timestamp     Int                         // in seconds
+  question      String
+  questionType  String                      @default("MCQ") // MCQ, TRUE_FALSE
+  options       String?                     // JSON array for MCQ options
+  correctAnswer String?                     // index for MCQ, "true"/"false" for TF
+  explanation   String?                     // shown after answer
+  order         Int                         @default(0)
+  isRequired    Boolean                     @default(true) // must answer to continue
+  createdAt     DateTime                    @default(now())
+  updatedAt     DateTime                    @updatedAt
+  lesson        VideoLesson                 @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  progress      VideoCheckpointProgress[]
+
+  @@index([lessonId])
+  @@index([timestamp])
+}
+
+model VideoCheckpointProgress {
+  id            String          @id @default(cuid())
+  studentId     String
+  checkpointId  String
+  answer        String?
+  isCorrect     Boolean         @default(false)
+  answeredAt    DateTime        @default(now())
+  timeSpent     Int?            // seconds spent on this checkpoint
+  student       Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  checkpoint    VideoCheckpoint @relation(fields: [checkpointId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, checkpointId])
+  @@index([studentId])
+  @@index([checkpointId])
+}
+
+// ============================================
+// FEATURE 3: TEACHER EVALUATION & TASKS
+// ============================================
+
+model TeacherTask {
+  id                String                      @id @default(cuid())
+  schoolId          String
+  teacherId         String
+  title             String
+  description       String?
+  taskType          String                      // "reading", "lesson_plan", "report", "meeting", "class_management", "other"
+  dueDate           DateTime?
+  priority          String                      @default("medium") // low, medium, high, urgent
+  status            String                      @default("pending") // pending, in_progress, completed, overdue
+  createdBy         String                      // userId of admin/head teacher
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+  school            School                      @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher           Teacher                     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  attachments       TeacherTaskAttachment[]
+  completions       TeacherTaskCompletion[]
+  readingAssignments TeacherReadingAssignment[]
+
+  @@index([schoolId])
+  @@index([teacherId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model TeacherTaskAttachment {
+  id        String      @id @default(cuid())
+  taskId    String
+  name      String
+  url       String
+  type      String     @default("document")
+  createdAt DateTime   @default(now())
+  task      TeacherTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+model TeacherTaskCompletion {
+  id          String    @id @default(cuid())
+  taskId      String
+  teacherId   String
+  notes       String?
+  attachmentUrl String?
+  completedAt DateTime  @default(now())
+  verifiedBy  String?   // userId who verified
+  verifiedAt  DateTime?
+  status      String    @default("pending") // pending, approved, rejected
+  feedback    String?   // feedback from verifier
+  task        TeacherTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  teacher     Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, teacherId])
+  @@index([taskId])
+  @@index([teacherId])
+  @@index([status])
+}
+
+model TeacherPerformance {
+  id                String    @id @default(cuid())
+  schoolId          String
+  teacherId         String
+  termId            String
+  taskCompletionScore Int      @default(0)      // From tasks completed
+  punctualityScore  Int       @default(0)      // Staff attendance
+  classScore        Int       @default(0)     // Class management quality
+  studentFeedbackScore Int    @default(0)     // Average from student evaluations
+  weeklyEvalScore   Int       @default(0)     // From weekly evaluations
+  totalScore        Int       @default(0)
+  rank              Int?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  school            School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher           Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  term              Term      @relation(fields: [termId], references: [id])
+
+  @@unique([teacherId, termId])
+  @@index([schoolId])
+  @@index([termId])
+  @@index([totalScore])
+}
+
+// Teacher task assignment for reading materials
+model TeacherReadingAssignment {
+  id          String    @id @default(cuid())
+  taskId      String
+  bookId      String?
+  content     String?   // Text content to read
+  pageRange   String?   // e.g. "1-50" or "Chapter 1-3"
+  notes       String?
+  task        TeacherTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  book        LibraryBook? @relation(fields: [bookId], references: [id])
+
+  @@index([taskId])
+  @@index([bookId])
+}
+
+// ============================================
+// FEATURE 4: STUDENT LEADERBOARDS
+// ============================================
+
+model StudentPerformanceSnapshot {
+  id              String    @id @default(cuid())
+  schoolId        String
+  studentId       String
+  date            DateTime  @db.Date
+  gpa             Float     @default(0)
+  attendanceScore Int       @default(0)    // Based on daily attendance (0-100)
+  behaviorScore   Int       @default(0)    // From daily behavior log (0-100)
+  homeworkScore  Int       @default(0)    // Homework submission rate (0-100)
+  evaluationScore Int       @default(0)    // From weekly evaluations (0-100)
+  totalScore      Int       @default(0)    // Weighted total
+  dailyRank       Int?
+  weeklyRank      Int?
+  termRank        Int?
+  yearlyRank      Int?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  school          School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student         Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+  @@index([schoolId])
+  @@index([date])
+  @@index([totalScore])
+  @@index([dailyRank])
+  @@index([weeklyRank])
+  @@index([termRank])
+  @@index([yearlyRank])
+}
+
+model Leaderboard {
+  id          String    @id @default(cuid())
+  schoolId    String
+  type        String    // "daily", "weekly", "termly", "yearly"
+  classId     String?
+  level       String?   // e.g. "JSS1", "SS1", "Year 10"
+  department  String?   // For secondary schools: Science, Arts, Commercial
+  period      String    // e.g. "2025-01-15", "2025-week-3", "2025-1st-term"
+  data        String    // JSON: [{rank, studentId, studentName, score, badges}]
+  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+  school      School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class       Class?    @relation(fields: [classId], references: [id])
+
+  @@unique([schoolId, type, classId, level, department, period])
+  @@index([schoolId])
+  @@index([type])
+  @@index([period])
+}
+
+model PerformanceBadge {
+  id          String    @id @default(cuid())
+  schoolId    String
+  studentId   String
+  badgeType   String    // "daily_best", "weekly_best", "termly_best", "yearly_best", "improver", "consistent"
+  title       String
+  description String?
+  icon        String?   // emoji or icon name
+  score       Int?      // score achieved
+  rank        Int?      // rank achieved
+  period      String    // the period this badge is for
+  awardedAt   DateTime  @default(now())
+  school      School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([badgeType])
+  @@index([awardedAt])
+}
+
+// Motivational messages for students
+model EncouragementMessage {
+  id          String    @id @default(cuid())
+  schoolId    String
+  studentId   String
+  type        String    // "daily", "weekly", "achievement", "improvement"
+  title       String
+  message     String
+  fromRank    Int?      // student's rank when sent
+  toRank      Int?      // improved to
+  sentAt      DateTime  @default(now())
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+  school      School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId])
+  @@index([studentId])
+  @@index([sentAt])
+  @@index([isRead])
 }

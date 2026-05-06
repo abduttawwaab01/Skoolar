@@ -27,7 +27,9 @@ export type DashboardView =
   | 'platform-management' | 'school-controls' | 'overlay-management' | 'plans-manager' | 'danger-zone'
   | 'class-monitoring' | 'messaging-center' | 'weekly-evaluations'
   | 'entrance-exams' | 'payment-verification' | 'job-postings'
-  | 'teacher-grades' | 'timetable';
+  | 'teacher-grades' | 'timetable'
+  | 'teacher-tasks' | 'teacher-performance' | 'student-leaderboard'
+  | 'parent-analytics' | 'video-checkpoints';
 
 interface AppState {
   currentRole: UserRole;

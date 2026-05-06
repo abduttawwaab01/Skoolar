@@ -1,0 +1,168 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
+import { db } from '@/lib/db';
+import { requireAuthAndRole, errorResponse, successResponse } from '@/lib/api-helpers';
+
+// POST /api/video-checkpoints/progress - Submit checkpoint answer
+export async function POST(request: NextRequest) {
+  try {
+    const authResult = await requireAuthAndRole(request, ['STUDENT']);
+    if (!authResult.valid) return authResult.error;
+    const { auth } = authResult;
+
+    const body = await request.json();
+    const { checkpointId, answer } = body;
+
+    if (!checkpointId || answer === undefined) {
+      return errorResponse('checkpointId and answer are required', 400);
+    }
+
+    // Get the student profile
+    const student = await db.student.findUnique({
+      where: { userId: auth.userId },
+    });
+
+    if (!student) {
+      return errorResponse('Student profile not found', 404);
+    }
+
+    // Get checkpoint to validate answer
+    const checkpoint = await db.videoCheckpoint.findUnique({
+      where: { id: checkpointId },
+    });
+
+    if (!checkpoint) {
+      return errorResponse('Checkpoint not found', 404);
+    }
+
+    // Check if student already answered this checkpoint
+    const existingProgress = await db.videoCheckpointProgress.findUnique({
+      where: {
+        studentId_checkpointId: {
+          studentId: student.id,
+          checkpointId,
+        },
+      },
+    });
+
+    // Determine if answer is correct
+    let isCorrect = false;
+    
+    if (checkpoint.questionType === 'MCQ') {
+      const correctIdx = parseInt(checkpoint.correctAnswer || '0');
+      const answerIdx = parseInt(answer);
+      isCorrect = !isNaN(answerIdx) && answerIdx === correctIdx;
+    } else if (checkpoint.questionType === 'TRUE_FALSE') {
+      const normalizedAnswer = String(answer).toLowerCase().trim();
+      isCorrect = normalizedAnswer === checkpoint.correctAnswer?.toLowerCase();
+    }
+
+    // Save or update progress
+    const progress = existingProgress
+      ? await db.videoCheckpointProgress.update({
+          where: { id: existingProgress.id },
+          data: {
+            answer: String(answer),
+            isCorrect,
+            answeredAt: new Date(),
+          },
+        })
+      : await db.videoCheckpointProgress.create({
+          data: {
+            studentId: student.id,
+            checkpointId,
+            answer: String(answer),
+            isCorrect,
+          },
+        });
+
+    // If incorrect, don't let them continue (if required)
+    const result = {
+      correct: isCorrect,
+      explanation: checkpoint.explanation,
+      isRequired: checkpoint.isRequired,
+      canContinue: !checkpoint.isRequired || isCorrect,
+    };
+
+    return successResponse(progress, isCorrect ? 'Correct answer!' : 'Incorrect answer');
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return errorResponse(message, 500);
+  }
+}
+
+// GET /api/video-checkpoints/progress - Get student's checkpoint progress for a lesson
+export async function GET(request: NextRequest) {
+  try {
+    const authResult = await requireAuthAndRole(request, ['STUDENT', 'TEACHER', 'SCHOOL_ADMIN']);
+    if (!authResult.valid) return authResult.error;
+    const { auth } = authResult;
+
+    const { searchParams } = new URL(request.url);
+    const lessonId = searchParams.get('lessonId');
+
+    if (!lessonId) {
+      return errorResponse('lessonId is required', 400);
+    }
+
+    let studentId: string | null = null;
+
+    // If student, get their ID
+    if (auth.role === 'STUDENT') {
+      const student = await db.student.findUnique({
+        where: { userId: auth.userId },
+        select: { id: true },
+      });
+      studentId = student?.id || null;
+    }
+
+    if (!studentId) {
+      return errorResponse('Student profile not found', 404);
+    }
+
+    // Get all checkpoints for the lesson
+    const checkpoints = await db.videoCheckpoint.findMany({
+      where: { lessonId },
+      orderBy: { timestamp: 'asc' },
+      select: { id: true },
+    });
+
+    const checkpointIds = checkpoints.map(c => c.id);
+
+    // Get student's progress
+    const progress = await db.videoCheckpointProgress.findMany({
+      where: {
+        studentId,
+        checkpointId: { in: checkpointIds },
+      },
+    });
+
+    // Calculate completion
+    const answeredCount = progress.length;
+    const correctCount = progress.filter(p => p.isCorrect).length;
+    const totalCheckpoints = checkpoints.length;
+    const completionRate = totalCheckpoints > 0 
+      ? Math.round((answeredCount / totalCheckpoints) * 100) 
+      : 0;
+    const accuracyRate = answeredCount > 0 
+      ? Math.round((correctCount / answeredCount) * 100) 
+      : 0;
+
+    return successResponse({
+      totalCheckpoints,
+      answeredCount,
+      correctCount,
+      completionRate,
+      accuracyRate,
+      progress: progress.map(p => ({
+        checkpointId: p.checkpointId,
+        answer: p.answer,
+        isCorrect: p.isCorrect,
+        answeredAt: p.answeredAt,
+      })),
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return errorResponse(message, 500);
+  }
+}

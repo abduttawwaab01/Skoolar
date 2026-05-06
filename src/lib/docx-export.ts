@@ -433,7 +433,7 @@ export async function generateQuestionsDocx(
       spacing: { before: 100 },
       children: [
         new TextRun({
-          text: 'Powered by Skoolar || Odebunmi Tawwāb',
+          text: 'Skoolar - Odebunmi Tawwab A',
           size: 18,
           font: 'Calibri',
           color: '999999',
@@ -883,7 +883,7 @@ export async function generateExamResultsDocx(
       spacing: { before: 100 },
       children: [
         new TextRun({
-          text: 'Powered by Skoolar || Odebunmi Tawwāb',
+          text: 'Skoolar - Odebunmi Tawwab A',
           size: 18,
           font: 'Calibri',
           color: '999999',

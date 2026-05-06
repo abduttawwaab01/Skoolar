@@ -122,10 +122,11 @@ export async function GET(
       rows.push(row.join(','));
     });
 
-    // Add watermark footer rows
+    // Add footer rows
     rows.push('');
-    rows.push('"Powered by Skoolar || Odebunmi Tawwāb"');
-    rows.push(`"Generated on ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}"`);
+    rows.push('---');
+    rows.push('Skoolar - Odebunmi Tawwab A');
+    rows.push(`Generated on ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`);
 
     const csvContent = rows.join('\n');
 

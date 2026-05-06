@@ -244,7 +244,7 @@ function buildHtmlPage(title: string, bodyContent: string): string {
       <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);opacity:0.04;font-size:4rem;font-weight:900;color:#1B5E20;white-space:nowrap;letter-spacing:0.5rem;">SKOOLAR</div>
     </div>
     <div style="text-align:center;padding:0.5rem 0;border-top:1px solid #e0e0e0;margin-top:2rem;">
-      <p style="font-size:8pt;color:#bbb;font-style:italic;">Powered by Skoolar || Odebunmi Tawwāb</p>
+      <p style="font-size:8pt;color:#bbb;font-style:italic;">Skoolar - Odebunmi Tawwab A</p>
     </div>
   `;
   return `<!DOCTYPE html>

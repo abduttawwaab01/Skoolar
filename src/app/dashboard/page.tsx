@@ -96,6 +96,11 @@ const viewComponents: Record<DashboardView, () => Promise<any>> = {
   'entrance-exams': () => import('@/components/dashboards/entrance-exams-view').then(m => m.EntranceExamsView),
   'job-postings': () => import('@/components/dashboards/job-postings-view').then(m => m.JobPostingsManagement),
   'staff-self-attendance': () => import('@/components/dashboards/staff-self-attendance').then(m => m.StaffSelfAttendance),
+  'teacher-tasks': () => import('@/components/features/teacher-tasks-management').then(m => m.TeacherTasksManagement),
+  'teacher-performance': () => import('@/components/features/teacher-tasks-management').then(m => m.TeacherTasksManagement),
+  'student-leaderboard': () => import('@/components/features/student-leaderboard').then(m => m.StudentLeaderboard),
+  'parent-analytics': () => import('@/components/features/parent-analytics').then(m => m.ParentAnalytics),
+  'video-checkpoints': () => import('@/components/features/parent-analytics').then(m => m.ParentAnalytics),
 };
 
 export default function DashboardPage() {
