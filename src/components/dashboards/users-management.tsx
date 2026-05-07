@@ -160,6 +160,8 @@ function UserFormDialog({
   schools,
   isSubmitting,
   allowedRoles,
+  isSchoolAdmin,
+  effectiveSchoolId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -168,6 +170,8 @@ function UserFormDialog({
   schools: SchoolOption[];
   isSubmitting: boolean;
   allowedRoles: UserRole[];
+  isSchoolAdmin: boolean;
+  effectiveSchoolId: string | null;
 }) {
   const [form, setForm] = React.useState<UserFormData>(defaultFormData);
   const [showPassword, setShowPassword] = React.useState(false);
@@ -725,10 +729,10 @@ export function UsersManagement() {
       </Tabs>
 
       {/* Create Dialog */}
-      <UserFormDialog open={createOpen} onOpenChange={setCreateOpen} editingUser={null} onSubmit={handleCreate} schools={schools} isSubmitting={submitting} allowedRoles={allowedRoles} />
+      <UserFormDialog open={createOpen} onOpenChange={setCreateOpen} editingUser={null} onSubmit={handleCreate} schools={schools} isSubmitting={submitting} allowedRoles={allowedRoles} isSchoolAdmin={isSchoolAdmin} effectiveSchoolId={effectiveSchoolId} />
 
       {/* Edit Dialog */}
-      <UserFormDialog open={!!editUser} onOpenChange={(open) => { if (!open) setEditUser(null); }} editingUser={editUser} onSubmit={handleEdit} schools={schools} isSubmitting={submitting} allowedRoles={allowedRoles} />
+      <UserFormDialog open={!!editUser} onOpenChange={(open) => { if (!open) setEditUser(null); }} editingUser={editUser} onSubmit={handleEdit} schools={schools} isSubmitting={submitting} allowedRoles={allowedRoles} isSchoolAdmin={isSchoolAdmin} effectiveSchoolId={effectiveSchoolId} />
 
       {/* View User Dialog */}
       <Dialog open={!!viewUser} onOpenChange={() => setViewUser(null)}>
