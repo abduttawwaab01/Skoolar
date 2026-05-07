@@ -446,11 +446,14 @@ export function UsersManagement() {
     if (!user) return;
     try {
       const res = await fetch(`/api/users/${userId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete user');
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to delete user');
+      }
       toast.success(`User "${user.name}" deleted`);
       fetchUsers();
     } catch (err) {
-      toast.error('Failed to delete user');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete user');
     }
   };
 

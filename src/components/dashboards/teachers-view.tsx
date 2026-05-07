@@ -139,10 +139,11 @@ export function TeachersView() {
     const formData = new FormData(form);
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
     const employeeNo = formData.get('employeeNo') as string;
 
-    if (!name || !email || !employeeNo) {
-      toast.error('Name, email, and employee number are required');
+    if (!name || !email || !password || !employeeNo) {
+      toast.error('Name, email, password, and employee number are required');
       return;
     }
 
@@ -155,6 +156,7 @@ export function TeachersView() {
           schoolId: selectedSchoolId,
           name,
           email,
+          password,
           employeeNo,
           specialization: formData.get('specialization') || null,
           qualification: formData.get('qualification') || null,
@@ -250,6 +252,11 @@ export function TeachersView() {
                   <div className="grid gap-2">
                     <Label>Email</Label>
                     <Input name="email" type="email" placeholder="teacher@school.com" required />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Password</Label>
+                    <Input name="password" type="password" placeholder="Enter login password" required />
+                    <span className="text-xs text-muted-foreground">Min 8 chars, uppercase, lowercase, number</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">

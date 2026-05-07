@@ -1,6 +1,9 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
+import bcrypt from 'bcryptjs';
+
+const SALT_ROUNDS = 10;
 
 // GET /api/teachers - List teachers with filters
 export async function GET(request: NextRequest) {
@@ -125,7 +128,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const { schoolId, name, email, employeeNo, specialization, qualification, dateOfJoining, gender, phone, address, photo, salary } = body;
+    const { schoolId, name, email, password, employeeNo, specialization, qualification, dateOfJoining, gender, phone, address, photo, salary } = body;
 
     // School context: use auth's schoolId if user is not SUPER_ADMIN
     const targetSchoolId = auth.role === 'SUPER_ADMIN' && schoolId ? schoolId : (auth.schoolId || schoolId);
@@ -160,6 +163,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate and hash password
+    if (password) {
+      if (password.length < 8) {
+        return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
+      }
+      if (!/[A-Z]/.test(password)) {
+        return NextResponse.json({ error: 'Password must contain at least one uppercase letter' }, { status: 400 });
+      }
+      if (!/[a-z]/.test(password)) {
+        return NextResponse.json({ error: 'Password must contain at least one lowercase letter' }, { status: 400 });
+      }
+      if (!/[0-9]/.test(password)) {
+        return NextResponse.json({ error: 'Password must contain at least one number' }, { status: 400 });
+      }
+    }
+
+    // Hash password or generate default
+    const hashedPassword = password
+      ? await bcrypt.hash(password, SALT_ROUNDS)
+      : await bcrypt.hash(`${email.toLowerCase()}2024`, SALT_ROUNDS);
+
     // Check plan limits - enforce max teachers
     const school = await db.school.findUnique({
       where: { id: targetSchoolId },
@@ -186,11 +210,13 @@ export async function POST(request: NextRequest) {
         data: {
           name,
           email,
+          password: hashedPassword,
           role: 'teacher',
           schoolId: targetSchoolId,
           phone: phone || null,
           avatar: photo || null,
           isActive: true,
+          emailVerified: new Date(),
         },
       });
 

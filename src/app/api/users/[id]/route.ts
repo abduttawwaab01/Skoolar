@@ -253,12 +253,20 @@ export async function DELETE(
     const profileTables = [
       { find: () => db.student.findFirst({ where: { userId: id } }), update: (profileId: string) => db.student.update({ where: { id: profileId }, data: { deletedAt: new Date(), isActive: false } }) },
       { find: () => db.teacher.findFirst({ where: { userId: id } }), update: (profileId: string) => db.teacher.update({ where: { id: profileId }, data: { deletedAt: new Date(), isActive: false } }) },
+      { find: () => db.parent.findFirst({ where: { userId: id } }), update: (profileId: string) => db.parent.update({ where: { id: profileId }, data: { deletedAt: new Date(), isActive: false } }) },
+      { find: () => db.accountant.findFirst({ where: { userId: id } }), update: (profileId: string) => db.accountant.update({ where: { id: profileId }, data: { deletedAt: new Date(), isActive: false } }) },
+      { find: () => db.librarian.findFirst({ where: { userId: id } }), update: (profileId: string) => db.librarian.update({ where: { id: profileId }, data: { deletedAt: new Date(), isActive: false } }) },
+      { find: () => db.director.findFirst({ where: { userId: id } }), update: (profileId: string) => db.director.update({ where: { id: profileId }, data: { deletedAt: new Date(), isActive: false } }) },
     ];
 
     for (const table of profileTables) {
-      const profile = await table.find();
-      if (profile) {
-        await table.update(profile.id);
+      try {
+        const profile = await table.find();
+        if (profile) {
+          await table.update(profile.id);
+        }
+      } catch {
+        // Profile may not exist, continue
       }
     }
 
