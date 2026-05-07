@@ -379,7 +379,7 @@ function SidebarContent() {
           {sidebarOpen && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-7 hover:bg-red-50 hover:text-red-600" onClick={() => { soundEffects.logout(); signOut({ callbackUrl: '/' }); }}>
+                <Button variant="ghost" size="icon" className="size-7 hover:bg-red-50 hover:text-red-600" onClick={() => { soundEffects.logout(); signOut({ callbackUrl: '/login' }); }}>
                   <LogOut className="size-3.5" />
                 </Button>
               </TooltipTrigger>
@@ -852,7 +852,7 @@ function Header() {
           <DropdownMenuItem onClick={() => { setCurrentView('settings'); soundEffects.click(); }}>⚙️ Settings</DropdownMenuItem>
           <DropdownMenuItem onClick={() => { soundEffects.refresh(); toast.success('Data synced ✅'); }}>🔄 Sync Data</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-destructive" onClick={() => { soundEffects.logout(); signOut({ callbackUrl: '/' }); }}>🚪 Logout</DropdownMenuItem>
+          <DropdownMenuItem className="text-destructive" onClick={() => { soundEffects.logout(); window.location.href = '/api/auth/signout?callbackUrl=/login'; }}>🚪 Logout</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

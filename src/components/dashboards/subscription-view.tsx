@@ -140,18 +140,14 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 const planIcons: Record<string, React.ElementType> = {
   free: Zap,
-  basic: Zap,
   pro: Star,
-  premium: Crown,
-  enterprise: Shield,
+  custom: Shield,
 };
 
 const planColors: Record<string, { border: string; bg: string; badge: string; text: string }> = {
   free: { border: 'border-gray-200', bg: 'bg-gray-50', badge: 'bg-gray-100 text-gray-600', text: 'text-gray-900' },
-  basic: { border: 'border-gray-200', bg: 'bg-gray-50', badge: 'bg-gray-100 text-gray-600', text: 'text-gray-900' },
   pro: { border: 'border-emerald-200', bg: 'bg-emerald-50/50', badge: 'bg-emerald-100 text-emerald-700', text: 'text-emerald-900' },
-  premium: { border: 'border-violet-200', bg: 'bg-violet-50/50', badge: 'bg-violet-100 text-violet-700', text: 'text-violet-900' },
-  enterprise: { border: 'border-amber-200', bg: 'bg-amber-50/50', badge: 'bg-amber-100 text-amber-700', text: 'text-amber-900' },
+  custom: { border: 'border-blue-200', bg: 'bg-blue-50/50', badge: 'bg-blue-100 text-blue-700', text: 'text-blue-900' },
 };
 
 // --- Default plan features for display ---
@@ -169,8 +165,8 @@ const defaultPlans = [
   {
     name: 'pro',
     displayName: 'Pro',
-    price: 40000,
-    priceDisplay: 'N40,000/term or N100,000/session',
+    price: 0, // Price controlled by Super Admin via database
+    priceDisplay: 'Contact admin for pricing',
     maxStudents: 500,
     maxTeachers: 50,
     maxClasses: -1,
@@ -979,10 +975,8 @@ function SuperAdminPlanManager({ plans }: { plans: Array<{ id: string; name: str
   const planBadgeColor = (planName: string) => {
     const colors: Record<string, string> = {
       free: 'bg-gray-100 text-gray-600',
-      basic: 'bg-gray-100 text-gray-600',
       pro: 'bg-emerald-100 text-emerald-700',
-      premium: 'bg-violet-100 text-violet-700',
-      enterprise: 'bg-amber-100 text-amber-700',
+      custom: 'bg-blue-100 text-blue-700',
     };
     return colors[planName?.toLowerCase()] || 'bg-gray-100 text-gray-600';
   };

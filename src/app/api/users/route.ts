@@ -152,6 +152,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // For School Admin, force schoolId to their own school
+    const targetSchoolId = userRole === 'SCHOOL_ADMIN' ? currentUser.schoolId : schoolId;
+
     if (!name || !email || !role) {
       return NextResponse.json(
         { error: 'Name, email, and role are required.' },
@@ -237,7 +240,7 @@ export async function POST(request: NextRequest) {
         email: email.toLowerCase(),
         password: hashedPassword,
         role,
-        schoolId: schoolId || null,
+        schoolId: targetSchoolId || null,
         phone: phone || null,
         avatar: avatar || null,
         isActive: true,
@@ -246,7 +249,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create role-specific profile if school is assigned
-    if (schoolId) {
+    if (targetSchoolId) {
       if (role === 'TEACHER') {
         await db.teacher.create({
           data: {

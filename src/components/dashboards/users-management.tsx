@@ -208,7 +208,7 @@ function UserFormDialog({
     onSubmit(form);
   };
 
-  const needsSchool = form.role !== 'SUPER_ADMIN';
+    const needsSchool = form.role !== 'SUPER_ADMIN' && !isSchoolAdmin;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -285,6 +285,11 @@ function UserFormDialog({
                 </Select>
               </div>
             )}
+            {isSchoolAdmin && (
+              <div className="text-xs text-muted-foreground p-2 bg-muted rounded-md">
+                Users will be created for your school: <strong>{schools.find(s => s.id === effectiveSchoolId)?.name || 'Your School'}</strong>
+              </div>
+            )}
           </div>
         </ScrollArea>
         <DialogFooter>
@@ -322,6 +327,9 @@ export function UsersManagement() {
     : isSchoolAdmin
       ? (['TEACHER', 'STUDENT', 'PARENT', 'ACCOUNTANT', 'LIBRARIAN', 'DIRECTOR'] as UserRole[])
       : [];
+
+  // For School Admin, auto-set schoolId to their school
+  const effectiveSchoolId = isSchoolAdmin ? selectedSchoolId : null;
 
   const fetchUsers = React.useCallback(async () => {
     try {
@@ -365,15 +373,23 @@ export function UsersManagement() {
   const handleCreate = async (data: UserFormData) => {
     try {
       setSubmitting(true);
+      // For School Admin, auto-use their school ID
+      const schoolId = isSchoolAdmin ? effectiveSchoolId : data.schoolId;
+      
+      if (!schoolId && data.role !== 'SUPER_ADMIN') {
+        toast.error('School ID is required');
+        return;
+      }
+
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: data.name,
-          email: data.email,
+          email: data.email.toLowerCase(),
           password: data.password,
           role: data.role,
-          schoolId: data.schoolId || null,
+          schoolId: schoolId || null,
         }),
       });
       if (!res.ok) {

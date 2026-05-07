@@ -137,19 +137,10 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
     e.preventDefault();
     setError('');
 
-    // Require school selection first
-    if (!selectedSchool) {
-      setStep('school');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      // Check if Super Admin - either email matches super admin config
-      const isSuperAdmin = email.toLowerCase() === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL?.toLowerCase();
-
-      if (isSuperAdmin) {
+    // For staff mode (Super Admin), don't require school selection
+    if (loginMode === 'staff') {
+      setIsLoading(true);
+      try {
         const result = await signIn('credentials', {
           email,
           password,
@@ -168,12 +159,26 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
             description: 'Redirecting to dashboard...',
           });
           playLogin();
-          router.push('/dashboard');
-          router.refresh();
+          // Use window.location for full page reload to ensure session is set
+          window.location.href = '/dashboard';
         }
-        return;
+      } catch {
+        setError('An unexpected error occurred. Please try again.');
+      } finally {
+        setIsLoading(false);
       }
+      return;
+    }
 
+    // For member mode, require school selection
+    if (!selectedSchool) {
+      setStep('school');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
       // Auto-detect role from database before login
       const detectRes = await fetch('/api/auth/detect-role', {
         method: 'POST',
@@ -219,8 +224,8 @@ export function LoginPage({ onSwitchToRegister }: { onSwitchToRegister?: () => v
           description: 'Redirecting to dashboard...',
         });
         playLogin();
-        router.push('/dashboard');
-        router.refresh();
+        // Use window.location for full page reload to ensure session is set
+        window.location.href = '/dashboard';
       }
     } catch {
       setError('An unexpected error occurred. Please try again.');

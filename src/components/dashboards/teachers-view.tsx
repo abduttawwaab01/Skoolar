@@ -127,7 +127,7 @@ export function TeachersView() {
 
   const handleAddTeacher = async () => {
     if (!selectedSchoolId) {
-      toast.error('No school selected');
+      toast.error('No school selected. Please select a school first.');
       return;
     }
 
@@ -155,7 +155,7 @@ export function TeachersView() {
         body: JSON.stringify({
           schoolId: selectedSchoolId,
           name,
-          email,
+          email: email.toLowerCase(),
           password,
           employeeNo,
           specialization: formData.get('specialization') || null,
@@ -164,7 +164,12 @@ export function TeachersView() {
         }),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed to create teacher');
+      if (!res.ok) {
+        // Show specific error message from API
+        const errorMsg = json.error || 'Failed to create teacher';
+        toast.error(errorMsg);
+        throw new Error(errorMsg);
+      }
 
       toast.success('Teacher added successfully');
       setAddOpen(false);
