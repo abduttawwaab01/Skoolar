@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
 import { useTheme } from '@/hooks/use-theme';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import {
   GraduationCap, CalendarCheck, Award, Star, Trophy, Clock, BookOpen,
   FileEdit, TrendingUp, Target, CheckCircle2, Info, Sparkles, User,
@@ -107,15 +107,8 @@ export function StudentDashboard() {
 
   const schoolId = currentUser.schoolId || selectedSchoolId || '';
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      // Redirect to login page after sign out
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Sign out error:', error);
-      toast.error('Failed to sign out. Please try again.');
-    }
+  const handleSignOut = () => {
+    window.location.href = '/api/auth/signout?callbackUrl=/login';
   };
 
   useEffect(() => {

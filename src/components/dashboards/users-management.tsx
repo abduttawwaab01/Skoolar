@@ -352,14 +352,20 @@ export function UsersManagement() {
 
   const fetchSchools = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/schools?limit=100');
+      // For SCHOOL_ADMIN, only fetch their own school
+      // For SUPER_ADMIN, fetch all schools
+      const url = isSchoolAdmin && effectiveSchoolId
+        ? `/api/schools?schoolId=${effectiveSchoolId}&limit=100`
+        : '/api/schools?limit=100';
+      
+      const res = await fetch(url);
       if (!res.ok) return;
       const json = await res.json();
       setSchools((json.data || []).map((s: { id: string; name: string }) => ({ id: s.id, name: s.name })));
     } catch {
       // ignore - schools list is supplementary
     }
-  }, []);
+  }, [isSchoolAdmin, effectiveSchoolId]);
 
   React.useEffect(() => { fetchUsers(); fetchSchools(); }, [fetchUsers, fetchSchools]);
 

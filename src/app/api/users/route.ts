@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
       if (role === 'TEACHER') {
         await db.teacher.create({
           data: {
-            schoolId,
+            schoolId: targetSchoolId,
             userId: user.id,
             employeeNo: `TCH-${Date.now().toString(36).toUpperCase()}`,
           },
@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
       } else if (role === 'STUDENT') {
         await db.student.create({
           data: {
-            schoolId,
+            schoolId: targetSchoolId,
             userId: user.id,
             admissionNo: `STU-${Date.now().toString(36).toUpperCase()}`,
           },
@@ -269,14 +269,14 @@ export async function POST(request: NextRequest) {
       } else if (role === 'PARENT') {
         await db.parent.create({
           data: {
-            schoolId,
+            schoolId: targetSchoolId,
             userId: user.id,
           },
         });
       } else if (role === 'ACCOUNTANT') {
         await db.accountant.create({
           data: {
-            schoolId,
+            schoolId: targetSchoolId,
             userId: user.id,
             employeeNo: `ACC-${Date.now().toString(36).toUpperCase()}`,
           },
@@ -284,7 +284,7 @@ export async function POST(request: NextRequest) {
       } else if (role === 'LIBRARIAN') {
         await db.librarian.create({
           data: {
-            schoolId,
+            schoolId: targetSchoolId,
             userId: user.id,
             employeeNo: `LIB-${Date.now().toString(36).toUpperCase()}`,
           },
@@ -292,7 +292,7 @@ export async function POST(request: NextRequest) {
       } else if (role === 'DIRECTOR') {
         await db.director.create({
           data: {
-            schoolId,
+            schoolId: targetSchoolId,
             userId: user.id,
             employeeNo: `DIR-${Date.now().toString(36).toUpperCase()}`,
           },

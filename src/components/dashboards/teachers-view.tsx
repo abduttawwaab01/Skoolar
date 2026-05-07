@@ -125,7 +125,7 @@ export function TeachersView() {
     (t.specialization || '').toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleAddTeacher = async () => {
+    const handleAddTeacher = async () => {
     if (!selectedSchoolId) {
       toast.error('No school selected. Please select a school first.');
       return;
@@ -142,26 +142,32 @@ export function TeachersView() {
     const password = formData.get('password') as string;
     const employeeNo = formData.get('employeeNo') as string;
 
-    if (!name || !email || !password || !employeeNo) {
-      toast.error('Name, email, password, and employee number are required');
+    if (!name || !email || !password) {
+      toast.error('Name, email, and password are required');
       return;
     }
 
     setAdding(true);
     try {
+      const body: Record<string, unknown> = {
+        schoolId: selectedSchoolId,
+        name,
+        email: email.toLowerCase(),
+        password,
+        specialization: formData.get('specialization') || null,
+        qualification: formData.get('qualification') || null,
+        phone: formData.get('phone') || null,
+      };
+      
+      // Only include employeeNo if provided (will be auto-generated if not)
+      if (employeeNo) {
+        body.employeeNo = employeeNo;
+      }
+      
       const res = await fetch('/api/teachers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolId: selectedSchoolId,
-          name,
-          email: email.toLowerCase(),
-          password,
-          employeeNo,
-          specialization: formData.get('specialization') || null,
-          qualification: formData.get('qualification') || null,
-          phone: formData.get('phone') || null,
-        }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!res.ok) {

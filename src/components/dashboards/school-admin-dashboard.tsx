@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
 import { useTheme } from '@/hooks/use-theme';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import {
   Users, GraduationCap, CalendarCheck, Wallet, FileEdit, CreditCard,
   Megaphone, IdCard, TrendingUp, Clock, BookOpen,
@@ -133,15 +133,8 @@ export function SchoolAdminDashboard() {
   const { data: session, status } = useSession();
   const { isDark, toggleTheme } = useTheme();
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      // Redirect to login page after sign out
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Sign out error:', error);
-      toast.error('Failed to sign out. Please try again.');
-    }
+  const handleSignOut = () => {
+    window.location.href = '/api/auth/signout?callbackUrl=/login';
   };
 
   // Data states

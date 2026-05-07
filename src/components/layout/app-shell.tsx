@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useAppStore, navigationByRole, type NavItem, type DashboardView, type UserRole } from '@/store/app-store';
 import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
@@ -379,7 +379,7 @@ function SidebarContent() {
           {sidebarOpen && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-7 hover:bg-red-50 hover:text-red-600" onClick={() => { soundEffects.logout(); signOut({ callbackUrl: '/login' }); }}>
+                <Button variant="ghost" size="icon" className="size-7 hover:bg-red-50 hover:text-red-600" onClick={() => { soundEffects.logout(); window.location.href = '/api/auth/signout?callbackUrl=/login'; }}>
                   <LogOut className="size-3.5" />
                 </Button>
               </TooltipTrigger>

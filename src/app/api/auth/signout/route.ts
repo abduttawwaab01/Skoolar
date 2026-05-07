@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 
 const JWT_SECRET = process.env.NEXTAUTH_SECRET;
 
-export async function GET(request: NextRequest) {
+async function handleSignout(request: NextRequest) {
   try {
     // Get the token from the request
     const token = await getToken({ req: request, secret: JWT_SECRET });
@@ -39,4 +39,12 @@ export async function GET(request: NextRequest) {
     // Redirect to login page even on error
     return NextResponse.redirect(new URL('/login', request.url));
   }
+}
+
+export async function GET(request: NextRequest) {
+  return handleSignout(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handleSignout(request);
 }

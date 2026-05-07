@@ -9,9 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
-import { handleSilentError } from '@/lib/error-handler';
 import { useTheme } from '@/hooks/use-theme';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
+import { handleSilentError } from '@/lib/error-handler';
 import { cn } from '@/lib/utils';
 import { fadeIn, slideUp, staggerContainer, scaleIn, hoverScale } from '@/lib/motion-variants';
 import {
@@ -35,15 +35,8 @@ export function ParentDashboard() {
   const { data: session, status } = useSession();
   const { isDark, toggleTheme } = useTheme();
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      // Redirect to login page after sign out
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Sign out error:', error);
-      toast.error('Failed to sign out. Please try again.');
-    }
+  const handleSignOut = () => {
+    window.location.href = '/api/auth/signout?callbackUrl=/login';
   };
 
   useEffect(() => {

@@ -130,21 +130,25 @@ export async function POST(request: NextRequest) {
 
     const { schoolId, name, email, password, employeeNo, specialization, qualification, dateOfJoining, gender, phone, address, photo, salary } = body;
 
-    // School context: use auth's schoolId if user is not SUPER_ADMIN
-    const targetSchoolId = auth.role === 'SUPER_ADMIN' && schoolId ? schoolId : (auth.schoolId || schoolId);
+    // School context: For SCHOOL_ADMIN, force use their own schoolId
+    // For SUPER_ADMIN, use the provided schoolId or their own
+    const targetSchoolId = auth.role === 'SCHOOL_ADMIN' 
+      ? (auth.schoolId || schoolId) 
+      : (schoolId || auth.schoolId);
+    
     if (!targetSchoolId) {
       return NextResponse.json({ error: 'School ID is required' }, { status: 400 });
     }
 
-    if (!name || !email || !employeeNo) {
+    if (!name || !email) {
       return NextResponse.json(
-        { error: 'name, email, and employeeNo are required' },
+        { error: 'name and email are required' },
         { status: 400 }
       );
     }
 
     // Check if email already exists
-    const existingUser = await db.user.findUnique({ where: { email } });
+    const existingUser = await db.user.findUnique({ where: { email: email.toLowerCase() } });
     if (existingUser) {
       return NextResponse.json(
         { error: 'A user with this email already exists' },
@@ -152,9 +156,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if employee number already exists in school
+    // Auto-generate employeeNo if not provided (like /api/users does)
+    const finalEmployeeNo = employeeNo || `TCH-${Date.now().toString(36).toUpperCase()}`;
+
+    // Check if employee number already exists in school (only if employeeNo was provided or for the generated one)
     const existingEmployee = await db.teacher.findFirst({
-      where: { schoolId: targetSchoolId, employeeNo },
+      where: { schoolId: targetSchoolId, employeeNo: finalEmployeeNo },
     });
     if (existingEmployee) {
       return NextResponse.json(
@@ -209,7 +216,7 @@ export async function POST(request: NextRequest) {
       const user = await tx.user.create({
         data: {
           name,
-          email,
+          email: email.toLowerCase(),
           password: hashedPassword,
           role: 'teacher',
           schoolId: targetSchoolId,
@@ -224,7 +231,7 @@ export async function POST(request: NextRequest) {
         data: {
           schoolId: targetSchoolId,
           userId: user.id,
-          employeeNo,
+          employeeNo: finalEmployeeNo,
           specialization: specialization || null,
           qualification: qualification || null,
           dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
