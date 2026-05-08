@@ -144,7 +144,7 @@ model User {
   pushSubscriptions       PushSubscription[]
   studentProfile          Student?
   teacherProfile          Teacher?
-  school                  School?            @relation(fields: [schoolId], references: [id])
+  school                  School?            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   sessions                UserSession[]
   messagesSent            Message[]          @relation("SentMessages")
 
@@ -341,8 +341,8 @@ model Student {
   payments               Payment[]
   reportCards            ReportCard[]
   class                  Class?                     @relation(fields: [classId], references: [id])
-  school                 School                     @relation(fields: [schoolId], references: [id])
-  user                   User                       @relation(fields: [userId], references: [id])
+  school                 School                     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user                   User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   teacherComments        TeacherComment[]
   weeklyEvaluations      WeeklyEvaluation[]
   studentParents         StudentParent[]            @relation("StudentParents")
@@ -378,8 +378,8 @@ model Teacher {
   classSubjects        ClassSubject[]
   exams                Exam[]
   homeworks            Homework[]
-  school               School                     @relation(fields: [schoolId], references: [id])
-  user                 User                       @relation(fields: [userId], references: [id])
+  school               School                     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user                 User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
   comments             TeacherComment[]
   weeklyEvaluations    WeeklyEvaluation[]
   tasks                TeacherTask[]
@@ -400,8 +400,8 @@ model Parent {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   deletedAt      DateTime?
-  school         School          @relation(fields: [schoolId], references: [id])
-  user           User            @relation(fields: [userId], references: [id])
+  school         School          @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   parentStudents StudentParent[] @relation("ParentStudents")
 
   @@index([schoolId])
@@ -429,8 +429,8 @@ model Accountant {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
-  school     School    @relation(fields: [schoolId], references: [id])
-  user       User      @relation(fields: [userId], references: [id])
+  school     School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([schoolId])
 }
@@ -443,8 +443,8 @@ model Librarian {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
-  school     School    @relation(fields: [schoolId], references: [id])
-  user       User      @relation(fields: [userId], references: [id])
+  school     School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([schoolId])
 }
@@ -457,8 +457,8 @@ model Director {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
-  school     School    @relation(fields: [schoolId], references: [id])
-  user       User      @relation(fields: [userId], references: [id])
+  school     School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([schoolId])
 }

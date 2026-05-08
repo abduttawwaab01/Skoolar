@@ -155,7 +155,30 @@ export async function POST(request: NextRequest) {
         if (!schoolId || !dataType) return NextResponse.json({ success: false, message: 'Missing schoolId or dataType' }, { status: 400 });
 
         const deleteMap: Record<string, () => Promise<unknown>> = {
-          all: async () => { await db.school.delete({ where: { id: schoolId } }); },
+          all: async () => { 
+            // First delete all related data to avoid FK constraints
+            // Users (will cascade to delete Student, Teacher, Parent, Accountant, Director, Librarian)
+            const users = await db.user.findMany({ where: { schoolId }, select: { id: true } });
+            const userIds = users.map(u => u.id);
+            await db.user.deleteMany({ where: { id: { in: userIds } } });
+            
+            // Delete other school-related data
+            await db.message.deleteMany({ where: { schoolId } });
+            await db.conversation.deleteMany({ where: { schoolId } });
+            await db.announcement.deleteMany({ where: { schoolId } });
+            await db.schoolEvent.deleteMany({ where: { schoolId } });
+            await db.notification.deleteMany({ where: { schoolId } });
+            await db.payment.deleteMany({ where: { schoolId } });
+            await db.feedback.deleteMany({ where: { schoolId } });
+            await db.auditLog.deleteMany({ where: { schoolId } });
+            await db.registrationCode.deleteMany({ where: { schoolId } });
+            await db.schoolSettings.deleteMany({ where: { schoolId } });
+            await db.domainGrade.deleteMany({ where: { schoolId } });
+            await db.scoreType.deleteMany({ where: { schoolId } });
+            
+            // Finally delete the school
+            await db.school.delete({ where: { id: schoolId } });
+          },
           students: async () => { 
             // First delete related user records
             const students = await db.student.findMany({ where: { schoolId }, select: { userId: true } });
@@ -241,7 +264,13 @@ export async function POST(request: NextRequest) {
         const deleteFn = deleteMap[dataType];
         if (!deleteFn) return NextResponse.json({ success: false, message: `Unknown data type: ${dataType}` }, { status: 400 });
 
-        await deleteFn();
+        try {
+          await deleteFn();
+        } catch (deleteError) {
+          const errorMessage = deleteError instanceof Error ? deleteError.message : 'Unknown error';
+          console.error(`Delete error for ${dataType}:`, deleteError);
+          return NextResponse.json({ success: false, message: `Failed to delete ${dataType}: ${errorMessage}` }, { status: 500 });
+        }
 
         await db.dangerLog.create({
           data: {
@@ -293,22 +322,14 @@ export async function POST(request: NextRequest) {
         await db.registrationCode.deleteMany({ where: { schoolId } });
         await db.schoolSettings.deleteMany({ where: { schoolId } });
 
+        // Delete users first - with cascade deletes, this will delete related profiles
         if (keepAdmin) {
-          await db.student.deleteMany({ where: { schoolId } });
-          await db.teacher.deleteMany({ where: { schoolId } });
-          await db.parent.deleteMany({ where: { schoolId } });
-          await db.accountant.deleteMany({ where: { schoolId } });
-          await db.librarian.deleteMany({ where: { schoolId } });
-          await db.director.deleteMany({ where: { schoolId } });
+          // Keep school admin, delete all other users
           await db.user.deleteMany({ where: { schoolId, role: { not: 'SCHOOL_ADMIN' } } });
         } else {
-          await db.student.deleteMany({ where: { schoolId } });
-          await db.teacher.deleteMany({ where: { schoolId } });
-          await db.parent.deleteMany({ where: { schoolId } });
-          await db.accountant.deleteMany({ where: { schoolId } });
-          await db.librarian.deleteMany({ where: { schoolId } });
-          await db.director.deleteMany({ where: { schoolId } });
+          // Delete all users (will cascade to delete Student, Teacher, Parent, etc.)
           await db.user.deleteMany({ where: { schoolId } });
+          // Then delete school
           await db.school.delete({ where: { id: schoolId } });
         }
 
