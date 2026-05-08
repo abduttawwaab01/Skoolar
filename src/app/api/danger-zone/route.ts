@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
           db.videoCheckpoint.count({ where: { lesson: { schoolId } } }),
           db.videoCheckpointProgress.count({ where: { checkpoint: { lesson: { schoolId } } } }),
           db.teacherTask.count({ where: { schoolId } }),
-          db.teacherTaskCompletion.count({ where: { schoolId } }),
+          db.teacherTaskCompletion.count({ where: { task: { schoolId } } }),
           db.teacherPerformance.count({ where: { schoolId } }),
           db.studentPerformanceSnapshot.count({ where: { schoolId } }),
           db.leaderboard.count({ where: { schoolId } }),
