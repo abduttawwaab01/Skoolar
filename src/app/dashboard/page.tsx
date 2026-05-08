@@ -246,15 +246,22 @@ export default function DashboardPage() {
         useAppStore.getState().setSelectedSchoolId(session.user.schoolId);
       }
       
-      // Determine correct view based on role
+      // Only set default view if currentView is still at initial default
+      // This preserves the user's last active view when returning to the tab
+      const persistedView = useAppStore.getState().currentView;
+      const isDefaultView = (userRole === 'SUPER_ADMIN' && persistedView === 'super-admin-dashboard') ||
+                           (userRole !== 'SUPER_ADMIN' && persistedView === 'overview');
+      
       let viewToLoad: DashboardView;
-      if (userRole === 'SUPER_ADMIN') {
-        viewToLoad = 'super-admin-dashboard';
+      if (isDefaultView) {
+        // First time visit - set role-appropriate default
+        viewToLoad = userRole === 'SUPER_ADMIN' ? 'super-admin-dashboard' : 'overview';
+        setCurrentView(viewToLoad);
       } else {
-        viewToLoad = 'overview';
+        // Returning user - restore their last active view
+        viewToLoad = persistedView;
       }
       
-      setCurrentView(viewToLoad);
       setIsInitialLoad(false);
       setPrevView(viewToLoad);
       

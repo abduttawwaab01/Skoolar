@@ -109,7 +109,8 @@ export const useAppStore = create<AppState>()(
         theme: state.theme,
         selectedSchoolId: state.selectedSchoolId,
         sidebarOpen: state.sidebarOpen,
-        // Don't persist currentView - always reset on load based on role
+        currentView: state.currentView,
+        currentRole: state.currentRole,
       }),
     }
   )
