@@ -112,44 +112,56 @@ model RegistrationCode {
 }
 
 model User {
-  id                      String             @id @default(cuid())
-  email                   String             @unique
-  password                String?
-  name                    String
-  username                String?
-  avatar                  String?
-  phone                   String?
-  role                    String
-  schoolId                String?
-  isActive                Boolean            @default(true)
-  lastLogin               DateTime?
-  loginCount              Int                @default(0)
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
-  deletedAt               DateTime?
-  emailVerified           DateTime?
-  resetToken              String?
-  resetTokenExpiry        DateTime?
-  // Separate tokens for email verification and password reset
-  emailVerificationToken  String?
-  emailVerificationExpiry DateTime?
-  passwordResetToken      String?
-  passwordResetExpiry     DateTime?
-  accountantProfile       Accountant?
-  auditLogs               AuditLog[]         @relation("AuditLogsByUser")
-  directorProfile         Director?
-  librarianProfile        Librarian?
-  notifications           Notification[]
-  parentProfile           Parent?
-  pushSubscriptions       PushSubscription[]
-  studentProfile          Student?
-  teacherProfile          Teacher?
-  school                  School?            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  sessions                UserSession[]
-  messagesSent            Message[]          @relation("SentMessages")
-
-  @@index([schoolId])
-  @@index([role])
+   id                      String             @id @default(cuid())
+   email                   String             @unique
+   password                String?
+   name                    String
+   username                String?
+   avatar                  String?
+   phone                   String?
+   role                    String
+   schoolId                String?
+   isActive                Boolean            @default(true)
+   lastLogin               DateTime?
+   loginCount              Int                @default(0)
+   createdAt               DateTime           @default(now())
+   updatedAt               DateTime           @updatedAt
+   deletedAt               DateTime?
+   emailVerified           DateTime?
+   resetToken              String?
+   resetTokenExpiry        DateTime?
+   // Separate tokens for email verification and password reset
+   emailVerificationToken  String?
+   emailVerificationExpiry DateTime?
+   passwordResetToken      String?
+   passwordResetExpiry     DateTime?
+   // Profile fields
+   passportNumber          String?
+   dateOfBirth             DateTime?
+   gender                  String?
+   address                 String?
+   nationality             String?
+   emergencyContact        String?
+   emergencyPhone          String?
+   bloodGroup              String?
+   maritalStatus           String?
+   nextOfKin               String?
+   nextOfKinPhone          String?
+   accountantProfile       Accountant?
+   auditLogs               AuditLog[]         @relation("AuditLogsByUser")
+   directorProfile         Director?
+   librarianProfile        Librarian?
+   notifications           Notification[]
+   parentProfile           Parent?
+   pushSubscriptions       PushSubscription[]
+   studentProfile          Student?
+   teacherProfile          Teacher?
+   school                  School?            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+   sessions                UserSession[]
+   messagesSent            Message[]          @relation("SentMessages")
+ 
+   @@index([schoolId])
+   @@index([role])
 }
 
 model UserSession {

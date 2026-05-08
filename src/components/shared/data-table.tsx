@@ -189,8 +189,8 @@ function DataTable<TData, TValue>({
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border overflow-hidden">
-        <div className="overflow-x-auto">
+<div className="rounded-lg border overflow-hidden">
+  <div className="overflow-x-auto scrollbar-thin">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (

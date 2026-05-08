@@ -11,95 +11,106 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const user = await db.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        avatar: true,
-        phone: true,
-        role: true,
-        schoolId: true,
-        isActive: true,
-        lastLogin: true,
-        loginCount: true,
-        createdAt: true,
-        updatedAt: true,
-        deletedAt: true,
-        school: {
-          select: { id: true, name: true, slug: true, logo: true },
-        },
-        studentProfile: {
-          select: {
-            id: true,
-            admissionNo: true,
-            classId: true,
-            gpa: true,
-            cumulativeGpa: true,
-            rank: true,
-            behaviorScore: true,
-            isActive: true,
-            class: { select: { id: true, name: true, section: true, grade: true } },
-          },
-        },
-        teacherProfile: {
-          select: {
-            id: true,
-            employeeNo: true,
-            specialization: true,
-            qualification: true,
-            gender: true,
-            salary: true,
-            isActive: true,
-            dateOfJoining: true,
-            classes: {
-              select: { id: true, name: true, section: true, grade: true },
-            },
-            classSubjects: {
-              include: {
-                subject: { select: { id: true, name: true, code: true } },
-                class: { select: { id: true, name: true } },
-              },
-            },
-          },
-        },
-        parentProfile: {
-          select: {
-            id: true,
-            occupation: true,
-            phone: true,
-            address: true,
-            parentStudents: {
-              include: {
-                student: {
-                  select: {
-                    id: true,
-                    admissionNo: true,
-                    user: { select: { name: true } },
-                  },
-                },
-              },
-            },
-          },
-        },
-        accountantProfile: {
-          select: { id: true, employeeNo: true },
-        },
-        librarianProfile: {
-          select: { id: true, employeeNo: true },
-        },
-        directorProfile: {
-          select: { id: true, employeeNo: true },
-        },
-        _count: {
-          select: {
-            notifications: true,
-            auditLogs: true,
-          },
-        },
-      },
-    });
+     const user = await db.user.findUnique({
+       where: { id },
+       select: {
+         id: true,
+         email: true,
+         name: true,
+         avatar: true,
+         phone: true,
+         role: true,
+         schoolId: true,
+         isActive: true,
+         lastLogin: true,
+         loginCount: true,
+         createdAt: true,
+         updatedAt: true,
+         deletedAt: true,
+         passportNumber: true,
+         dateOfBirth: true,
+         gender: true,
+         address: true,
+         nationality: true,
+         emergencyContact: true,
+         emergencyPhone: true,
+         bloodGroup: true,
+         maritalStatus: true,
+         nextOfKin: true,
+         nextOfKinPhone: true,
+         school: {
+           select: { id: true, name: true, slug: true, logo: true },
+         },
+         studentProfile: {
+           select: {
+             id: true,
+             admissionNo: true,
+             classId: true,
+             gpa: true,
+             cumulativeGpa: true,
+             rank: true,
+             behaviorScore: true,
+             isActive: true,
+             class: { select: { id: true, name: true, section: true, grade: true } },
+           },
+         },
+         teacherProfile: {
+           select: {
+             id: true,
+             employeeNo: true,
+             specialization: true,
+             qualification: true,
+             gender: true,
+             salary: true,
+             isActive: true,
+             dateOfJoining: true,
+             classes: {
+               select: { id: true, name: true, section: true, grade: true },
+             },
+             classSubjects: {
+               include: {
+                 subject: { select: { id: true, name: true, code: true } },
+                 class: { select: { id: true, name: true } },
+               },
+             },
+           },
+         },
+         parentProfile: {
+           select: {
+             id: true,
+             occupation: true,
+             phone: true,
+             address: true,
+             parentStudents: {
+               include: {
+                 student: {
+                   select: {
+                     id: true,
+                     admissionNo: true,
+                     user: { select: { name: true } },
+                   },
+                 },
+               },
+             },
+           },
+         },
+         accountantProfile: {
+           select: { id: true, employeeNo: true },
+         },
+         librarianProfile: {
+           select: { id: true, employeeNo: true },
+         },
+         directorProfile: {
+           select: { id: true, employeeNo: true },
+         },
+         _count: {
+           select: {
+             notifications: true,
+             auditLogs: true,
+           },
+         },
+       },
+     });
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -138,17 +149,22 @@ export async function PUT(
       return NextResponse.json({ error: 'Cannot update a deleted user' }, { status: 410 });
     }
 
-    // School isolation - non-superadmins can only edit users in their school
-    if (currentUser.role !== 'SUPER_ADMIN') {
-      if (!currentUser.schoolId) {
-        return NextResponse.json({ error: 'School ID not found in session' }, { status: 400 });
-      }
-      if (existing.schoolId !== currentUser.schoolId) {
-        return NextResponse.json({ error: 'You can only edit users in your school' }, { status: 403 });
-      }
-    }
+     // School isolation - non-superadmins can only edit users in their school
+     if (currentUser.role !== 'SUPER_ADMIN') {
+       if (!currentUser.schoolId) {
+         return NextResponse.json({ error: 'School ID not found in session' }, { status: 400 });
+       }
+       if (existing.schoolId !== currentUser.schoolId) {
+         return NextResponse.json({ error: 'You can only edit users in your school' }, { status: 403 });
+       }
+     }
+     
+     // Prevent Parent and Student roles from editing profiles (including their own)
+     if (currentUser.role === 'PARENT' || currentUser.role === 'STUDENT') {
+       return NextResponse.json({ error: 'Parent and Student portal users cannot edit profiles' }, { status: 403 });
+     }
 
-    const { name, email, phone, avatar, role, schoolId, isActive, password } = body;
+     const { name, email, phone, avatar, role, schoolId, isActive, password, passportNumber, dateOfBirth, gender, address, nationality, emergencyContact, emergencyPhone, bloodGroup, maritalStatus, nextOfKin, nextOfKinPhone } = body;
 
     // Role change validation - School Admins cannot grant SUPER_ADMIN or SCHOOL_ADMIN
     if (role !== undefined && role !== existing.role) {
@@ -162,13 +178,24 @@ export async function PUT(
       }
     }
 
-    const updateData: Record<string, unknown> = {};
-    if (name !== undefined) updateData.name = name;
-    if (phone !== undefined) updateData.phone = phone;
-    if (avatar !== undefined) updateData.avatar = avatar;
-    if (role !== undefined) updateData.role = role;
-    if (schoolId !== undefined) updateData.schoolId = schoolId;
-    if (isActive !== undefined) updateData.isActive = isActive;
+     const updateData: Record<string, unknown> = {};
+     if (name !== undefined) updateData.name = name;
+     if (phone !== undefined) updateData.phone = phone;
+     if (avatar !== undefined) updateData.avatar = avatar;
+     if (role !== undefined) updateData.role = role;
+     if (schoolId !== undefined) updateData.schoolId = schoolId;
+     if (isActive !== undefined) updateData.isActive = isActive;
+     if (passportNumber !== undefined) updateData.passportNumber = passportNumber;
+     if (dateOfBirth !== undefined) updateData.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : null;
+     if (gender !== undefined) updateData.gender = gender;
+     if (address !== undefined) updateData.address = address;
+     if (nationality !== undefined) updateData.nationality = nationality;
+     if (emergencyContact !== undefined) updateData.emergencyContact = emergencyContact;
+     if (emergencyPhone !== undefined) updateData.emergencyPhone = emergencyPhone;
+     if (bloodGroup !== undefined) updateData.bloodGroup = bloodGroup;
+     if (maritalStatus !== undefined) updateData.maritalStatus = maritalStatus;
+     if (nextOfKin !== undefined) updateData.nextOfKin = nextOfKin;
+     if (nextOfKinPhone !== undefined) updateData.nextOfKinPhone = nextOfKinPhone;
 
     // Handle email update with uniqueness check
     if (email && email !== existing.email) {
@@ -179,10 +206,14 @@ export async function PUT(
       updateData.email = email.toLowerCase();
     }
 
-    // Handle password update
-    if (password) {
-      updateData.password = await bcrypt.hash(password, 10);
-    }
+     // Handle password update - only allow if user is editing someone else or is admin
+     if (password) {
+       // Prevent non-admin users from changing their own password via profile edit
+       if (currentUser.role !== 'SUPER_ADMIN' && currentUser.role !== 'SCHOOL_ADMIN' && id === currentUser.id) {
+         return NextResponse.json({ error: 'Password changes must be done through the password change endpoint' }, { status: 403 });
+       }
+       updateData.password = await bcrypt.hash(password, 10);
+     }
 
     const user = await db.user.update({
       where: { id },

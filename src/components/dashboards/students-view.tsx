@@ -54,18 +54,18 @@ interface ClassRecord {
 }
 
 const columns: ColumnDef<StudentRecord>[] = [
-  {
-    accessorKey: 'admissionNo',
-    header: 'Admission No',
-    cell: ({ row }) => (
-      <span className="text-xs font-mono">{row.original.admissionNo}</span>
-    ),
-  },
-  {
-    accessorKey: 'name',
-    header: 'Name',
-    cell: ({ row }) => <span className="text-sm font-medium">{row.original.name}</span>,
-  },
+{
+  accessorKey: 'admissionNo',
+  header: 'Admission No',
+  cell: ({ row }) => (
+    <span className="text-xs font-mono truncate max-w-[100px]">{row.original.admissionNo}</span>
+  ),
+},
+{
+  accessorKey: 'name',
+  header: 'Name',
+  cell: ({ row }) => <span className="text-sm font-medium truncate max-w-[150px]">{row.original.name}</span>,
+},
   {
     accessorKey: 'className',
     header: 'Class',

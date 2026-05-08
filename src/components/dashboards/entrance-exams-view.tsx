@@ -221,9 +221,9 @@ export function EntranceExamsView() {
    // Create Dialog
    const [createOpen, setCreateOpen] = React.useState(false);
    const [creating, setCreating] = React.useState(false);
-   const [createForm, setCreateForm] = React.useState({
-     title: '', type: 'assessment', description: '', totalMarks: '100', passingMarks: '50', duration: '',
-   });
+    const [createForm, setCreateForm] = React.useState({
+      title: '', type: 'assessment', description: '', totalMarks: '100', passingMarks: '50', duration: '',
+    });
 
    const confirm = useConfirm();
 
@@ -340,20 +340,23 @@ export function EntranceExamsView() {
     finally { setLoading(false); }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+    const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createForm.title || !selectedSchoolId) { toast.error('Title is required'); return; }
     setCreating(true);
     try {
+      const durationValue = createForm.duration.trim() === '' ? null : parseInt(createForm.duration);
+      const totalMarksValue = parseInt(createForm.totalMarks) || 100;
+      const passingMarksValue = parseInt(createForm.passingMarks) || 50;
       const res = await fetch('/api/entrance-exams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           schoolId: selectedSchoolId, title: createForm.title, type: createForm.type,
           description: createForm.description,
-          totalMarks: parseInt(createForm.totalMarks) || 100,
-          passingMarks: parseInt(createForm.passingMarks) || 50,
-          duration: createForm.duration ? parseInt(createForm.duration) : null,
+          totalMarks: totalMarksValue,
+          passingMarks: passingMarksValue,
+          duration: durationValue,
         })
       });
       const data = await res.json();

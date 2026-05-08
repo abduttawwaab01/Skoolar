@@ -95,23 +95,34 @@ export async function GET(request: NextRequest) {
     }
 
     const [data, total] = await Promise.all([
-      db.user.findMany({
-        where,
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          avatar: true,
-          phone: true,
-          role: true,
-          schoolId: true,
-          isActive: true,
-          lastLogin: true,
-          loginCount: true,
-          createdAt: true,
-          updatedAt: true,
-          ...include,
-        },
+       db.user.findMany({
+         where,
+         select: {
+           id: true,
+           email: true,
+           name: true,
+           avatar: true,
+           phone: true,
+           role: true,
+           schoolId: true,
+           isActive: true,
+           lastLogin: true,
+           loginCount: true,
+           createdAt: true,
+           updatedAt: true,
+           passportNumber: true,
+           dateOfBirth: true,
+           gender: true,
+           address: true,
+           nationality: true,
+           emergencyContact: true,
+           emergencyPhone: true,
+           bloodGroup: true,
+           maritalStatus: true,
+           nextOfKin: true,
+           nextOfKinPhone: true,
+           ...include,
+         },
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -140,7 +151,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, email, password, role, schoolId, phone, avatar } = body;
+     const { name, email, password, role, schoolId, phone, avatar, passportNumber, dateOfBirth, gender, address, nationality, emergencyContact, emergencyPhone, bloodGroup, maritalStatus, nextOfKin, nextOfKinPhone } = body;
 
     // School Admins cannot create SUPER_ADMIN or SCHOOL_ADMIN roles
     if (userRole === 'SCHOOL_ADMIN') {
@@ -215,19 +226,30 @@ export async function POST(request: NextRequest) {
 
     // Use transaction to ensure user + profile are created atomically
     const { user } = await db.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          name,
-          email: email.toLowerCase(),
-          password: hashedPassword,
-          role,
-          schoolId: targetSchoolId || null,
-          phone: phone || null,
-          avatar: avatar || null,
-          isActive: true,
-          emailVerified: new Date(),
-        },
-      });
+       const user = await tx.user.create({
+         data: {
+           name,
+           email: email.toLowerCase(),
+           password: hashedPassword,
+           role,
+           schoolId: targetSchoolId || null,
+           phone: phone || null,
+           avatar: avatar || null,
+           passportNumber: passportNumber || null,
+           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+           gender: gender || null,
+           address: address || null,
+           nationality: nationality || null,
+           emergencyContact: emergencyContact || null,
+           emergencyPhone: emergencyPhone || null,
+           bloodGroup: bloodGroup || null,
+           maritalStatus: maritalStatus || null,
+           nextOfKin: nextOfKin || null,
+           nextOfKinPhone: nextOfKinPhone || null,
+           isActive: true,
+           emailVerified: new Date(),
+         },
+       });
 
       // Create role-specific profile if school is assigned
       if (targetSchoolId) {

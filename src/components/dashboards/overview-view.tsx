@@ -213,32 +213,32 @@ export function OverviewView() {
               </CardTitle>
               <CardDescription className="text-xs font-medium">Real-time system & user updates</CardDescription>
             </CardHeader>
-            <CardContent className="p-4">
-              <ScrollArea className="h-[420px] pr-4">
-                <motion.div 
-                  className="space-y-3"
-                  variants={staggerContainer}
-                >
-                  {announcements.slice(0, 6).map((ann, idx) => (
-                    <motion.div
-                      key={ann.id || idx}
-                      variants={fadeIn}
-                      className="flex items-start gap-4 p-3 rounded-xl hover:bg-white/40 transition-all border border-transparent hover:border-white/50 group"
-                    >
-                      <div className={cn("size-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:rotate-12", 
-                        ann.priority === 'urgent' ? 'bg-red-50 text-red-500' : ann.priority === 'high' ? 'bg-amber-50 text-amber-500' : 'bg-emerald-50 text-emerald-500')}>
-                        <Bell className={cn("size-5", 
-                          ann.priority === 'urgent' ? 'text-red-500' : ann.priority === 'high' ? 'text-amber-500' : 'text-emerald-500')} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{ann.title}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">{new Date(ann.createdAt).toLocaleDateString()}</p>
-                      </div>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </ScrollArea>
-            </CardContent>
+<CardContent className="p-4">
+  <ScrollArea className="h-[300px] sm:h-[350px] lg:h-[420px] pr-4">
+    <motion.div 
+      className="space-y-3"
+      variants={staggerContainer}
+    >
+      {announcements.slice(0, 6).map((ann, idx) => (
+        <motion.div
+          key={ann.id || idx}
+          variants={fadeIn}
+          className="flex items-start gap-4 p-3 rounded-xl hover:bg-white/40 transition-all border border-transparent hover:border-white/50 group"
+        >
+          <div className={cn("size-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:rotate-12", 
+            ann.priority === 'urgent' ? 'bg-red-50 text-red-500' : ann.priority === 'high' ? 'bg-amber-50 text-amber-500' : 'bg-emerald-50 text-emerald-500')}>
+            <Bell className={cn("size-5", 
+              ann.priority === 'urgent' ? 'text-red-500' : ann.priority === 'high' ? 'text-amber-500' : 'text-emerald-500')} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{ann.title}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">{new Date(ann.createdAt).toLocaleDateString()}</p>
+          </div>
+        </motion.div>
+      ))}
+    </motion.div>
+  </ScrollArea>
+</CardContent>
           </Card>
         </motion.div>
       </div>

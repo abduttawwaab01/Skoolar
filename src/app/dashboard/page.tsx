@@ -94,14 +94,19 @@ const viewComponents: Record<DashboardView, () => Promise<any>> = {
   'messaging-center': () => import('@/components/dashboards/messaging-center').then(m => m.MessagingCenter),
   'weekly-evaluations': () => import('@/components/features/weekly-evaluation').then(m => m.WeeklyEvaluation),
   'entrance-exams': () => import('@/components/dashboards/entrance-exams-view').then(m => m.EntranceExamsView),
-  'year-results': () => import('@/components/dashboards/year-results-view').then(m => m.YearResultsView),
-  'job-postings': () => import('@/components/dashboards/job-postings-view').then(m => m.JobPostingsManagement),
+
   'staff-self-attendance': () => import('@/components/dashboards/staff-self-attendance').then(m => m.StaffSelfAttendance),
   'teacher-tasks': () => import('@/components/features/teacher-tasks-management').then(m => m.TeacherTasksManagement),
   'teacher-performance': () => import('@/components/features/teacher-tasks-management').then(m => m.TeacherTasksManagement),
-  'student-leaderboard': () => import('@/components/features/student-leaderboard').then(m => m.StudentLeaderboard),
-  'parent-analytics': () => import('@/components/features/parent-analytics').then(m => m.ParentAnalytics),
-  'video-checkpoints': () => import('@/components/features/parent-analytics').then(m => m.ParentAnalytics),
+   'student-leaderboard': () => import('@/components/features/student-leaderboard').then(m => m.StudentLeaderboard),
+   'parent-analytics': () => import('@/components/features/parent-analytics').then(m => m.ParentAnalytics),
+   'profile': () => import('@/components/profile/profile-view').then(m => m.ProfileView),
+   'video-checkpoints': () => import('@/components/features/parent-analytics').then(m => m.ParentAnalytics),
+   'year-results': () => import('@/components/dashboards/year-results-view').then(m => m.YearResultsView),
+   'job-postings': () => import('@/components/dashboards/job-postings-view').then(m => m.JobPostingsManagement),
+   'staff-self-attendance': () => import('@/components/dashboards/staff-self-attendance').then(m => m.StaffSelfAttendance),
+   'teacher-tasks': () => import('@/components/features/teacher-tasks-management').then(m => m.TeacherTasksManagement),
+   'teacher-performance': () => import('@/components/features/teacher-tasks-management').then(m => m.TeacherTasksManagement),
 };
 
 export default function DashboardPage() {
