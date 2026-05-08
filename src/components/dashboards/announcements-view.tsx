@@ -280,7 +280,7 @@ export function AnnouncementsView() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Dialog open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) { resetForm(); setEditItem(null); } }}>
+          {isAdmin && <Dialog open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) { resetForm(); setEditItem(null); } }}>
             <DialogTrigger asChild>
               <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700 shadow-sm">
                 <Plus className="size-4" /> Create Announcement
@@ -493,8 +493,8 @@ export function AnnouncementsView() {
               </div>
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-1">No Announcements</h3>
-            <p className="text-sm text-gray-500 mb-4">{searchQuery || filterPriority !== 'all' ? 'Try adjusting your filters' : 'Create your first announcement to keep the school community informed'}</p>
-            {!searchQuery && <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Create Announcement</Button>}
+            <p className="text-sm text-gray-500 mb-4">{searchQuery || filterPriority !== 'all' ? 'Try adjusting your filters' : 'No announcements yet'}</p>
+            {isAdmin && !searchQuery && <Button className="gap-2 bg-emerald-600 hover:bg-emerald-700" onClick={() => setAddOpen(true)}><Plus className="h-4 w-4" /> Create Announcement</Button>}
           </div>
         ) : (
           displayItems.map((item) => {

@@ -31,7 +31,7 @@ import { StudentVideoLessons } from './student-video-lessons';
 import { StudentAnalytics } from './student-analytics';
 import { StudentAchievements } from './student-achievements';
 import { StudentAIChat } from './student-ai-chat';
-import { MessagingCenter } from './messaging-center';
+
 
 // ---- Types ----
 interface ApiStudent {
@@ -337,7 +337,7 @@ export function StudentDashboard() {
             { id: 'exams', label: 'Exams' },
             { id: 'lessons', label: 'Video Hub' },
             { id: 'ai', label: 'AI Study' },
-            { id: 'messages', label: 'Messages' },
+            // Messages removed for students - they cannot chat
             { id: 'analytics', label: 'Analytics' },
             { id: 'achievements', label: 'Awards' },
           ].map(tab => (
@@ -539,7 +539,6 @@ export function StudentDashboard() {
             {activeTab === 'analytics' && <StudentAnalytics />}
             {activeTab === 'achievements' && <StudentAchievements />}
             {activeTab === 'ai' && <StudentAIChat />}
-            {activeTab === 'messages' && <MessagingCenter />}
           </motion.div>
         </AnimatePresence>
       </Tabs>

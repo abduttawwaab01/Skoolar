@@ -28,16 +28,9 @@ interface RankedStudent {
   examCount: number;
 }
 
-const xpData = { current: 2450, total: 3000, level: 7 };
-
-const achievementBadges = [
-  { name: 'Academic Excellence', icon: Trophy, earned: true, xp: 500, description: 'Maintain GPA above 3.5 for 2 consecutive terms' },
-  { name: 'Perfect Attendance', icon: CalendarCheck, earned: true, xp: 300, description: '100% attendance for a full month' },
-  { name: 'Sports Star', icon: Medal, earned: false, xp: 400, description: 'Win an inter-house sports event' },
-  { name: 'Art Master', icon: Star, earned: false, xp: 350, description: 'Create outstanding artwork selected for display' },
-  { name: 'Leadership Award', icon: Target, earned: true, xp: 450, description: 'Lead 3 or more student initiatives' },
-  { name: 'Community Service', icon: Users, earned: false, xp: 500, description: 'Complete 50 hours of community service' },
-];
+// Real achievement data will be fetched from API - placeholder for now
+const defaultXpData = null; // Will be populated from API
+const defaultAchievements = null; // Will be populated from API
 
 function LoadingSkeleton() {
   return (
@@ -81,8 +74,13 @@ export function StudentAchievements() {
     fetchLeaderboard();
   }, [fetchLeaderboard]);
 
-  const xpProgress = (xpData.current / xpData.total) * 100;
-  const earnedCount = achievementBadges.filter(b => b.earned).length;
+  // Get real XP and achievements from student's results
+  const xpData = leaderboard.find(s => s.userId === currentUser?.id)
+    ? { current: Math.round((leaderboard.find(s => s.userId === currentUser?.id)?.cumulativeGpa || 0) * 1000), total: 3000, level: Math.floor((leaderboard.find(s => s.userId === currentUser?.id)?.cumulativeGpa || 0) * 10) }
+    : { current: 0, total: 3000, level: 1 };
+  const earnedCount = leaderboard.filter(s => s.userId === currentUser?.id).length;
+
+  const xpProgress = xpData.total > 0 ? (xpData.current / xpData.total) * 100 : 0;
 
   if (loading) return <LoadingSkeleton />;
 
@@ -128,48 +126,66 @@ export function StudentAchievements() {
         </CardContent>
       </Card>
 
-      {/* Achievement Badges */}
+      {/* Achievement Badges - Show based on student rank */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base">Achievement Badges</CardTitle>
-              <CardDescription>{earnedCount} of {achievementBadges.length} earned</CardDescription>
+              <CardDescription>Earn badges by excelling in your studies!</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {achievementBadges.map(badge => (
-              <div
-                key={badge.name}
-                className={`flex items-center gap-4 rounded-xl border p-4 transition-shadow hover:shadow-md ${
-                  badge.earned ? 'border-amber-200 bg-amber-50/30' : 'border-muted bg-muted/30 opacity-60'
-                }`}
-              >
-                <div className={`flex size-14 shrink-0 items-center justify-center rounded-full ${
-                  badge.earned ? 'bg-amber-100 text-amber-600 ring-2 ring-amber-300' : 'bg-gray-100 text-gray-400'
-                }`}>
-                  {badge.earned ? <badge.icon className="size-7" /> : <Lock className="size-5" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold">{badge.name}</h3>
+          {leaderboard.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(() => {
+                const myRank = leaderboard.find(s => s.userId === currentUser?.id)?.rank || 0;
+                const myGpa = leaderboard.find(s => s.userId === currentUser?.id)?.gpa || 0;
+                const badges = [
+                  { name: 'Top Student', icon: Trophy, earned: myRank === 1, xp: 500, description: myRank === 1 ? 'Ranked #1 in class' : 'Achieve first position' },
+                  { name: 'Excellent Performance', icon: Star, earned: myGpa >= 3.5, xp: 400, description: myGpa >= 3.5 ? 'GPA 3.5 or above' : 'Maintain high GPA' },
+                  { name: 'Improver', icon: TrendingUp, earned: myRank <= 10, xp: 300, description: myRank <= 10 ? 'Top 10 in class' : 'Keep improving' },
+                  { name: 'Active Learner', icon: Target, earned: true, xp: 200, description: 'Using the platform regularly' },
+                ];
+                return badges.map(badge => (
+                  <div
+                    key={badge.name}
+                    className={`flex items-center gap-4 rounded-xl border p-4 transition-shadow hover:shadow-md ${
+                      badge.earned ? 'border-amber-200 bg-amber-50/30' : 'border-muted bg-muted/30 opacity-60'
+                    }`}
+                  >
+                    <div className={`flex size-14 shrink-0 items-center justify-center rounded-full ${
+                      badge.earned ? 'bg-amber-100 text-amber-600 ring-2 ring-amber-300' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {badge.earned ? <badge.icon className="size-7" /> : <Lock className="size-5" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-semibold">{badge.name}</h3>
+                        {badge.earned && (
+                          <Badge className="bg-amber-500 text-white text-[10px]">+{badge.xp} XP</Badge>
+                        )}
+                        {!badge.earned && (
+                          <Badge variant="outline" className="text-[10px] text-gray-400">{badge.xp} XP</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{badge.description}</p>
+                    </div>
                     {badge.earned && (
-                      <Badge className="bg-amber-500 text-white text-[10px]">+{badge.xp} XP</Badge>
-                    )}
-                    {!badge.earned && (
-                      <Badge variant="outline" className="text-[10px] text-gray-400">{badge.xp} XP</Badge>
+                      <Award className="size-5 text-amber-400 shrink-0" />
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{badge.description}</p>
-                </div>
-                {badge.earned && (
-                  <Award className="size-5 text-amber-400 shrink-0" />
-                )}
-              </div>
-            ))}
-          </div>
+                ));
+              })()}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Trophy className="size-10 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">No achievements to display yet</p>
+              <p className="text-xs mt-1">Complete exams to appear on the leaderboard</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

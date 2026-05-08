@@ -77,20 +77,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Messages array is required' }, { status: 400 });
     }
 
-    const isValidMessages = messages.every(
-      (msg) => typeof msg.content === 'string' && ['system', 'user', 'assistant'].includes(msg.role)
-    );
+    // Normalize messages - only keep user and assistant roles, filter out invalid
+    const normalizedMessages = messages
+      .filter((msg) => msg && typeof msg.content === 'string')
+      .map((msg) => ({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content,
+      }));
 
-    if (!isValidMessages) {
-      return NextResponse.json({ error: 'Invalid message format' }, { status: 400 });
+    if (normalizedMessages.length === 0) {
+      return NextResponse.json({ error: 'No valid messages to process' }, { status: 400 });
     }
 
     const systemPrompt = (role && SYSTEM_PROMPTS[role.toUpperCase()]) || DEFAULT_SYSTEM_PROMPT;
-    const userMessages = messages.filter((msg) => msg.role !== 'system');
 
     const fullMessages = [
       { role: 'system', content: systemPrompt },
-      ...userMessages,
+      ...normalizedMessages,
     ];
 
     const selectedModel = model && FREE_MODELS.includes(model) ? model : FREE_MODELS[0];
@@ -124,7 +127,11 @@ export async function POST(request: NextRequest) {
     }
 
     // All models failed
-    throw lastError;
+    console.error('[AI Chat] All models failed:', lastError);
+    return NextResponse.json(
+      { error: 'AI service temporarily unavailable. Please try again later.' },
+      { status: 503 }
+    );
   } catch (error: unknown) {
     console.error('[AI Chat API Error]', error);
     const message = error instanceof Error ? error.message : 'An unexpected error occurred';
