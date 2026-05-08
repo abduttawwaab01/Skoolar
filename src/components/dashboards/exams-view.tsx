@@ -332,8 +332,8 @@ export function ExamsView() {
           <h2 className="text-lg font-semibold">Exam Management</h2>
           <p className="text-sm text-muted-foreground">{exams.length} examinations configured</p>
         </div>
-        {isAdmin && <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
+        <Dialog open={open} onOpenChange={setOpen}>
+          {isAdmin && <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="size-4" />
               Create Exam

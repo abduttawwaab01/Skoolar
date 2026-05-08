@@ -12,13 +12,28 @@ function generateCode(): string {
   return code;
 }
 
-// GET /api/entrance-exams - List entrance exams
+// GET /api/entrance-exams - List entrance exams and registrations
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth(request);
-    if (auth instanceof NextResponse) return auth;
-
+    const authResult = await requireAuth(request);
     const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action') || '';
+
+    // Handle action-based routes
+    if (action === 'registrations') {
+      return getRegistrations(request, authResult);
+    }
+    if (action === 'my-registration') {
+      return getMyRegistration(request, authResult);
+    }
+    if (action === 'pending-count') {
+      return getPendingCount(request, authResult);
+    }
+
+    // Original list exams logic
+    if (authResult instanceof NextResponse) return authResult;
+    const auth = authResult;
+
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const schoolId = searchParams.get('schoolId') || auth.schoolId;
@@ -62,16 +77,47 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/entrance-exams - Create an entrance exam
+// POST /api/entrance-exams - Create exam or handle registration/admin actions
 export async function POST(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get('action') || '';
+  
+  // Handle action-based routes first
+  if (action === 'register') {
+    return registerForExam(request);
+  }
+  
+  // Admin actions require auth
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) return authResult;
+  const auth = authResult;
+  
+  if (!['SCHOOL_ADMIN', 'DIRECTOR', 'SUPER_ADMIN'].includes(auth.role || '')) {
+    return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+  }
+  
+  // Handle admin actions
+  if (action === 'approve-registration') {
+    return approveRegistration(request);
+  }
+  if (action === 'reject-registration') {
+    return rejectRegistration(request);
+  }
+  if (action === 'defer-registration') {
+    return deferRegistration(request);
+  }
+  if (action === 'admit-candidate') {
+    return admitCandidate(request);
+  }
+  if (action === 'accept-deferred-offer') {
+    return acceptDeferredOffer(request);
+  }
+  if (action === 'decline-deferred-offer') {
+    return declineDeferredOffer(request);
+  }
+
+  // Original create exam logic
   try {
-    const auth = await requireAuth(request);
-    if (auth instanceof NextResponse) return auth;
-
-    if (!['SCHOOL_ADMIN', 'DIRECTOR', 'SUPER_ADMIN'].includes(auth.role || '')) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-    }
-
     const body = await request.json();
     const {
       title, description, type, totalMarks, passingMarks, duration, instructions,
@@ -118,26 +164,8 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
 
-// GET /api/entrance-exams?action=registrations - Get registrations for admin
-// GET /api/entrance-exams?action=my-registration - Candidate checks their registration status
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const action = searchParams.get('action') || '';
-  
-  if (action === 'registrations') {
-    return getRegistrations(request);
-  }
-  if (action === 'my-registration') {
-    return getMyRegistration(request);
-  }
-  if (action === 'pending-count') {
-    return getPendingCount(request);
-  }
-}
-
-async function getRegistrations(request: NextRequest) {
+async function getRegistrations(request: NextRequest, authResult: unknown) {
   try {
     const auth = await requireAuth(request);
     if (auth instanceof NextResponse) return auth;
@@ -178,7 +206,7 @@ async function getRegistrations(request: NextRequest) {
   }
 }
 
-async function getMyRegistration(request: NextRequest) {
+async function getMyRegistration(request: NextRequest, authResult: unknown) {
   try {
     const auth = await requireAuth(request);
     if (auth instanceof NextResponse) return auth;
@@ -204,7 +232,7 @@ async function getMyRegistration(request: NextRequest) {
   }
 }
 
-async function getPendingCount(request: NextRequest) {
+async function getPendingCount(request: NextRequest, authResult: unknown) {
   try {
     const auth = await requireAuth(request);
     if (auth instanceof NextResponse) return auth;
@@ -224,86 +252,6 @@ async function getPendingCount(request: NextRequest) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
-
-// POST /api/entrance-exams - Handle registration and admin actions
-export async function POST(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const action = searchParams.get('action') || '';
-  
-  // Candidate registration (public endpoint - no auth required)
-  if (action === 'register') {
-    return registerForExam(request);
-  }
-  
-  // Admin actions (auth required)
-  if (action === 'approve-registration') {
-    return approveRegistration(request);
-  }
-  if (action === 'reject-registration') {
-    return rejectRegistration(request);
-  }
-  if (action === 'defer-registration') {
-    return deferRegistration(request);
-  }
-  if (action === 'admit-candidate') {
-    return admitCandidate(request);
-  }
-  if (action === 'accept-deferred-offer') {
-    return acceptDeferredOffer(request);
-  }
-  if (action === 'decline-deferred-offer') {
-    return declineDeferredOffer(request);
-  }
-  
-  // Default to original create exam
-  return createExam(request, auth);
-}
-
-// Original create exam logic extracted for reuse
-async function createExam(request: NextRequest, auth: { id: string; schoolId?: string; role?: string }) {
-  const body = await request.json();
-  const {
-    title, description, type, totalMarks, passingMarks, duration, instructions,
-    allowCalculator, calculatorMode, shuffleQuestions, shuffleOptions
-  } = body;
-  
-  let { schoolId } = body;
-  schoolId = schoolId || auth.schoolId;
-
-  if (!title || !schoolId) {
-    return NextResponse.json({ error: 'Title and School ID are required' }, { status: 400 });
-  }
-
-  // Generate a unique code
-  let isUnique = false;
-  let code = '';
-  while (!isUnique) {
-    code = generateCode();
-    const existing = await db.entranceExam.findUnique({ where: { code } });
-    if (!existing) isUnique = true;
-  }
-
-  const exam = await db.entranceExam.create({
-    data: {
-      schoolId,
-      title,
-      description: description || null,
-      code,
-      type: type || 'assessment',
-      totalMarks: totalMarks || 100,
-      passingMarks: passingMarks || 50,
-      duration: duration || null,
-      instructions: instructions || null,
-      allowCalculator: allowCalculator !== undefined ? allowCalculator : true,
-      calculatorMode: calculatorMode || 'basic',
-      shuffleQuestions: shuffleQuestions || false,
-      shuffleOptions: shuffleOptions || false,
-      isActive: true,
-    },
-  });
-
-  return NextResponse.json({ data: exam, message: 'Entrance exam created' }, { status: 201 });
 }
 
 async function registerForExam(request: NextRequest) {
