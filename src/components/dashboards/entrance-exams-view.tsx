@@ -254,6 +254,78 @@ export function EntranceExamsView() {
    const [gradingComments, setGradingComments] = React.useState('');
    const [savingGrading, setSavingGrading] = React.useState(false);
 
+  // Registration management
+  const [registrations, setRegistrations] = React.useState<Array<{
+    id: string; applicantName: string; applicantEmail: string | null; applicantPhone: string | null;
+    applicantAddress: string | null; registrationStatus: string; appliedClass: string | null;
+    deferredClass: string | null; canRetry: boolean; createdAt: string; adminNotes: string | null;
+    exam: { id: string; title: string; code: string };
+  }>>([]);
+  const [loadingRegistrations, setLoadingRegistrations] = React.useState(false);
+
+  const fetchRegistrations = async () => {
+    if (!selectedSchoolId) return;
+    setLoadingRegistrations(true);
+    try {
+      const res = await fetch(`/api/entrance-exams?action=registrations&schoolId=${selectedSchoolId}`);
+      const json = await res.json();
+      if (json.data) setRegistrations(json.data);
+    } catch (error: unknown) { handleSilentError(error); }
+    finally { setLoadingRegistrations(false); }
+  };
+
+  const handleApproveRegistration = async (attemptId: string) => {
+    try {
+      const res = await fetch('/api/entrance-exams?action=approve-registration', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success('Registration approved');
+      fetchRegistrations();
+    } catch (err: any) { toast.error(err.message || 'Failed to approve'); }
+  };
+
+  const handleRejectRegistration = async (attemptId: string, canRetry = true) => {
+    try {
+      const res = await fetch('/api/entrance-exams?action=reject-registration', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId, canRetry }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success('Registration rejected');
+      fetchRegistrations();
+    } catch (err: any) { toast.error(err.message || 'Failed to reject'); }
+  };
+
+  const handleDeferRegistration = async (attemptId: string, deferredClass: string) => {
+    try {
+      const res = await fetch('/api/entrance-exams?action=defer-registration', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId, deferredClass }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success(`Candidate deferred to ${deferredClass}`);
+      fetchRegistrations();
+    } catch (err: any) { toast.error(err.message || 'Failed to defer'); }
+  };
+
+  const handleAdmitCandidate = async (attemptId: string, admittedClass: string) => {
+    try {
+      const res = await fetch('/api/entrance-exams?action=admit-candidate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId, admittedClass }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      toast.success(`Candidate admitted to ${admittedClass}`);
+      fetchRegistrations();
+    } catch (err: any) { toast.error(err.message || 'Failed to admit'); }
+  };
+
    React.useEffect(() => { fetchExams(); }, [selectedSchoolId]);
 
   const fetchExams = async () => {
@@ -676,6 +748,9 @@ export function EntranceExamsView() {
                   <TabsTrigger value="security" className="gap-1.5">
                     <Shield className="h-3.5 w-3.5" /> Security
                   </TabsTrigger>
+                  <TabsTrigger value="registrations" className="gap-1.5" onClick={() => { if (registrations.length === 0) fetchRegistrations(); }}>
+                    <ClipboardCheck className="h-3.5 w-3.5" /> Registrations ({registrations.filter(r => r.registrationStatus === 'pending').length})
+                  </TabsTrigger>
                 </TabsList>
 
                 {/* Attempts Tab */}
@@ -858,6 +933,104 @@ export function EntranceExamsView() {
                         Save Security Settings
                       </Button>
                     </div>
+                  </ScrollArea>
+                </TabsContent>
+
+                {/* Registrations Tab */}
+                <TabsContent value="registrations" className="flex-1 overflow-hidden">
+                  <ScrollArea className="h-full px-6 pb-6">
+                    {loadingRegistrations ? (
+                      <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-emerald-500" /></div>
+                    ) : registrations.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                        <ClipboardCheck className="h-10 w-10 opacity-30" />
+                        <p className="text-sm mt-3 font-medium">No registrations yet</p>
+                        <p className="text-xs mt-1">Share the exam code with applicants to receive registrations.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4 mt-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">{registrations.length} Registration(s)</p>
+                          <Button variant="outline" size="sm" onClick={fetchRegistrations}>
+                            <RefreshCw className="h-3.5 w-3.5 mr-1" /> Refresh
+                          </Button>
+                        </div>
+                        {registrations.map(reg => (
+                          <Card key={reg.id} className="border-l-4 border-l-emerald-500">
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between">
+                                <div className="space-y-1">
+                                  <p className="font-medium">{reg.applicantName}</p>
+                                  <p className="text-sm text-muted-foreground">{reg.applicantEmail || 'No email'} · {reg.applicantPhone || 'No phone'}</p>
+                                  <div className="flex items-center gap-2 mt-2">
+                                    <Badge variant={reg.registrationStatus === 'pending' ? 'outline' : reg.registrationStatus === 'approved' ? 'default' : reg.registrationStatus === 'rejected' ? 'destructive' : 'secondary'}>
+                                      {reg.registrationStatus}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">Applied: {reg.appliedClass || 'N/A'}</span>
+                                    {reg.deferredClass && <span className="text-xs text-muted-foreground">→ Deferred: {reg.deferredClass}</span>}
+                                  </div>
+                                  {reg.adminNotes && <p className="text-xs text-muted-foreground mt-2 italic">{reg.adminNotes}</p>}
+                                </div>
+                                {reg.registrationStatus === 'pending' && (
+                                  <div className="flex gap-2">
+                                    <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => handleApproveRegistration(reg.id)}>
+                                      Approve
+                                    </Button>
+                                    <Dialog>
+                                      <DialogTrigger asChild><Button size="sm" variant="outline">Reject</Button></DialogTrigger>
+                                      <DialogContent>
+                                        <DialogHeader><DialogTitle>Reject Registration</DialogTitle></DialogHeader>
+                                        <div className="space-y-4 py-4">
+                                          <div className="flex items-center gap-2">
+                                            <input type="checkbox" id="canRetry" defaultChecked className="rounded" />
+                                            <Label htmlFor="canRetry">Can retry next year</Label>
+                                          </div>
+                                          <Button className="w-full" variant="destructive" onClick={() => handleRejectRegistration(reg.id, true)}>Reject</Button>
+                                        </div>
+                                      </DialogContent>
+                                    </Dialog>
+                                    <Dialog>
+                                      <DialogTrigger asChild><Button size="sm" variant="outline">Defer</Button></DialogTrigger>
+                                      <DialogContent>
+                                        <DialogHeader><DialogTitle>Defer to Different Class</DialogTitle></DialogHeader>
+                                        <div className="space-y-4 py-4">
+                                          <Select onValueChange={(val) => handleDeferRegistration(reg.id, val)}>
+                                            <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
+                                            <SelectContent>
+                                              {['JS1', 'JS2', 'JS3', 'SS1', 'SS2', 'SS3', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6'].map(c => (
+                                                <SelectItem key={c} value={c}>{c}</SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </DialogContent>
+                                    </Dialog>
+                                  </div>
+                                )}
+                                {reg.registrationStatus === 'approved' && (
+                                  <Dialog>
+                                    <DialogTrigger asChild><Button size="sm" className="bg-emerald-600">Admit</Button></DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader><DialogTitle>Admit Candidate</DialogTitle></DialogHeader>
+                                      <div className="space-y-4 py-4">
+                                        <Select onValueChange={(val) => handleAdmitCandidate(reg.id, val)}>
+                                          <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
+                                          <SelectContent>
+                                            {['JS1', 'JS2', 'JS3', 'SS1', 'SS2', 'SS3', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6'].map(c => (
+                                              <SelectItem key={c} value={c}>{c}</SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
                   </ScrollArea>
                 </TabsContent>
               </Tabs>

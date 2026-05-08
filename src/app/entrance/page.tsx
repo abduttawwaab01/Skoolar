@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { School, ArrowRight, CheckCircle2, AlertTriangle, Timer, ChevronRight, Shield, Lock, Eye, Camera } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 // ---- Types ----
 interface ExamQuestion {
@@ -30,10 +31,31 @@ interface ExamData {
   securitySettings: Record<string, boolean | number> | null;
 }
 
-type Step = 'code-entry' | 'bio-data' | 'exam-room' | 'submitted';
+type Step = 'code-entry' | 'registration' | 'pending-approval' | 'rejected' | 'deferred-offer' | 'bio-data' | 'exam-room' | 'submitted';
+
+interface RegistrationData {
+  id: string;
+  entranceExamId: string;
+  applicantName: string;
+  applicantEmail: string | null;
+  applicantPhone: string | null;
+  applicantAddress: string | null;
+  registrationStatus: string;
+  appliedClass: string | null;
+  deferredClass: string | null;
+  canRetry: boolean;
+  admittedAt: string | null;
+  deferredOfferAccepted: boolean | null;
+  adminNotes: string | null;
+  exam: ExamData;
+}
 
 // ---- Step 1: Code Entry ----
-function CodeEntryStep({ onValidated }: { onValidated: (exam: ExamData) => void }) {
+function CodeEntryStep({ onValidated, onShowRegistration, onShowStatus }: { 
+  onValidated: (exam: ExamData) => void; 
+  onShowRegistration: (exam: ExamData) => void;
+  onShowStatus: (registration: RegistrationData) => void;
+}) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -42,6 +64,7 @@ function CodeEntryStep({ onValidated }: { onValidated: (exam: ExamData) => void 
     if (!code.trim()) return;
     setLoading(true);
     try {
+      // First validate the exam code
       const res = await fetch('/api/public/entrance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -49,7 +72,32 @@ function CodeEntryStep({ onValidated }: { onValidated: (exam: ExamData) => void 
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Invalid code');
-      onValidated(json.data);
+      
+      const examData = json.data;
+      
+      // Check if user is logged in and has a registration
+      const sessionRes = await fetch('/api/auth/session');
+      const session = await sessionRes.json();
+      
+      if (session?.user?.id) {
+        // Check for existing registration
+        const regRes = await fetch(`/api/entrance-exams?action=my-registration`, {
+          headers: { 'Cookie': document.cookie }
+        });
+        const regJson = await regRes.json();
+        
+        if (regJson.data) {
+          const reg = regJson.data;
+          if (reg.entranceExamId === examData.id) {
+            // Already registered for this exam
+            onShowStatus({ ...reg, exam: examData });
+            return;
+          }
+        }
+      }
+      
+      // Not registered - show registration form
+      onShowRegistration(examData);
     } catch (err: any) {
       toast.error(err.message || 'Invalid or expired exam code');
     } finally {
@@ -103,6 +151,247 @@ function CodeEntryStep({ onValidated }: { onValidated: (exam: ExamData) => void 
             </Link>
           </div>
         </form>
+      </div>
+    </motion.div>
+  );
+}
+
+// ---- Registration Step ----
+function RegistrationStep({ exam, onRegistered, onBack }: { 
+  exam: ExamData; 
+  onRegistered: (registration: RegistrationData) => void;
+  onBack: () => void;
+}) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [appliedClass, setAppliedClass] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !address.trim()) {
+      toast.error('Name and address are required.');
+      return;
+    }
+    setLoading(true);
+    try {
+      // Get session to check if logged in
+      const sessionRes = await fetch('/api/auth/session');
+      const session = await sessionRes.json();
+      const userId = session?.user?.id || null;
+      
+      const res = await fetch('/api/entrance-exams?action=register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          examId: exam.id,
+          applicantName: name,
+          applicantEmail: email || null,
+          applicantPhone: phone || null,
+          applicantAddress: address,
+          appliedClass: appliedClass || null,
+          userId,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Registration failed');
+      toast.success('Registration submitted! Please wait for approval.');
+      onRegistered({ ...json.data, exam });
+    } catch (err: any) {
+      toast.error(err.message || 'Registration failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const classOptions = ['JS1', 'JS2', 'JS3', 'SS1', 'SS2', 'SS3', 'Primary 1', 'Primary 2', 'Primary 3', 'Primary 4', 'Primary 5', 'Primary 6'];
+
+  return (
+    <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-lg mx-auto">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100">
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            {exam.school.logo ? (
+              <img src={exam.school.logo} alt={exam.school.name} className="w-10 h-10 rounded-lg" />
+            ) : (
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: exam.school.primaryColor + '20' }}>
+                <School className="h-5 w-5" style={{ color: exam.school.primaryColor }} />
+              </div>
+            )}
+            <div>
+              <h3 className="font-bold text-gray-900">{exam.school.name}</h3>
+              <p className="text-sm text-gray-500">{exam.title} · Registration</p>
+            </div>
+          </div>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Class Applying For <span className="text-red-500">*</span></label>
+            <select value={appliedClass} onChange={e => setAppliedClass(e.target.value)} required
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none">
+              <option value="">Select class</option>
+              {classOptions.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Full Name <span className="text-red-500">*</span></label>
+            <input value={name} onChange={e => setName(e.target.value)} type="text" placeholder="Enter your full name" required
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Email</label>
+              <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="your@email.com"
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Phone</label>
+              <input value={phone} onChange={e => setPhone(e.target.value)} type="tel" placeholder="Phone number"
+                className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Address <span className="text-red-500">*</span></label>
+            <textarea value={address} onChange={e => setAddress(e.target.value)} placeholder="Your full address" required rows={2}
+              className="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:outline-none" />
+          </div>
+          <div className="flex gap-3">
+            <Button type="button" variant="outline" onClick={onBack} className="flex-1">Back</Button>
+            <Button type="submit" disabled={loading} className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+              {loading ? 'Submitting...' : 'Submit Registration'}
+            </Button>
+          </div>
+        </form>
+      </div>
+    </motion.div>
+  );
+}
+
+// ---- Pending Approval Step ----
+function PendingApprovalStep({ registration, onBack }: { registration: RegistrationData; onBack: () => void }) {
+  return (
+    <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-md mx-auto">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center">
+        <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Timer className="h-8 w-8 text-amber-600" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Registration Pending</h2>
+        <p className="text-gray-500 mb-6">
+          Your registration for <span className="font-semibold">{registration.exam.title}</span> is being reviewed.
+          You will be notified once your application is approved.
+        </p>
+        <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+          <p className="text-sm text-gray-600"><span className="font-medium">Name:</span> {registration.applicantName}</p>
+          <p className="text-sm text-gray-600"><span className="font-medium">Class:</span> {registration.appliedClass || 'N/A'}</p>
+          <p className="text-sm text-gray-600"><span className="font-medium">Applied:</span> {new Date(registration.createdAt).toLocaleDateString()}</p>
+        </div>
+        <Button variant="outline" onClick={onBack}>Back to Home</Button>
+      </div>
+    </motion.div>
+  );
+}
+
+// ---- Rejected Step ----
+function RejectedStep({ registration, onBack }: { registration: RegistrationData; onBack: () => void }) {
+  return (
+    <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-md mx-auto">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center">
+        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertTriangle className="h-8 w-8 text-red-600" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Application Not Approved</h2>
+        <p className="text-gray-500 mb-4">
+          Unfortunately, your application for <span className="font-semibold">{registration.exam.title}</span> was not approved.
+        </p>
+        {registration.adminNotes && (
+          <div className="bg-red-50 rounded-lg p-4 mb-6 text-left">
+            <p className="text-sm text-red-700">{registration.adminNotes}</p>
+          </div>
+        )}
+        {registration.canRetry && (
+          <p className="text-sm text-gray-500 mb-6">
+            You may reapply during the next admission cycle.
+          </p>
+        )}
+        <Button variant="outline" onClick={onBack}>Back to Home</Button>
+      </div>
+    </motion.div>
+  );
+}
+
+// ---- Deferred Offer Step ----
+function DeferredOfferStep({ registration, onAccept, onDecline, onBack }: { 
+  registration: RegistrationData; 
+  onAccept: () => void;
+  onDecline: () => void;
+  onBack: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const handleAccept = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/entrance-exams?action=accept-deferred-offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to accept offer');
+      toast.success(`You have accepted the offer to join ${registration.deferredClass}!`);
+      onAccept();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to accept offer');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/entrance-exams?action=decline-deferred-offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to decline offer');
+      toast.info('You have declined the offer.');
+      onDecline();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to decline offer');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} className="w-full max-w-md mx-auto">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center">
+        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <School className="h-8 w-8 text-blue-600" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">Class Adjustment Offer</h2>
+        <p className="text-gray-500 mb-4">
+          The school has offered you admission to <span className="font-bold text-lg">{registration.deferredClass}</span> instead of your applied class.
+        </p>
+        {registration.adminNotes && (
+          <div className="bg-blue-50 rounded-lg p-4 mb-6 text-left">
+            <p className="text-sm text-blue-700">{registration.adminNotes}</p>
+          </div>
+        )}
+        <div className="space-y-3">
+          <Button onClick={handleAccept} disabled={loading} className="w-full bg-emerald-600 hover:bg-emerald-700">
+            Accept Offer - Join {registration.deferredClass}
+          </Button>
+          <Button variant="outline" onClick={handleDecline} disabled={loading} className="w-full">
+            Decline - Try Next Cycle
+          </Button>
+        </div>
+        <button onClick={onBack} className="mt-4 text-sm text-gray-500 hover:text-gray-700">
+          Back to Home
+        </button>
       </div>
     </motion.div>
   );
@@ -567,10 +856,38 @@ export default function EntrancePage() {
   const [exam, setExam] = useState<ExamData | null>(null);
   const [bio, setBio] = useState<Record<string, string>>({});
   const [finalScore, setFinalScore] = useState(0);
+  const [registration, setRegistration] = useState<RegistrationData | null>(null);
 
   const handleValidated = (e: ExamData) => {
     setExam(e);
     setStep('bio-data');
+  };
+
+  const handleShowRegistration = (e: ExamData) => {
+    setExam(e);
+    setStep('registration');
+  };
+
+  const handleRegistered = (reg: RegistrationData) => {
+    setRegistration(reg);
+    setStep('pending-approval');
+  };
+
+  const handleShowStatus = (reg: RegistrationData) => {
+    setRegistration(reg);
+    setExam(reg.exam);
+    if (reg.registrationStatus === 'pending') {
+      setStep('pending-approval');
+    } else if (reg.registrationStatus === 'rejected') {
+      setStep('rejected');
+    } else if (reg.registrationStatus === 'deferred') {
+      setStep('deferred-offer');
+    } else if (reg.registrationStatus === 'approved') {
+      setStep('bio-data');
+    } else if (reg.registrationStatus === 'admitted') {
+      toast.success('You have been admitted! You can now access the student portal.');
+      setStep('code-entry');
+    }
   };
 
   const handleBio = (b: Record<string, string>) => {
@@ -581,6 +898,12 @@ export default function EntrancePage() {
   const handleSubmitted = (score: number) => {
     setFinalScore(score);
     setStep('submitted');
+  };
+
+  const goBack = () => {
+    setStep('code-entry');
+    setExam(null);
+    setRegistration(null);
   };
 
   return (
@@ -609,20 +932,20 @@ export default function EntrancePage() {
       {step !== 'exam-room' && step !== 'submitted' && (
         <div className="max-w-lg mx-auto px-4 pt-8 pb-4">
           <div className="flex items-center gap-2 justify-center">
-            {['code-entry', 'bio-data', 'exam-room'].map((s, i) => (
+            {['code-entry', 'registration', 'exam-room'].map((s, i) => (
               <React.Fragment key={s}>
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                   step === s ? 'bg-emerald-600 text-white' :
-                  ['code-entry', 'bio-data', 'exam-room'].indexOf(step) > i ? 'bg-emerald-200 text-emerald-700' :
+                  ['code-entry', 'registration', 'exam-room'].indexOf(step) > i ? 'bg-emerald-200 text-emerald-700' :
                   'bg-gray-200 text-gray-500'
                 }`}>{i + 1}</div>
-                {i < 2 && <div className={`flex-1 h-0.5 max-w-12 ${['code-entry', 'bio-data', 'exam-room'].indexOf(step) > i ? 'bg-emerald-400' : 'bg-gray-200'}`} />}
+                {i < 2 && <div className={`flex-1 h-0.5 max-w-12 ${['code-entry', 'registration', 'exam-room'].indexOf(step) > i ? 'bg-emerald-400' : 'bg-gray-200'}`} />}
               </React.Fragment>
             ))}
           </div>
           <div className="flex justify-between mt-1 text-[10px] text-gray-400 px-1">
-            <span>Verify Code</span>
-            <span>Your Info</span>
+            <span>Enter Code</span>
+            <span>Register</span>
             <span>Take Exam</span>
           </div>
         </div>
@@ -630,7 +953,11 @@ export default function EntrancePage() {
 
       <main className={`${step !== 'exam-room' ? 'max-w-2xl mx-auto px-4 py-8' : ''}`}>
         <AnimatePresence mode="wait">
-          {step === 'code-entry' && <CodeEntryStep onValidated={handleValidated} />}
+          {step === 'code-entry' && <CodeEntryStep onValidated={handleValidated} onShowRegistration={handleShowRegistration} onShowStatus={handleShowStatus} />}
+          {step === 'registration' && exam && <RegistrationStep exam={exam} onRegistered={handleRegistered} onBack={goBack} />}
+          {step === 'pending-approval' && registration && <PendingApprovalStep registration={registration} onBack={goBack} />}
+          {step === 'rejected' && registration && <RejectedStep registration={registration} onBack={goBack} />}
+          {step === 'deferred-offer' && registration && <DeferredOfferStep registration={registration} onAccept={goBack} onDecline={goBack} onBack={goBack} />}
           {step === 'bio-data' && exam && <BioDataStep exam={exam} onContinue={handleBio} />}
           {step === 'exam-room' && exam && <ExamRoom exam={exam} bio={bio} onSubmitted={handleSubmitted} />}
           {step === 'submitted' && exam && <SubmittedScreen score={finalScore} total={exam.totalMarks} school={exam.school.name} />}
