@@ -47,6 +47,7 @@ interface RegistrationData {
   admittedAt: string | null;
   deferredOfferAccepted: boolean | null;
   adminNotes: string | null;
+  createdAt: string;
   exam: ExamData;
 }
 

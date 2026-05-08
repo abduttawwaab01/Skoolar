@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
           lessonQuizzes, lessonQuizQuestions, lessonQuizAttempts,
           entranceExams, entranceExamQuestions, entranceExamAttempts,
           videoCheckpoints, videoCheckpointProgress, teacherTasks, teacherTaskCompletions,
-          teacherPerformance, studentSnapshots, leaderboards, performanceBadges, studentBadges,
+          teacherPerformance, studentSnapshots, leaderboards, performanceBadges,
           encouragementMessages,
         ] = await Promise.all([
           db.student.count({ where: { schoolId } }),
@@ -81,7 +81,6 @@ export async function GET(request: NextRequest) {
           db.studentPerformanceSnapshot.count({ where: { schoolId } }),
           db.leaderboard.count({ where: { schoolId } }),
           db.performanceBadge.count({ where: { schoolId } }),
-          db.studentBadge.count({ where: { badge: { schoolId } } }),
           db.encouragementMessage.count({ where: { schoolId } }),
         ]);
 
@@ -99,7 +98,7 @@ export async function GET(request: NextRequest) {
           domainGrades, scoreTypes, registrationCodes, schoolSettings,
           messages, conversations, videoCheckpoints, videoCheckpointProgress,
           teacherTasks, teacherTaskCompletions, teacherPerformance, studentSnapshots,
-          leaderboards, performanceBadges, studentBadges, encouragementMessages,
+          leaderboards, performanceBadges, encouragementMessages,
           entranceExams, entranceExamQuestions, entranceExamAttempts,
           homeworkQuestions, homeworkAnswers,
         }});
@@ -226,19 +225,16 @@ export async function POST(request: NextRequest) {
           video_checkpoint_progress: async () => { 
             const lessons = await db.videoLesson.findMany({ where: { schoolId }, select: { id: true } });
             const lessonIds = lessons.map(l => l.id);
-            await db.videoCheckpointProgress.deleteMany({ where: { checkpoint: { lesson: { id: { in: lessonIds } } } } });
+            const checkpoints = await db.videoCheckpoint.findMany({ where: { lessonId: { in: lessonIds } }, select: { id: true } });
+            const checkpointIds = checkpoints.map(c => c.id);
+            await db.videoCheckpointProgress.deleteMany({ where: { checkpointId: { in: checkpointIds } } });
           },
           teacher_tasks: async () => { await db.teacherTask.deleteMany({ where: { schoolId } }); },
-          teacher_task_completions: async () => { await db.teacherTaskCompletion.deleteMany({ where: { schoolId } }); },
+          teacher_task_completions: async () => { await db.teacherTaskCompletion.deleteMany({ where: { task: { schoolId } } }); },
           teacher_performance: async () => { await db.teacherPerformance.deleteMany({ where: { schoolId } }); },
           student_snapshots: async () => { await db.studentPerformanceSnapshot.deleteMany({ where: { schoolId } }); },
           leaderboards: async () => { await db.leaderboard.deleteMany({ where: { schoolId } }); },
-          performance_badges: async () => { 
-            const badges = await db.performanceBadge.findMany({ where: { schoolId }, select: { id: true } });
-            const badgeIds = badges.map(b => b.id);
-            await db.studentBadge.deleteMany({ where: { badgeId: { in: badgeIds } } });
-            await db.performanceBadge.deleteMany({ where: { schoolId } });
-          },
+          performance_badges: async () => { await db.performanceBadge.deleteMany({ where: { schoolId } }); },
           encouragement_messages: async () => { await db.encouragementMessage.deleteMany({ where: { schoolId } }); },
         };
 

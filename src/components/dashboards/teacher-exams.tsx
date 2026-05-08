@@ -1641,7 +1641,7 @@ export function TeacherExams() {
         {isAdmin && <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button><Plus className="size-4 mr-2" /> Create Exam</Button>
-          </DialogTrigger>}
+          </DialogTrigger>
           <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Exam</DialogTitle>
@@ -1717,6 +1717,7 @@ export function TeacherExams() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        }
       </div>
 
       {/* Search */}

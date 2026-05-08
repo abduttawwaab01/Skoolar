@@ -63,7 +63,7 @@ export function ParentDashboard() {
         }
         setChildren(childrenData);
 
-        const childClassIds = [...new Set(childrenData.filter(c => c.classId).map(c => c.classId))].join(',');
+        const childClassIds = [...new Set(childrenData.filter(c => c.class).map(c => c.class?.id))].join(',');
 
         if (paymentsRes.ok) {
           const json = await paymentsRes.json();
