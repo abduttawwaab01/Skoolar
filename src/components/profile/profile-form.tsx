@@ -53,10 +53,8 @@ export function ProfileForm({
         dateOfBirth: initialData.dateOfBirth 
           ? typeof initialData.dateOfBirth === 'string'
             ? initialData.dateOfBirth.split('T')[0] 
-            : initialData.dateOfBirth !== null && 
-              typeof initialData.dateOfBirth === 'object' && 
-              initialData.dateOfBirth instanceof Date
-              ? initialData.dateOfBirth.toISOString().split('T')[0]
+            : (initialData.dateOfBirth as unknown) instanceof Date
+              ? ((initialData.dateOfBirth as unknown) as Date).toISOString().split('T')[0]
               : null
           : null,
       gender: initialData.gender ?? null,
