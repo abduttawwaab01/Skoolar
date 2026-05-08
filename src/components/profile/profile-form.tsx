@@ -43,6 +43,7 @@ export function ProfileForm({
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
+    setValue,
   } = useForm<ProfileFormValues>({
     defaultValues: {
       name: initialData.name || '',
@@ -52,8 +53,10 @@ export function ProfileForm({
         dateOfBirth: initialData.dateOfBirth 
           ? typeof initialData.dateOfBirth === 'string'
             ? initialData.dateOfBirth.split('T')[0] 
-            : initialData.dateOfBirth && typeof initialData.dateOfBirth === 'object'
-              ? (initialData.dateOfBirth as Date).toISOString().split('T')[0]
+            : initialData.dateOfBirth !== null && 
+              typeof initialData.dateOfBirth === 'object' && 
+              initialData.dateOfBirth instanceof Date
+              ? initialData.dateOfBirth.toISOString().split('T')[0]
               : null
           : null,
       gender: initialData.gender ?? null,
@@ -166,8 +169,6 @@ export function ProfileForm({
           <Label>Full Name</Label>
           <Input 
             {...register('name', { required: 'Name is required' })}
-            value={initialData.name || ''}
-            onChange={e => register().onChange(e.target.value)}
           />
           {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
@@ -182,8 +183,6 @@ export function ProfileForm({
                 message: 'Invalid email format'
               }
             })}
-            value={initialData.email || ''}
-            onChange={e => register().onChange(e.target.value)}
           />
           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
@@ -191,16 +190,12 @@ export function ProfileForm({
           <Label>Phone</Label>
           <Input 
             {...register('phone')}
-            value={initialData.phone ?? ''}
-            onChange={e => register().onChange(e.target.value)}
           />
         </div>
         <div>
           <Label>Passport Number</Label>
           <Input 
             {...register('passportNumber')}
-            value={initialData.passportNumber ?? ''}
-            onChange={e => register().onChange(e.target.value)}
           />
         </div>
         <div>
@@ -208,16 +203,13 @@ export function ProfileForm({
           <Input 
             type="date"
             {...register('dateOfBirth')}
-            value={initialData.dateOfBirth ?? ''}
-            onChange={e => register().onChange(e.target.value)}
           />
         </div>
         <div>
           <Label>Gender</Label>
           <Select 
-            {...register('gender')}
-            value={initialData.gender ?? ''}
-            onValueChange={(value) => register().onChange(value)}
+            defaultValue={initialData.gender ?? ''}
+            onValueChange={(value) => setValue('gender', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select gender" />
@@ -235,40 +227,31 @@ export function ProfileForm({
           <Label>Address</Label>
           <Textarea 
             {...register('address')}
-            value={initialData.address ?? ''}
-            onChange={e => register().onChange(e.target.value)}
           />
         </div>
         <div>
           <Label>Nationality</Label>
           <Input 
             {...register('nationality')}
-            value={initialData.nationality ?? ''}
-            onChange={e => register().onChange(e.target.value)}
           />
         </div>
         <div>
           <Label>Emergency Contact</Label>
           <Input 
             {...register('emergencyContact')}
-            value={initialData.emergencyContact ?? ''}
-            onChange={e => register().onChange(e.target.value)}
           />
         </div>
         <div>
           <Label>Emergency Phone</Label>
           <Input 
             {...register('emergencyPhone')}
-            value={initialData.emergencyPhone ?? ''}
-            onChange={e => register().onChange(e.target.value)}
           />
         </div>
         <div>
           <Label>Blood Group</Label>
           <Select 
-            {...register('bloodGroup')}
-            value={initialData.bloodGroup ?? ''}
-            onValueChange={(value) => register().onChange(value)}
+            defaultValue={initialData.bloodGroup ?? ''}
+            onValueChange={(value) => setValue('bloodGroup', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select blood group" />
@@ -290,9 +273,8 @@ export function ProfileForm({
         <div>
           <Label>Marital Status</Label>
           <Select 
-            {...register('maritalStatus')}
-            value={initialData.maritalStatus ?? ''}
-            onValueChange={(value) => register().onChange(value)}
+            defaultValue={initialData.maritalStatus ?? ''}
+            onValueChange={(value) => setValue('maritalStatus', value)}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select marital status" />
@@ -311,16 +293,12 @@ export function ProfileForm({
           <Label>Next of Kin</Label>
           <Input 
             {...register('nextOfKin')}
-            value={initialData.nextOfKin ?? ''}
-            onChange={e => register().onChange(e.target.value)}
           />
         </div>
         <div>
           <Label>Next of Kin Phone</Label>
           <Input 
             {...register('nextOfKinPhone')}
-            value={initialData.nextOfKinPhone ?? ''}
-            onChange={e => register().onChange(e.target.value)}
           />
         </div>
       </div>
