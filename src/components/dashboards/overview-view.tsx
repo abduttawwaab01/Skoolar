@@ -14,6 +14,15 @@ import { motion } from 'framer-motion';
  import { fadeIn, slideUp, staggerContainer, scaleIn, hoverScale } from '@/lib/motion-variants';
  import { useAnalytics } from '@/hooks/use-api';
 
+ // Get today's date only on client side to avoid hydration mismatch
+ function useTodayDate() {
+   const [today, setToday] = useState<string>('');
+   useEffect(() => {
+     setToday(new Date().toISOString());
+   }, []);
+   return today;
+ }
+
  const quickActions = [
   { icon: Users, label: 'Manage Students', view: 'students' as const, color: 'bg-blue-50 border-blue-200 hover:bg-blue-100', iconColor: 'text-blue-600' },
   { icon: BookOpen, label: 'Academic', view: 'academic-structure' as const, color: 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100', iconColor: 'text-emerald-600' },
@@ -30,6 +39,7 @@ export function OverviewView() {
   const { currentRole, setCurrentView, selectedTermId, selectedSchoolId } = useAppStore();
   const { data: analyticsData, isLoading, refetch } = useAnalytics();
   const [announcements, setAnnouncements] = useState<Array<{ id: string; title: string; content: string; priority: string; createdAt: string }>>([]);
+  const todayDate = useTodayDate();
   
   // Fetch announcements
   useEffect(() => {
@@ -89,7 +99,7 @@ export function OverviewView() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="bg-white/50 backdrop-blur-sm border-gray-200 py-1.5 px-3 rounded-lg font-bold text-xs shadow-sm uppercase tracking-wider">
-            <Clock className="size-3.5 mr-1.5 text-emerald-500" /> <SafeFormattedDate date={new Date()} options={{ month: 'short', day: 'numeric', year: 'numeric' }} mode="toLocaleDateString" />
+            <Clock className="size-3.5 mr-1.5 text-emerald-500" /> {todayDate ? <SafeFormattedDate date={todayDate} options={{ month: 'short', day: 'numeric', year: 'numeric' }} mode="toLocaleDateString" /> : '...'}
           </Badge>
         </div>
        </motion.div>

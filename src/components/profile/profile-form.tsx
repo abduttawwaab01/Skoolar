@@ -213,7 +213,6 @@ export function ProfileForm({
               <SelectValue placeholder="Select gender" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Select gender</SelectItem>
               <SelectItem value="Male">Male</SelectItem>
               <SelectItem value="Female">Female</SelectItem>
               <SelectItem value="Other">Other</SelectItem>
@@ -255,7 +254,6 @@ export function ProfileForm({
               <SelectValue placeholder="Select blood group" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Select blood group</SelectItem>
               <SelectItem value="A+">A+</SelectItem>
               <SelectItem value="A-">A-</SelectItem>
               <SelectItem value="B+">B+</SelectItem>
@@ -278,7 +276,6 @@ export function ProfileForm({
               <SelectValue placeholder="Select marital status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Select marital status</SelectItem>
               <SelectItem value="Single">Single</SelectItem>
               <SelectItem value="Married">Married</SelectItem>
               <SelectItem value="Divorced">Divorced</SelectItem>
