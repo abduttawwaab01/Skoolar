@@ -2,6 +2,9 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
+// Cache plans for 60 seconds - rarely changes
+export const revalidate = 60;
+
 // GET /api/plans - List all subscription plans
 export async function GET(request: NextRequest) {
   try {

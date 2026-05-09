@@ -2,6 +2,9 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
+// Cache registration codes for 30 seconds
+export const revalidate = 30;
+
 // GET /api/registration-codes - List registration codes
 export async function GET(request: NextRequest) {
   try {

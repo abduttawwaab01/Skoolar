@@ -2,6 +2,9 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireRole, requireAuth } from '@/lib/auth-middleware';
 
+// Cache schools list for 30 seconds to reduce database load
+export const revalidate = 30;
+
 const GOOGLE_SHEET_URL = process.env.GOOGLE_SHEET_URL || '';
 
 async function submitToGoogleSheet(data: Record<string, unknown>) {

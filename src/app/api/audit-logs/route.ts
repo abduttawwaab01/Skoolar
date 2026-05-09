@@ -1,6 +1,9 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
+// Cache audit logs for 30 seconds
+export const revalidate = 30;
+
 // GET /api/audit-logs - List audit logs with filters
 export async function GET(request: NextRequest) {
   try {

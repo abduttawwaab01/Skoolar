@@ -236,14 +236,19 @@ export function SuperAdminDashboard() {
      }
    }, []);
 
-   useEffect(() => {
-     fetchSchools();
-     fetchCodes();
-     fetchLogs();
-     fetchNotifications();
-     fetchPlans();
-     fetchHealthMetrics();
-   }, [fetchSchools, fetchCodes, fetchLogs, fetchNotifications, fetchPlans, fetchHealthMetrics]);
+useEffect(() => {
+      // Fetch all data in parallel for better performance
+      Promise.all([
+        fetchSchools(),
+        fetchCodes(),
+        fetchLogs(),
+        fetchNotifications(),
+        fetchPlans(),
+        fetchHealthMetrics()
+      ]).catch(err => {
+        console.error('Error fetching dashboard data:', err);
+      });
+    }, [fetchSchools, fetchCodes, fetchLogs, fetchNotifications, fetchPlans, fetchHealthMetrics]);
 
   const isLoading = loadingSchools || loadingCodes || loadingLogs || loadingNotifs;
   const hasError = errorSchools || errorCodes || errorLogs || errorNotifs;
