@@ -185,6 +185,7 @@ export default function DashboardPage() {
 
   const [prevView, setPrevView] = useState<DashboardView | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   // Load component when currentView changes (after initial setup)
   useEffect(() => {
@@ -217,6 +218,11 @@ export default function DashboardPage() {
     
     loadComponent();
   }, [currentView, session, prefetchViewData, prevView, isInitialLoad]);
+
+  // Track mount status for hydration safety
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Initial setup on mount
   useEffect(() => {

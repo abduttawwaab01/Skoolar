@@ -264,12 +264,13 @@ function AnimatedCounter({ value, label, icon: Icon }: { value: number; label: s
 }
 
 function FloatingParticle({ delay, size, left }: { delay: number; size: number; left: number }) {
+  const duration = 6 + (size % 4);
   return (
     <div
       className="absolute rounded-full bg-white/20 animate-float pointer-events-none"
       style={{
         width: size, height: size, left: `${left}%`, bottom: '-10px',
-        animationDelay: `${delay}s`, animationDuration: `${6 + Math.random() * 4}s`,
+        animationDelay: `${delay}s`, animationDuration: `${duration}s`,
       }}
     />
   );
@@ -1366,7 +1367,7 @@ export default function LearningHubPage() {
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-transparent to-teal-500/20 animate-gradient-x" />
           {/* Floating particles */}
           {[...Array(8)].map((_, i) => (
-            <FloatingParticle key={i} delay={i * 0.8} size={4 + Math.random() * 8} left={10 + Math.random() * 80} />
+            <FloatingParticle key={i} delay={i * 0.8} size={4 + (i % 5) * 2} left={10 + (i * 10) % 80} />
           ))}
           <div className="relative max-w-7xl mx-auto px-4 py-10 md:py-16">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
