@@ -1,5 +1,6 @@
 'use client';
 
+import React, { memo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { type LucideIcon, ArrowUpRight, ArrowDownRight, Minus, TrendingUp } from 'lucide-react';
@@ -17,7 +18,7 @@ interface KpiCardProps {
   emoji?: string;
 }
 
-function KpiCard({
+const KpiCardComponent = ({
   title,
   value,
   change,
@@ -28,7 +29,7 @@ function KpiCard({
   className,
   sparklineData,
   emoji,
-}: KpiCardProps) {
+}: KpiCardProps) => {
   const isPositive = change !== undefined && change > 0;
   const isNegative = change !== undefined && change < 0;
   const isNeutral = change !== undefined && change === 0;
@@ -111,5 +112,5 @@ function KpiCard({
   );
 }
 
-export { KpiCard };
+export const KpiCard = memo(KpiCardComponent);
 export type { KpiCardProps };
