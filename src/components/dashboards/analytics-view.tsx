@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { memo } from 'react';
+import { memo, Suspense, lazy } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,15 +10,19 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useAppStore } from '@/store/app-store';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Legend,
-} from 'recharts';
 import { Search, CalendarDays, Users, RefreshCw, XCircle, TrendingUp as TrendingUpIcon, Award, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { fadeIn, slideUp, staggerContainer, scaleIn } from '@/lib/motion-variants';
 import { cn } from '@/lib/utils';
+
+const BarChartComponent = lazy(() => import('@/components/shared/bar-chart').then(mod => ({ default: mod.default })));
+const LineChartComponent = lazy(() => import('@/components/shared/line-chart').then(mod => ({ default: mod.default })));
+const PieChartComponent = lazy(() => import('@/components/shared/pie-chart').then(mod => ({ default: mod.default })));
+
+function ChartsLoadingFallback({ height = 280 }: { height?: number }) {
+  return <Skeleton className="w-full" style={{ height }} />;
+}
 
 interface AnalyticsData {
   schoolOverview: {
@@ -319,24 +323,9 @@ export function AnalyticsView() {
               <CardDescription className="text-xs font-medium">First Term vs Second Term average scores</CardDescription>
             </CardHeader>
             <CardContent>
-              {performanceBySubject.length > 0 ? (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={performanceBySubject}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-100" vertical={false} />
-                    <XAxis dataKey="subject" tick={{ fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', fontWeight: 700 }} 
-                      cursor={{ fill: 'rgba(0,0,0,0.02)' }}
-                    />
-                    <Legend iconType="circle" />
-                    <Bar dataKey="term1" fill="hsl(239, 84%, 67%)" radius={[6, 6, 0, 0]} name="Term 1" />
-                    <Bar dataKey="term2" fill="hsl(152, 69%, 31%)" radius={[6, 6, 0, 0]} name="Term 2" />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-[280px]"><p className="text-sm text-gray-400">No performance data available</p></div>
-              )}
+              <Suspense fallback={<ChartsLoadingFallback />}>
+                <BarChartComponent data={performanceBySubject} />
+              </Suspense>
             </CardContent>
           </Card>
         </motion.div>
@@ -349,21 +338,9 @@ export function AnalyticsView() {
               <CardDescription className="text-xs font-medium">Weekly attendance patterns</CardDescription>
             </CardHeader>
             <CardContent>
-              {attendanceTrend.length > 0 ? (
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={attendanceTrend}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-100" vertical={false} />
-                    <XAxis dataKey="day" tick={{ fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fontWeight: 700 }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', fontWeight: 700 }} />
-                    <Legend iconType="circle" />
-                    <Line type="monotone" dataKey="present" stroke="hsl(152, 69%, 31%)" strokeWidth={4} dot={{ r: 4, strokeWidth: 2, fill: 'hsl(0, 0%, 100%)' }} name="Present" />
-                    <Line type="monotone" dataKey="absent" stroke="hsl(0, 74%, 50%)" strokeWidth={4} dot={{ r: 4, strokeWidth: 2, fill: 'hsl(0, 0%, 100%)' }} name="Absent" />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-[280px]"><p className="text-sm text-gray-400">No attendance data available</p></div>
-              )}
+              <Suspense fallback={<ChartsLoadingFallback />}>
+                <LineChartComponent data={attendanceTrend} />
+              </Suspense>
             </CardContent>
           </Card>
         </motion.div>
@@ -445,42 +422,9 @@ export function AnalyticsView() {
                 <CardTitle className="text-lg font-semibold uppercase tracking-tight">Performance Distribution</CardTitle>
               </CardHeader>
               <CardContent>
-                {gradeDistribution.length > 0 ? (
-                  <div className="flex flex-col items-center sm:flex-row gap-4">
-                    <ResponsiveContainer width="100%" height={220} className="sm:w-1/2">
-                      <PieChart>
-                        <Pie 
-                          data={gradeDistribution} 
-                          cx="50%" 
-                          cy="50%" 
-                          innerRadius={60} 
-                          outerRadius={80} 
-                          paddingAngle={5}
-                          dataKey="value" 
-                          nameKey="grade"
-                        >
-                          {gradeDistribution.map((entry, i) => (
-                            <Cell key={i} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="flex-1 grid grid-cols-2 gap-3 w-full">
-                      {gradeDistribution.map(g => (
-                        <div key={g.grade} className="flex flex-col p-3 rounded-2xl bg-gray-50/50 border border-gray-50 transition-transform hover:scale-105">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="size-2 rounded-full" style={{ backgroundColor: g.color }} />
-                            <span className="text-xs font-semibold text-gray-900 uppercase">Grade {g.grade}</span>
-                          </div>
-                          <span className="text-lg font-semibold text-gray-900">{g.value}%</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-[220px]"><p className="text-sm text-gray-400">No distribution data</p></div>
-                )}
+                <Suspense fallback={<ChartsLoadingFallback height={220} />}>
+                  <PieChartComponent data={gradeDistribution} />
+                </Suspense>
               </CardContent>
             </Card>
           </motion.div>
