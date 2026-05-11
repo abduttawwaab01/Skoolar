@@ -166,6 +166,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const action = searchParams.get('action') || '';
+
+    if (action === 'bulk-upload') {
+      return bulkUploadStudents(request, auth);
+    }
+
     const body = await request.json();
 
     const { schoolId, name, email, password, admissionNo, classId, parentIds, dateOfBirth, gender, address, bloodGroup, allergies, emergencyContact, photo, house } = body;
@@ -288,6 +295,85 @@ export async function POST(request: NextRequest) {
       { data: { ...result.student, user: result.user }, message: 'Student created successfully' },
       { status: 201 }
     );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+async function bulkUploadStudents(request: NextRequest, auth: any) {
+  try {
+    const body = await request.json();
+    const { students, schoolId } = body;
+    
+    if (!students || !Array.isArray(students)) {
+      return NextResponse.json({ error: 'Students list is required' }, { status: 400 });
+    }
+
+    const targetSchoolId = auth.schoolId || schoolId;
+    if (!targetSchoolId) return NextResponse.json({ error: 'School ID required' }, { status: 400 });
+
+    const results = await db.$transaction(async (tx) => {
+      const created: any[] = [];
+      const skipped: any[] = [];
+      
+      for (const sData of students) {
+        const { name, email, admissionNo, password, classId, gender } = sData;
+        
+        if (!name || !email || !admissionNo || !password) {
+          skipped.push({ ...sData, error: 'Missing required fields' });
+          continue;
+        }
+
+        const existing = await tx.user.findFirst({
+          where: { email: email.toLowerCase(), deletedAt: null },
+        });
+        if (existing) {
+          skipped.push({ ...sData, error: 'Email already exists' });
+          continue;
+        }
+
+        const existingAdm = await tx.student.findFirst({
+          where: { schoolId: targetSchoolId, admissionNo, deletedAt: null },
+        });
+        if (existingAdm) {
+          skipped.push({ ...sData, error: 'Admission No already exists' });
+          continue;
+        }
+
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+        const user = await tx.user.create({
+          data: {
+            name,
+            email: email.toLowerCase(),
+            password: hashedPassword,
+            role: 'STUDENT',
+            schoolId: targetSchoolId,
+            isActive: true,
+            emailVerified: new Date(),
+          },
+        });
+
+        const student = await tx.student.create({
+          data: {
+            schoolId: targetSchoolId,
+            userId: user.id,
+            admissionNo,
+            classId: classId || null,
+            gender: gender || null,
+          },
+        });
+        
+        created.push({ ...student, user });
+      }
+      
+      return { created, skipped };
+    });
+
+    return NextResponse.json({ 
+      data: results, 
+      message: `Successfully added ${results.created.length} students. ${results.skipped.length} skipped.` 
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

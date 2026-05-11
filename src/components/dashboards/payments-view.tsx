@@ -19,6 +19,8 @@ import {
 import { Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 interface Payment {
   id: string;
@@ -59,15 +61,45 @@ export function PaymentsView() {
   const [open, setOpen] = React.useState(false);
   const [activeFilter, setActiveFilter] = React.useState<string>('All');
   const [submitting, setSubmitting] = React.useState(false);
+  const [studentSearch, setStudentSearch] = React.useState('');
+  const [foundStudents, setFoundStudents] = React.useState<any[]>([]);
+  const [isSearching, setIsSearching] = React.useState(false);
+  const [studentPopoverOpen, setStudentPopoverOpen] = React.useState(false);
 
   // Form state
   const [formData, setFormData] = React.useState({
     studentId: '',
     amount: '',
-    method: '',
+    method: 'bank-transfer',
     reference: '',
-    termId: '',
+    termId: 'first',
   });
+
+  const searchStudents = useCallback(async (q: string) => {
+    if (!q || q.length < 2) {
+      setFoundStudents([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const res = await fetch(`/api/students?schoolId=${selectedSchoolId}&search=${q}&limit=5`);
+      if (res.ok) {
+        const json = await res.json();
+        setFoundStudents(json.data || []);
+      }
+    } catch (err) {
+      console.error('Search failed', err);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [selectedSchoolId]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (studentSearch) searchStudents(studentSearch);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [studentSearch, searchStudents]);
 
   const fetchPayments = useCallback(async () => {
     if (!selectedSchoolId) return;
@@ -116,7 +148,60 @@ export function PaymentsView() {
       },
     },
     { accessorKey: 'receiptNo', header: 'Receipt' },
+    {
+      id: 'actions',
+      cell: ({ row }) => (
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => handlePrintReceipt(row.original)}
+          className="text-blue-600 hover:text-blue-700"
+        >
+          Receipt
+        </Button>
+      ),
+    },
   ];
+
+  const handlePrintReceipt = (p: PaymentRow) => {
+    const doc = new jsPDF() as any;
+    
+    // Receipt Header
+    doc.setFontSize(22);
+    doc.text('SKOOLAR PAYMENT RECEIPT', 105, 20, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(`Date: ${new Date(p.createdAt).toLocaleDateString()}`, 105, 30, { align: 'center' });
+    doc.text(`Receipt No: ${p.receiptNo || 'N/A'}`, 105, 35, { align: 'center' });
+    
+    // Student Info
+    doc.line(20, 45, 190, 45);
+    doc.setFontSize(14);
+    doc.text('PAYMENT INFORMATION', 20, 55);
+    doc.setFontSize(10);
+    doc.text(`Student: ${p.studentName}`, 20, 65);
+    doc.text(`Admission No: ${p.student?.admissionNo || 'N/A'}`, 20, 70);
+    doc.text(`Class: ${p.student?.class?.name || 'N/A'}`, 20, 75);
+    doc.text(`Method: ${p.method.toUpperCase()}`, 20, 80);
+    doc.text(`Reference: ${p.reference || 'N/A'}`, 20, 85);
+    
+    // Amount Table
+    doc.autoTable({
+      startY: 95,
+      head: [['Description', 'Amount']],
+      body: [
+        ['Fee Payment', `NGN ${p.amount.toLocaleString()}`],
+        ['Total Paid', `NGN ${p.amount.toLocaleString()}`]
+      ],
+      theme: 'grid',
+      headStyles: { fillStyle: [5, 150, 105] }
+    });
+    
+    // Footer
+    doc.text('Thank you for your payment.', 105, doc.lastAutoTable.finalY + 20, { align: 'center' });
+    doc.text('This is an electronically generated receipt.', 105, doc.lastAutoTable.finalY + 25, { align: 'center' });
+    
+    doc.save(`Receipt_${p.receiptNo || p.id}.pdf`);
+  };
 
   const handleSubmit = async () => {
     if (!formData.amount || !formData.method) {
@@ -176,8 +261,37 @@ export function PaymentsView() {
                 <Label>Student</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                  <Input placeholder="Search student..." className="pl-9" value={formData.studentId} onChange={e => setFormData(f => ({ ...f, studentId: e.target.value }))} />
+                  <Input 
+                    placeholder="Type to search student..." 
+                    className="pl-9" 
+                    value={studentSearch} 
+                    onChange={e => setStudentSearch(e.target.value)} 
+                  />
                 </div>
+                {foundStudents.length > 0 && (
+                  <div className="border rounded-md mt-1 divide-y bg-white shadow-sm max-h-40 overflow-y-auto">
+                    {foundStudents.map(s => (
+                      <div 
+                        key={s.id} 
+                        className={cn(
+                          "p-2 hover:bg-emerald-50 cursor-pointer text-sm flex items-center justify-between",
+                          formData.studentId === s.id && "bg-emerald-50"
+                        )}
+                        onClick={() => {
+                          setFormData(f => ({ ...f, studentId: s.id }));
+                          setStudentSearch(s.user.name);
+                          setFoundStudents([]);
+                        }}
+                      >
+                        <div>
+                          <p className="font-medium">{s.user.name}</p>
+                          <p className="text-[10px] text-muted-foreground">{s.admissionNo} • {s.class?.name || 'No Class'}</p>
+                        </div>
+                        {formData.studentId === s.id && <Plus className="size-4 text-emerald-600 rotate-45" />}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Amount (₦)</Label>

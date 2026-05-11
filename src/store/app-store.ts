@@ -7,7 +7,7 @@ export type DashboardView =
   | 'overview' | 'super-admin-dashboard' | 'schools' | 'registration-codes' | 'academic-structure' 
   | 'students' | 'teachers' | 'parents' | 'classes' | 'subjects'
   | 'attendance' | 'staff-attendance' | 'staff-self-attendance' | 'exams' | 'results' | 'report-cards'
-  | 'finance' | 'payments' | 'fee-structure'
+  | 'finance' | 'payments' | 'fee-structure' | 'expenses'
   | 'library' | 'books' | 'borrow-records'
   | 'id-cards' | 'id-scanner'
   | 'analytics' | 'behavior' | 'achievements'
@@ -169,6 +169,7 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
        { id: 'finance', label: 'Finance', icon: 'wallet', children: [
          { id: 'payments', label: 'Payments', icon: 'credit-card' },
          { id: 'fee-structure', label: 'Fee Structure', icon: 'receipt' },
+         { id: 'expenses', label: 'Expenses', icon: 'trending-down' },
        ]},
        { id: 'homework', label: 'Homework', icon: 'book-open' },
        { id: 'video-lessons', label: 'Video Lessons', icon: 'video' },
@@ -256,6 +257,7 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
      { id: 'overview', label: 'Dashboard', icon: 'layout-dashboard' },
      { id: 'payments', label: 'Payments', icon: 'credit-card' },
      { id: 'fee-structure', label: 'Fee Structure', icon: 'receipt' },
+     { id: 'expenses', label: 'Expenses', icon: 'trending-down' },
      { id: 'finance', label: 'Financial Reports', icon: 'bar-chart-3' },
      { id: 'students', label: 'Student Accounts', icon: 'user-graduate' },
      { id: 'analytics', label: 'Analytics', icon: 'trending-up' },

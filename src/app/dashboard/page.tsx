@@ -14,7 +14,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ConfirmProvider } from '@/components/confirm-dialog';
 
 // Map of view IDs to their components
-// Map of view IDs to their components - Using a loader function type to avoid TS component mismatch
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const viewComponents: Record<DashboardView, () => Promise<any>> = {
   'super-admin-dashboard': () => import('@/components/dashboards/super-admin-dashboard').then(m => m.SuperAdminDashboard),
@@ -35,6 +34,7 @@ const viewComponents: Record<DashboardView, () => Promise<any>> = {
   finance: () => import('@/components/dashboards/payments-view').then(m => m.PaymentsView),
   payments: () => import('@/components/dashboards/payments-view').then(m => m.PaymentsView),
   'fee-structure': () => import('@/components/dashboards/fee-structure-view').then(m => m.FeeStructureView),
+  expenses: () => import('@/components/dashboards/expenses-view').then(m => m.ExpensesView),
   library: () => import('@/components/dashboards/books-view').then(m => m.BooksView),
   books: () => import('@/components/dashboards/books-view').then(m => m.BooksView),
   'borrow-records': () => import('@/components/dashboards/borrow-records-view').then(m => m.BorrowRecordsView),
@@ -94,23 +94,22 @@ const viewComponents: Record<DashboardView, () => Promise<any>> = {
   'messaging-center': () => import('@/components/dashboards/messaging-center').then(m => m.MessagingCenter),
   'weekly-evaluations': () => import('@/components/features/weekly-evaluation').then(m => m.WeeklyEvaluation),
   'entrance-exams': () => import('@/components/dashboards/entrance-exams-view').then(m => m.EntranceExamsView),
-  
   'staff-self-attendance': () => import('@/components/dashboards/staff-self-attendance').then(m => m.StaffSelfAttendance),
   'teacher-tasks': () => import('@/components/features/teacher-tasks-management').then(m => m.TeacherTasksManagement),
   'teacher-performance': () => import('@/components/features/teacher-tasks-management').then(m => m.TeacherTasksManagement),
-   'student-leaderboard': () => import('@/components/features/student-leaderboard').then(m => m.StudentLeaderboard),
-   'parent-analytics': () => import('@/components/features/parent-analytics').then(m => m.ParentAnalytics),
-   'profile': () => import('@/components/profile/profile-view').then(m => m.ProfileView),
-   'video-checkpoints': () => import('@/components/features/parent-analytics').then(m => m.ParentAnalytics),
-   'year-results': () => import('@/components/dashboards/year-results-view').then(m => m.YearResultsView),
-   'job-postings': () => import('@/components/dashboards/job-postings-view').then(m => m.JobPostingsManagement),
+  'student-leaderboard': () => import('@/components/features/student-leaderboard').then(m => m.StudentLeaderboard),
+  'parent-analytics': () => import('@/components/features/parent-analytics').then(m => m.ParentAnalytics),
+  profile: () => import('@/components/profile/profile-view').then(m => m.ProfileView),
+  'video-checkpoints': () => import('@/components/features/parent-analytics').then(m => m.ParentAnalytics),
+  'year-results': () => import('@/components/dashboards/year-results-view').then(m => m.YearResultsView),
+  'job-postings': () => import('@/components/dashboards/job-postings-view').then(m => m.JobPostingsManagement),
 };
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { currentView, setCurrentView, currentRole, setCurrentRole, setCurrentUser, currentUser } = useAppStore();
+  const { currentView, setCurrentView, setCurrentRole, setCurrentUser, currentUser } = useAppStore();
   const [ViewComponent, setViewComponent] = useState<React.ComponentType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,6 +149,10 @@ export default function DashboardPage() {
       'payments': () => queryClient.prefetchQuery({
         queryKey: ['payments', contextSchoolId],
         queryFn: () => fetch(`/api/payments${contextSchoolId ? `?schoolId=${contextSchoolId}` : ''}`).then(r => r.json()),
+      }),
+      'expenses': () => queryClient.prefetchQuery({
+        queryKey: ['expenses', contextSchoolId],
+        queryFn: () => fetch(`/api/expenses${contextSchoolId ? `?schoolId=${contextSchoolId}` : ''}`).then(r => r.json()),
       }),
       'analytics': () => {
         return queryClient.prefetchQuery({

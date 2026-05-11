@@ -174,6 +174,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check plan limits - enforce max video lessons
+    const school = await db.school.findUnique({
+      where: { id: schoolId },
+      include: { subscriptionPlan: true },
+    });
+    
+    if (school) {
+      const maxVideoLessons = school.subscriptionPlan?.maxVideoLessons || 100;
+      // If maxVideoLessons is -1, it means unlimited
+      if (maxVideoLessons !== -1) {
+        const currentVideoCount = await db.videoLesson.count({
+          where: { schoolId, deletedAt: null },
+        });
+        
+        if (currentVideoCount >= maxVideoLessons) {
+          return NextResponse.json(
+            { error: `Your plan allows maximum ${maxVideoLessons} video lessons. Please upgrade your plan to add more.` },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     // Validate that at least one content field is provided based on contentType
     const ct = contentType || 'video';
     if (ct === 'video' && !videoUrl) {

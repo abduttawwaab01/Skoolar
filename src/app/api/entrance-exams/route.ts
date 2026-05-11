@@ -104,6 +104,9 @@ export async function POST(request: NextRequest) {
   if (action === 'decline-deferred-offer') {
     return declineDeferredOffer(request);
   }
+  if (action === 'bulk-register') {
+    return bulkRegister(request);
+  }
 
   try {
     const body = await request.json();
@@ -476,6 +479,75 @@ async function declineDeferredOffer(request: NextRequest) {
     return NextResponse.json({ 
       data: updated, 
       message: 'You have declined the offer. You can reapply during the next admission cycle.' 
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+async function bulkRegister(request: NextRequest) {
+  try {
+    const auth = await requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+    
+    const body = await request.json();
+    const { examId, candidates, autoApprove = true } = body;
+    
+    if (!examId || !candidates || !Array.isArray(candidates)) {
+      return NextResponse.json({ error: 'Exam ID and candidates list are required' }, { status: 400 });
+    }
+    
+    const exam = await db.entranceExam.findUnique({ where: { id: examId } });
+    if (!exam) return NextResponse.json({ error: 'Exam not found' }, { status: 404 });
+    
+    const results = await db.$transaction(async (tx) => {
+      const created = [];
+      const skipped = [];
+      
+      for (const cand of candidates) {
+        if (!cand.applicantName) {
+          skipped.push({ ...cand, error: 'Name is required' });
+          continue;
+        }
+        
+        if (cand.applicantEmail || cand.applicantPhone) {
+          const existing = await tx.entranceExamAttempt.findFirst({
+            where: {
+              entranceExamId: examId,
+              OR: [
+                ...(cand.applicantEmail ? [{ applicantEmail: cand.applicantEmail }] : []),
+                ...(cand.applicantPhone ? [{ applicantPhone: cand.applicantPhone }] : []),
+              ],
+            },
+          });
+          
+          if (existing) {
+            skipped.push({ ...cand, error: 'Already registered' });
+            continue;
+          }
+        }
+        
+        const attempt = await tx.entranceExamAttempt.create({
+          data: {
+            entranceExamId: examId,
+            applicantName: cand.applicantName,
+            applicantEmail: cand.applicantEmail || null,
+            applicantPhone: cand.applicantPhone || null,
+            appliedClass: cand.appliedClass || null,
+            registrationStatus: autoApprove ? 'approved' : 'pending',
+            status: 'pending',
+          },
+        });
+        created.push(attempt);
+      }
+      
+      return { created, skipped };
+    });
+    
+    return NextResponse.json({ 
+      data: results, 
+      message: `Successfully registered ${results.created.length} candidates. ${results.skipped.length} skipped.` 
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';

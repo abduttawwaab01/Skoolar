@@ -139,6 +139,29 @@ const body = await request.json();
 );
       }
 
+      // Check plan limits - enforce max parents
+      const school = await db.school.findUnique({
+        where: { id: targetSchoolId },
+        include: { subscriptionPlan: true },
+      });
+      
+      if (school) {
+        const maxParents = school.subscriptionPlan?.maxParents || school.maxParents || 500;
+        // If maxParents is -1, it means unlimited
+        if (maxParents !== -1) {
+          const currentParentCount = await db.parent.count({
+            where: { schoolId: targetSchoolId, deletedAt: null },
+          });
+          
+          if (currentParentCount >= maxParents) {
+            return NextResponse.json(
+              { error: `Your plan allows maximum ${maxParents} parents. Please upgrade your plan to add more.` },
+              { status: 403 }
+            );
+          }
+        }
+      }
+
       // Hash password
       const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 

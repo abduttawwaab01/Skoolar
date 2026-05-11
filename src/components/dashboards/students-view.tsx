@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
-import { Plus, User, GraduationCap, BookOpen, BarChart3, CalendarCheck, Loader2 } from 'lucide-react';
+import { Plus, User, GraduationCap, BookOpen, BarChart3, CalendarCheck, Loader2, FileUp, Download } from 'lucide-react';
  import { useAppStore } from '@/store/app-store';
  import { toast } from 'sonner';
  import { useStudents, useClasses, useCreateStudent } from '@/hooks/use-api';
@@ -128,7 +128,10 @@ export function StudentsView() {
   const { currentUser } = useAppStore();
   const [classFilter, setClassFilter] = React.useState('all');
   const [addOpen, setAddOpen] = React.useState(false);
+  const [bulkOpen, setBulkOpen] = React.useState(false);
   const [detailStudent, setDetailStudent] = React.useState<StudentRecord | null>(null);
+  const [bulkFile, setBulkFile] = React.useState<File | null>(null);
+  const [bulkLoading, setBulkLoading] = React.useState(false);
 
   const { data: studentsData, isLoading } = useStudents({ limit: 100 });
   const { data: classesData } = useClasses();
@@ -197,6 +200,63 @@ export function StudentsView() {
     }
   };
 
+  const downloadTemplate = () => {
+    const headers = ['Name', 'Email', 'Password', 'AdmissionNo', 'ClassID', 'Gender'];
+    const example = ['John Doe', 'john@school.com', 'pass123', 'SCH/2026/001', 'class_id_here', 'Male'];
+    const csvContent = [headers, example].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "students_upload_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleBulkUpload = async () => {
+    if (!bulkFile) { toast.error('Please select a file'); return; }
+    setBulkLoading(true);
+    try {
+      const text = await bulkFile.text();
+      const lines = text.split(/\r?\n/).filter(line => line.trim());
+      if (lines.length < 2) throw new Error('File is empty or missing data');
+      
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const students = lines.slice(1).map(line => {
+        const values = line.split(',').map(v => v.trim());
+        const obj: any = {};
+        headers.forEach((h, i) => {
+          if (h === 'name') obj.name = values[i];
+          if (h === 'email') obj.email = values[i];
+          if (h === 'password') obj.password = values[i];
+          if (h === 'admissionno') obj.admissionNo = values[i];
+          if (h === 'classid') obj.classId = values[i];
+          if (h === 'gender') obj.gender = values[i];
+        });
+        return obj;
+      }).filter(s => s.name && s.email);
+
+      const res = await fetch('/api/students?action=bulk-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ students, schoolId: currentUser.schoolId }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      
+      toast.success(json.message);
+      setBulkOpen(false);
+      setBulkFile(null);
+      window.location.reload(); 
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to upload students');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   if (!currentUser.schoolId) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -235,6 +295,59 @@ export function StudentsView() {
               ))}
             </SelectContent>
           </Select>
+          
+          <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2 border-emerald-200 hover:bg-emerald-50 text-emerald-700">
+                <FileUp className="size-4" />
+                Bulk Upload
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Student Upload</DialogTitle>
+                <DialogDescription>Add multiple students at once using a CSV file.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>1. Download Template</Label>
+                  <Button variant="ghost" size="sm" onClick={downloadTemplate} className="w-full justify-start text-xs text-blue-600 hover:bg-blue-50">
+                    <Download className="size-3.5 mr-2" /> Download CSV Template
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground px-1">Tip: Use class IDs from the dashboard if assigning classes.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>2. Upload File</Label>
+                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-emerald-300 transition-colors cursor-pointer relative">
+                    <input 
+                      type="file" 
+                      accept=".csv" 
+                      className="absolute inset-0 opacity-0 cursor-pointer" 
+                      onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+                    />
+                    {bulkFile ? (
+                      <div className="text-emerald-600 font-medium flex items-center justify-center gap-2">
+                         <BookOpen className="size-5" /> {bulkFile.name}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <FileUp className="size-8 text-gray-300 mx-auto" />
+                        <p className="text-sm text-gray-500">Click or drag CSV file here</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setBulkOpen(false)}>Cancel</Button>
+                <Button onClick={handleBulkUpload} disabled={bulkLoading || !bulkFile}>
+                  {bulkLoading ? <Loader2 className="size-4 animate-spin mr-2" /> : <FileUp className="size-4 mr-2" />}
+                  Start Upload
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">

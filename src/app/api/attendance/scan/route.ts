@@ -22,9 +22,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid QR code data' }, { status: 400 });
     }
 
-    const { type, id: cardId, userId, personId, schoolId: qrSchoolId, name, role, timestamp } = parsedData;
+    const { type, id: cardId, userId: targetUserId, personId, schoolId: qrSchoolId, name, role, timestamp } = parsedData;
 
-    if (!personId || !schoolId) {
+    // Validation: We need either a personId (for students/teachers) or a userId (for other staff/admins)
+    if ((!personId && !targetUserId) || !schoolId) {
       return NextResponse.json({ error: 'QR code missing required fields' }, { status: 400 });
     }
 
@@ -36,32 +37,64 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'QR code does not belong to your school' }, { status: 403 });
     }
 
-    // Check if person exists and is active
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    // 1. Identify the person being scanned
     let person: any = null;
+    let finalUserId: string | null = null;
     let isStudent = false;
+
     if (type === 'student') {
       person = await db.student.findUnique({
         where: { id: personId },
-        include: { user: { select: { name: true, email: true } }, class: { select: { name: true } } },
+        include: { user: { select: { id: true, name: true, role: true } }, class: { select: { id: true, name: true } } },
       });
-      isStudent = true;
-    } else if (type === 'staff') {
-      person = await db.teacher.findUnique({
-        where: { id: personId },
-        include: { user: { select: { name: true, email: true } } },
-      });
+      if (person) {
+        finalUserId = person.userId;
+        isStudent = true;
+      }
+    } else {
+      // It's staff (Teacher, Accountant, Librarian, Director, or Admin)
+      // First try by userId if provided (for Admin/generic staff)
+      if (targetUserId) {
+        person = await db.user.findUnique({
+          where: { id: targetUserId },
+          include: { 
+            teacherProfile: { select: { id: true, employeeNo: true } },
+            accountantProfile: { select: { id: true, employeeNo: true } },
+            librarianProfile: { select: { id: true, employeeNo: true } },
+            directorProfile: { select: { id: true, employeeNo: true } },
+          }
+        });
+        if (person) finalUserId = person.id;
+      } 
+      // Then try by teacherId (backward compatibility for old QR codes)
+      else if (personId) {
+        const teacher = await db.teacher.findUnique({
+          where: { id: personId },
+          include: { user: { select: { id: true, name: true, role: true } } }
+        });
+        if (teacher) {
+          person = teacher.user;
+          finalUserId = teacher.userId;
+        }
+      }
     }
 
-    if (!person) {
+    if (!person || !finalUserId) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 });
     }
 
-    // Record scan in AttendanceScanLog
+    // 2. Record scan in AttendanceScanLog
     const scanLog = await db.attendanceScanLog.create({
       data: {
         schoolId: targetSchoolId,
         studentId: isStudent ? personId : null,
-        cardId: cardId,
+        teacherId: (!isStudent && type === 'staff' && personId) ? personId : null,
+        userId: finalUserId,
+        cardId: cardId || null,
         scanType: scanType,
         action: scanType === 'attendance' || scanType === 'staff_attendance' ? 'attendance' : scanType,
         status: 'success',
@@ -70,13 +103,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // If it's an attendance scan, mark attendance for today
-    if ((scanType === 'attendance' || scanType === 'staff_attendance') && person) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
+    // 3. Process Attendance
+    if (scanType === 'attendance' || scanType === 'staff_attendance') {
       if (isStudent) {
-        // Student attendance
+        // --- Student Attendance Logic ---
         const currentTerm = await db.term.findFirst({
           where: {
             schoolId: targetSchoolId,
@@ -116,29 +146,48 @@ export async function POST(request: NextRequest) {
           });
         }
       } else {
-        // Staff attendance - could be tracked in a separate model or logs
-        // For now, we'll create a record in AttendanceScanLog as the official record
-        // In a full implementation, you'd have a StaffAttendance model
-        console.log(`Staff attendance marked for ${person.user?.name} via QR scan`);
+        // --- Staff Attendance Logic ---
+        await db.staffAttendance.upsert({
+          where: {
+            schoolId_userId_date: {
+              schoolId: targetSchoolId,
+              userId: finalUserId,
+              date: today,
+            },
+          },
+          update: {
+            status: 'present',
+            checkInTime: timeStr,
+            method: 'qr_scan',
+            markedBy: scannedBy || auth.userId,
+          },
+          create: {
+            schoolId: targetSchoolId,
+            userId: finalUserId,
+            date: today,
+            status: 'present',
+            checkInTime: timeStr,
+            method: 'qr_scan',
+            markedBy: scannedBy || auth.userId,
+          },
+        });
       }
     }
-
-    // For staff attendance, you might want to track it differently (e.g., separate model or log)
-    // For now, we just log the scan
 
     return NextResponse.json({
       success: true,
       data: {
         scanLog,
         person: {
-          name: person.user?.name || person.name,
-          id: person.admissionNo || person.employeeNo,
-          role: type === 'student' ? 'STUDENT' : (person.qualification?.toUpperCase() || 'STAFF'),
+          name: isStudent ? person.user.name : person.name,
+          id: isStudent ? person.admissionNo : (person.teacherProfile?.employeeNo || person.accountantProfile?.employeeNo || person.id.slice(0, 8)),
+          role: isStudent ? 'STUDENT' : person.role,
         },
       },
-      message: 'Attendance marked successfully',
+      message: 'Attendance recorded successfully',
     });
   } catch (error: unknown) {
+    console.error('Scan API Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
   }

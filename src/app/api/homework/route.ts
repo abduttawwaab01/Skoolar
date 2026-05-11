@@ -313,6 +313,37 @@ export async function POST(request: NextRequest) {
       if (!teacher) return errorResponse('Teacher not found or does not belong to school', 404);
     }
 
+    // Check plan limits - enforce max homework per month
+    const school = await db.school.findUnique({
+      where: { id: validatedData.schoolId },
+      include: { subscriptionPlan: true },
+    });
+    
+    if (school) {
+      const maxHomeworkPerMonth = school.subscriptionPlan?.maxHomeworkPerMonth || school.maxHomeworkPerMonth || 100;
+      // If maxHomeworkPerMonth is -1, it means unlimited
+      if (maxHomeworkPerMonth !== -1) {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        
+        const currentMonthHomeworkCount = await db.homework.count({
+          where: { 
+            schoolId: validatedData.schoolId, 
+            deletedAt: null,
+            createdAt: {
+              gte: startOfMonth,
+              lte: endOfMonth
+            }
+          },
+        });
+        
+        if (currentMonthHomeworkCount >= maxHomeworkPerMonth) {
+          return errorResponse(`Your plan allows maximum ${maxHomeworkPerMonth} homework assignments per month. Please upgrade your plan to add more.`, 403);
+        }
+      }
+    }
+
     // Create homework with questions in a transaction
     const homework = await db.$transaction(async (tx) => {
       const newHomework = await tx.homework.create({

@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Plus, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 interface FeeItem {
   id: string;
@@ -43,6 +44,8 @@ export function FeeStructureView() {
   const [open, setOpen] = React.useState(false);
   const [isOptional, setIsOptional] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [classes, setClasses] = React.useState<{id: string, name: string}[]>([]);
+  const [selectedClasses, setSelectedClasses] = React.useState<string[]>([]);
 
   // Form state
   const [formData, setFormData] = React.useState({
@@ -58,9 +61,18 @@ export function FeeStructureView() {
     }
     try {
       setLoading(true);
-      const res = await fetch(`/api/fee-structure?schoolId=${selectedSchoolId}&limit=100`);
-      if (!res.ok) throw new Error('Failed to load fee structure');
-      const json = await res.json();
+      const [feesRes, classesRes] = await Promise.all([
+        fetch(`/api/fee-structure?schoolId=${selectedSchoolId}&limit=100`),
+        fetch(`/api/classes?schoolId=${selectedSchoolId}&limit=100`),
+      ]);
+      
+      if (!feesRes.ok) throw new Error('Failed to load fee structure');
+      if (classesRes.ok) {
+        const classesJson = await classesRes.json();
+        setClasses(classesJson.data || []);
+      }
+      
+      const json = await feesRes.json();
       setFeeItems(Array.isArray(json.data) ? json.data : []);
     } catch (err) {
       toast.error('Failed to load fee structure');
@@ -122,6 +134,7 @@ export function FeeStructureView() {
           amount: parseFloat(formData.amount),
           frequency: formData.frequency,
           isOptional,
+          classIds: selectedClasses.length > 0 ? selectedClasses : undefined,
         }),
       });
       if (!res.ok) {
@@ -132,6 +145,7 @@ export function FeeStructureView() {
       setOpen(false);
       setFormData({ name: '', amount: '', frequency: 'termly' });
       setIsOptional(false);
+      setSelectedClasses([]);
       fetchFees();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to create fee item');
@@ -183,6 +197,45 @@ export function FeeStructureView() {
                   <p className="text-xs text-muted-foreground">Students can opt out of this fee</p>
                 </div>
                 <Switch checked={isOptional} onCheckedChange={setIsOptional} />
+              </div>
+              <div className="space-y-2">
+                <Label>Applicable Classes</Label>
+                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 border rounded-md">
+                  <div className="w-full flex items-center gap-2 pb-2 mb-2 border-b">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 text-[10px]" 
+                      onClick={() => setSelectedClasses(classes.map(c => c.id))}
+                    >
+                      Select All
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 text-[10px]" 
+                      onClick={() => setSelectedClasses([])}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                  {classes.map(c => (
+                    <Badge 
+                      key={c.id} 
+                      variant={selectedClasses.includes(c.id) ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => {
+                        setSelectedClasses(prev => 
+                          prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]
+                        );
+                      }}
+                    >
+                      {c.name}
+                    </Badge>
+                  ))}
+                  {classes.length === 0 && <p className="text-xs text-muted-foreground">No classes found</p>}
+                </div>
+                <p className="text-[10px] text-muted-foreground">If none selected, it applies to all classes by default.</p>
               </div>
             </div>
             <DialogFooter>

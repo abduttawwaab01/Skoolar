@@ -117,7 +117,7 @@ export const PaymentCreateSchema = z.object({
   schoolId: z.string().cuid(),
   studentId: z.string().cuid(),
   amount: z.number().positive('Amount must be greater than 0').max(999999),
-  method: z.enum(['cash', 'card', 'bank_transfer', 'online']).optional(),
+  method: z.enum(['cash', 'card', 'bank_transfer', 'bank-transfer', 'online']).optional(),
   reference: z.string().max(255).optional(),
   feeStructureId: z.string().cuid().optional(),
   termId: z.string().cuid().optional(),

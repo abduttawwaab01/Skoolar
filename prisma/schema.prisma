@@ -82,10 +82,12 @@ model School {
   weeklyEvaluations      WeeklyEvaluation[]
   teacherTasks           TeacherTask[]
   teacherPerformance     TeacherPerformance[]
+  staffAttendances       StaffAttendance[]
   performanceSnapshots   StudentPerformanceSnapshot[]
   leaderboards           Leaderboard[]
   performanceBadges      PerformanceBadge[]
   encouragements         EncouragementMessage[]
+  expenses               Expense[]
 
   @@index([slug])
   @@index([region])
@@ -159,6 +161,8 @@ model User {
    school                  School?            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
    sessions                UserSession[]
    messagesSent            Message[]          @relation("SentMessages")
+   staffAttendances        StaffAttendance[]
+   attendanceScanLogs      AttendanceScanLog[]
  
    @@index([schoolId])
    @@index([role])
@@ -706,11 +710,35 @@ model Attendance {
   @@index([schoolId, termId, studentId])
 }
 
+model StaffAttendance {
+  id           String   @id @default(cuid())
+  schoolId     String
+  userId       String
+  date         DateTime
+  status       String   @default("present") // present, absent, late, excused
+  checkInTime  String?
+  checkOutTime String?
+  method       String   @default("qr_scan") // qr_scan, manual, self_scan
+  remarks      String?
+  markedBy     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  school       School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, userId, date])
+  @@index([schoolId])
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+}
+
 model AttendanceScanLog {
   id        String   @id @default(cuid())
   schoolId  String
   studentId String?
   teacherId String?
+  userId    String?
   cardId    String?
   scanType  String   @default("qr")
   action    String   @default("attendance")
@@ -720,10 +748,12 @@ model AttendanceScanLog {
   createdAt DateTime @default(now())
   school    School   @relation(fields: [schoolId], references: [id])
   teacher   Teacher? @relation(fields: [teacherId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
 
   @@index([schoolId])
   @@index([studentId])
   @@index([teacherId])
+  @@index([userId])
   @@index([createdAt])
 }
 
@@ -1800,6 +1830,8 @@ model HubPost {
   tags          String?
   attachments   String?
   imageUrl      String?
+  mediaUrl      String?
+  mediaType     String?      // video, audio
   likeCount     Int          @default(0)
   commentCount  Int          @default(0)
   viewCount     Int          @default(0)
@@ -2427,4 +2459,25 @@ model EncouragementMessage {
   @@index([studentId])
   @@index([sentAt])
   @@index([isRead])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  schoolId    String
+  title       String
+  description String?
+  amount      Float
+  category    String   // Salary, Utility, Maintenance, Supplies, Others
+  date        DateTime @default(now())
+  paidTo      String?
+  receiptUrl  String?
+  status      String   @default("paid") // paid, pending
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+  school      School   @relation(fields: [schoolId], references: [id])
+
+  @@index([schoolId])
+  @@index([category])
+  @@index([date])
 }

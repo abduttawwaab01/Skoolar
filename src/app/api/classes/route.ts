@@ -139,6 +139,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check plan limits - enforce max classes
+    const school = await db.school.findUnique({
+      where: { id: targetSchoolId },
+      include: { subscriptionPlan: true },
+    });
+    
+    if (school) {
+      const maxClasses = school.subscriptionPlan?.maxClasses || school.maxClasses || 50;
+      // If maxClasses is -1, it means unlimited
+      if (maxClasses !== -1) {
+        const currentClassCount = await db.class.count({
+          where: { schoolId: targetSchoolId, deletedAt: null },
+        });
+        
+        if (currentClassCount >= maxClasses) {
+          return NextResponse.json(
+            { error: `Your plan allows maximum ${maxClasses} classes. Please upgrade your plan to add more.` },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
     const classData = await db.class.create({
       data: {
         schoolId: targetSchoolId,

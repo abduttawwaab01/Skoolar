@@ -2,48 +2,14 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
 
-// GET /api/attendance/staff-checkin - Get current staff member's check-in status
-export async function GET(request: NextRequest) {
-  try {
-    const auth = await requireAuth(request);
-    if (auth instanceof NextResponse) return auth;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const attendance = await db.staffAttendance.findUnique({
-      where: {
-        schoolId_userId_date: {
-          schoolId: auth.schoolId!,
-          userId: auth.userId!,
-          date: today,
-        },
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        checkedIn: !!attendance && attendance.status === 'present',
-        checkInTime: attendance?.checkInTime || null,
-        date: today.toISOString().split('T')[0],
-        schoolId: auth.schoolId,
-      },
-    });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
-
-// POST /api/attendance/staff-checkin - Mark own attendance via QR scan
+// POST /api/staff-attendance/checkin - Self check-in via school QR scan
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth(request);
     if (auth instanceof NextResponse) return auth;
 
     const body = await request.json();
-    const { qrData } = body;
+    const { qrData, location } = body;
 
     if (!qrData) {
       return NextResponse.json({ error: 'QR data is required' }, { status: 400 });
@@ -56,21 +22,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid QR code data' }, { status: 400 });
     }
 
-    // Support both school entrance QR and personal staff QR (for self-scanning if ever needed)
-    if (parsedData.type !== 'school_attendance' && parsedData.type !== 'staff') {
-       return NextResponse.json({ error: 'Invalid QR code type' }, { status: 400 });
+    // Verify it's a school attendance QR
+    if (parsedData.type !== 'school_attendance' || !parsedData.schoolId) {
+      return NextResponse.json({ error: 'Invalid QR code type for check-in' }, { status: 400 });
     }
 
-    // Verify school
-    if (parsedData.schoolId !== auth.schoolId) {
-      return NextResponse.json({ error: 'QR code does not belong to your school' }, { status: 403 });
+    // Verify staff belongs to this school
+    if (auth.schoolId !== parsedData.schoolId) {
+      return NextResponse.json({ error: 'You do not belong to this school' }, { status: 403 });
     }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 
-    // Record in StaffAttendance
+    // Mark attendance in StaffAttendance
     const attendance = await db.staffAttendance.upsert({
       where: {
         schoolId_userId_date: {
@@ -82,7 +48,8 @@ export async function POST(request: NextRequest) {
       update: {
         status: 'present',
         checkInTime: timeStr,
-        method: parsedData.type === 'school_attendance' ? 'self_scan' : 'qr_scan',
+        method: 'self_scan',
+        remarks: location ? `Scanned at ${location}` : 'Self-scan at entrance',
         markedBy: auth.userId,
       },
       create: {
@@ -91,17 +58,18 @@ export async function POST(request: NextRequest) {
         date: today,
         status: 'present',
         checkInTime: timeStr,
-        method: parsedData.type === 'school_attendance' ? 'self_scan' : 'qr_scan',
+        method: 'self_scan',
+        remarks: location ? `Scanned at ${location}` : 'Self-scan at entrance',
         markedBy: auth.userId,
       },
     });
 
-    // Log the scan
+    // Also log the scan
     await db.attendanceScanLog.create({
       data: {
         schoolId: auth.schoolId!,
         userId: auth.userId!,
-        scanType: parsedData.type,
+        scanType: 'self_scan',
         action: 'attendance',
         status: 'success',
         scannedBy: auth.userId,
@@ -111,10 +79,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Attendance marked successfully',
+      message: 'Check-in successful',
       data: attendance,
     });
   } catch (error: unknown) {
+    console.error('Self Check-in API Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
   }

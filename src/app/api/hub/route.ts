@@ -125,6 +125,8 @@ function formatPost(post: any, authorMap: Map<string, any>, channelMap: Map<stri
     category: post.category || 'General',
     tags: post.tags ? JSON.parse(post.tags) : [],
     imageUrl: post.imageUrl || '',
+    mediaUrl: post.mediaUrl || '',
+    mediaType: post.mediaType || '',
     likes: post.likeCount,
     likedBy,
     commentsCount: post.commentCount,
@@ -776,7 +778,7 @@ export async function POST(request: NextRequest) {
 
       // --- Create Post ---
       case 'create-post': {
-        const { authorId, authorName, channelId, title, content, contentType, category, tags, imageUrl } = body;
+        const { authorId, authorName, channelId, title, content, contentType, category, tags, imageUrl, mediaUrl, mediaType } = body;
         if (!authorId || !title || !content || !channelId) {
           return NextResponse.json({ success: false, message: 'Missing required fields' }, { status: 400 });
         }
@@ -795,6 +797,8 @@ export async function POST(request: NextRequest) {
             category: category || 'General',
             tags: Array.isArray(tags) ? JSON.stringify(tags.map(String).slice(0, 10)) : null,
             imageUrl: typeof imageUrl === 'string' ? imageUrl.slice(0, 500) : null,
+            mediaUrl: typeof mediaUrl === 'string' ? mediaUrl.slice(0, 500) : null,
+            mediaType: typeof mediaType === 'string' ? mediaType.slice(0, 50) : null,
           },
         });
 
@@ -1222,6 +1226,72 @@ export async function PUT(request: NextRequest) {
         });
 
         return NextResponse.json({ success: true, data: formatGame(updatedGame) });
+      }
+
+      // --- Moderation ---
+      case 'moderate': {
+        const { postId, action: modAction, reason, moderatorId } = body;
+        if (!postId || !modAction || !moderatorId) {
+          return NextResponse.json({ success: false, message: 'Missing moderation details' }, { status: 400 });
+        }
+
+        // Verify moderator role
+        const modUser = await db.hubUser.findUnique({ 
+          where: { id: moderatorId },
+          include: { user: true }
+        });
+
+        const isSuperAdmin = modUser?.user?.role === 'SUPER_ADMIN';
+        const isAdmin = modUser?.user?.role === 'SCHOOL_ADMIN';
+        
+        if (!isSuperAdmin && !isAdmin) {
+          return NextResponse.json({ success: false, message: 'Unauthorized moderation attempt' }, { status: 403 });
+        }
+
+        let result;
+        switch (modAction) {
+          case 'hide':
+            result = await db.hubPost.update({ where: { id: postId }, data: { isHidden: true, hiddenBy: moderatorId } });
+            break;
+          case 'unhide':
+            result = await db.hubPost.update({ where: { id: postId }, data: { isHidden: false, hiddenBy: null } });
+            break;
+          case 'delete':
+            result = await db.hubPost.delete({ where: { id: postId } });
+            break;
+          case 'pin':
+            result = await db.hubPost.update({ where: { id: postId }, data: { isPinned: true } });
+            break;
+          case 'unpin':
+            result = await db.hubPost.update({ where: { id: postId }, data: { isPinned: false } });
+            break;
+          case 'feature':
+            result = await db.hubPost.update({ where: { id: postId }, data: { isFeatured: true } });
+            break;
+          case 'unfeature':
+            result = await db.hubPost.update({ where: { id: postId }, data: { isFeatured: false } });
+            break;
+          case 'flag':
+            result = await db.hubPost.update({ where: { id: postId }, data: { isFlagged: true, flagReason: reason || 'Community violation' } });
+            break;
+          case 'resolve-flag':
+            result = await db.hubPost.update({ where: { id: postId }, data: { isFlagged: false, flagReason: null } });
+            break;
+          case 'ban-author': {
+            const post = await db.hubPost.findUnique({ where: { id: postId } });
+            if (post) {
+              result = await db.hubUser.update({ 
+                where: { id: post.hubUserId }, 
+                data: { isBanned: true, bannedBy: moderatorId, banReason: reason || 'Terms of service violation', bannedAt: new Date() } 
+              });
+            }
+            break;
+          }
+          default:
+            return NextResponse.json({ success: false, message: 'Invalid moderation action' }, { status: 400 });
+        }
+
+        return NextResponse.json({ success: true, data: result, message: `Moderation action '${modAction}' successful` });
       }
 
       default:

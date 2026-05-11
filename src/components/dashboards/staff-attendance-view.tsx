@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAppStore } from '@/store/app-store';
 import {
   Shield, Users, CalendarCheck, Clock, CheckCircle2, XCircle, AlertTriangle,
-  TrendingUp, BarChart3, Search, QrCode
+  TrendingUp, BarChart3, Search, QrCode, Download
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -357,8 +357,17 @@ export function StaffAttendanceView() {
               </div>
               <p className="text-xs text-muted-foreground">Staff can mark attendance by scanning this QR code</p>
               <div className="flex gap-2 justify-center">
+                <Button variant="outline" onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = qrCodeUrl;
+                  link.download = `school-qr-${selectedSchoolId}.png`;
+                  link.click();
+                }}>
+                  <Download className="size-4 mr-2" />
+                  Download
+                </Button>
                 <Button variant="outline" onClick={() => window.print()}>
-                  Print QR Code
+                  Print
                 </Button>
                 <Button variant="default" onClick={() => setShowQRCode(false)}>
                   Close

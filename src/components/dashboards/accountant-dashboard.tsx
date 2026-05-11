@@ -155,6 +155,7 @@ export function AccountantDashboard() {
 
   const quickActions = [
     { label: 'Record Payment', icon: Plus, view: 'payments' as const, color: 'bg-emerald-100 text-emerald-700' },
+    { label: 'Add Expense', icon: Wallet, view: 'expenses' as const, color: 'bg-red-100 text-red-700' },
     { label: 'Generate Invoice', icon: FileText, view: 'payments' as const, color: 'bg-blue-100 text-blue-700' },
     { label: 'Export Report', icon: Download, view: 'analytics' as const, color: 'bg-purple-100 text-purple-700' },
   ];

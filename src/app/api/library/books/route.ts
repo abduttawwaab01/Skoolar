@@ -57,9 +57,7 @@ export async function GET(request: NextRequest) {
           },
           _count: {
             select: {
-              borrowRecords: {
-                where: { status: 'borrowed' },
-              },
+              borrowRecords: true,
             },
           },
         },
@@ -83,6 +81,36 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const { action, books, schoolId: bulkSchoolId } = body;
+
+    if (action === 'bulk-upload') {
+      if (!bulkSchoolId || !Array.isArray(books)) {
+        return NextResponse.json({ error: 'schoolId and books array required' }, { status: 400 });
+      }
+
+      const results = await db.$transaction(async (tx) => {
+        const created = [];
+        for (const b of books) {
+          const newBook = await tx.libraryBook.create({
+            data: {
+              schoolId: bulkSchoolId,
+              title: b.title || b.Title,
+              author: b.author || b.Author || null,
+              isbn: b.isbn || b.ISBN || null,
+              category: b.category || b.Category || 'General',
+              totalCopies: parseInt(b.totalcopies || b.totalCopies || b.Copies || '1'),
+              availableCopies: parseInt(b.totalcopies || b.totalCopies || b.Copies || '1'),
+              location: b.location || b.Location || b.Shelf || null,
+              barcode: b.barcode || b.Barcode || null,
+            }
+          });
+          created.push(newBook);
+        }
+        return created;
+      });
+
+      return NextResponse.json({ data: results, message: `Successfully added ${results.length} books` });
+    }
 
     const { schoolId, title, author, isbn, category, publisher, year, totalCopies, location, barcode, coverImage, description } = body;
 
@@ -91,6 +119,29 @@ export async function POST(request: NextRequest) {
         { error: 'schoolId and title are required' },
         { status: 400 }
       );
+    }
+
+    // Check plan limits - enforce max library books
+    const school = await db.school.findUnique({
+      where: { id: schoolId },
+      include: { subscriptionPlan: true },
+    });
+    
+    if (school) {
+      const maxLibraryBooks = school.subscriptionPlan?.maxLibraryBooks || school.maxLibraryBooks || 500;
+      // If maxLibraryBooks is -1, it means unlimited
+      if (maxLibraryBooks !== -1) {
+        const currentBookCount = await db.libraryBook.count({
+          where: { schoolId, deletedAt: null },
+        });
+        
+        if (currentBookCount >= maxLibraryBooks) {
+          return NextResponse.json(
+            { error: `Your plan allows maximum ${maxLibraryBooks} library books. Please upgrade your plan to add more.` },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     const book = await db.libraryBook.create({

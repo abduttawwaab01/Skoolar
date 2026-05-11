@@ -23,7 +23,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Plus, AlertCircle, Loader2, Copy, Eye, Trash2, ClipboardCheck,
   CheckCircle2, Users, FileQuestion, Shield, Link2, GraduationCap,
-  Briefcase, Timer, ToggleLeft, ArrowUpDown, RefreshCw, Pencil
+  Briefcase, Timer, ToggleLeft, ArrowUpDown, RefreshCw, Pencil,
+  FileUp, Download
 } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
@@ -262,6 +263,75 @@ export function EntranceExamsView() {
     exam: { id: string; title: string; code: string };
   }>>([]);
   const [loadingRegistrations, setLoadingRegistrations] = React.useState(false);
+  
+  // Bulk registration
+  const [bulkOpen, setBulkOpen] = React.useState(false);
+  const [bulkExamId, setBulkExamId] = React.useState('');
+  const [bulkLoading, setBulkLoading] = React.useState(false);
+  const [bulkFile, setBulkFile] = React.useState<File | null>(null);
+
+  const downloadTemplate = () => {
+    const headers = ['Name', 'Email', 'Phone', 'Class'];
+    const rows = [
+      ['John Doe', 'john@example.com', '08012345678', 'SS1'],
+      ['Jane Smith', 'jane@example.com', '08087654321', 'JSS3']
+    ];
+    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "entrance_applicants_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.info('Template downloaded. Please fill and upload.');
+  };
+
+  const handleBulkUpload = async () => {
+    if (!bulkExamId) { toast.error('Please select an exam'); return; }
+    if (!bulkFile) { toast.error('Please select a file'); return; }
+    
+    setBulkLoading(true);
+    try {
+      const text = await bulkFile.text();
+      const lines = text.split(/\r?\n/).filter(line => line.trim());
+      if (lines.length < 2) throw new Error('File is empty or missing data');
+      
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const candidates = lines.slice(1).map(line => {
+        const values = line.split(',').map(v => v.trim());
+        const obj: any = {};
+        headers.forEach((h, i) => {
+          if (h === 'name') obj.applicantName = values[i];
+          if (h === 'email') obj.applicantEmail = values[i];
+          if (h === 'phone') obj.applicantPhone = values[i];
+          if (h === 'class') obj.appliedClass = values[i];
+        });
+        return obj;
+      }).filter(c => c.applicantName);
+
+      if (candidates.length === 0) throw new Error('No valid candidates found');
+
+      const res = await fetch('/api/entrance-exams?action=bulk-register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examId: bulkExamId, candidates, autoApprove: true }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      
+      toast.success(json.message);
+      setBulkOpen(false);
+      setBulkFile(null);
+      fetchExams();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to process file');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   const fetchRegistrations = async () => {
     if (!selectedSchoolId) return;
@@ -616,6 +686,68 @@ export function EntranceExamsView() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={fetchExams}><RefreshCw className="h-4 w-4" /></Button>
+          <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2 border-emerald-200 hover:bg-emerald-50 text-emerald-700">
+                <FileUp className="size-4" /> Bulk Register
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Bulk Registration</DialogTitle>
+                <DialogDescription>Upload a CSV file with candidate details to register them in bulk.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>1. Download Template</Label>
+                  <Button variant="ghost" size="sm" onClick={downloadTemplate} className="w-full justify-start text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                    <Download className="size-3.5 mr-2" /> Download CSV Template
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <Label>2. Select Target Exam</Label>
+                  <Select value={bulkExamId} onValueChange={setBulkExamId}>
+                    <SelectTrigger className="text-sm"><SelectValue placeholder="Select exam to register for" /></SelectTrigger>
+                    <SelectContent>
+                      {exams.map(e => <SelectItem key={e.id} value={e.id} className="text-sm">{e.title} ({e.code})</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>3. Upload Filled CSV</Label>
+                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-emerald-300 transition-colors cursor-pointer relative">
+                    <input 
+                      type="file" 
+                      accept=".csv" 
+                      className="absolute inset-0 opacity-0 cursor-pointer" 
+                      onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+                    />
+                    {bulkFile ? (
+                      <div className="flex items-center justify-center gap-2 text-emerald-600 font-medium">
+                        <CheckCircle2 className="size-5" /> {bulkFile.name}
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <FileUp className="size-8 text-gray-300 mx-auto" />
+                        <p className="text-sm text-gray-500">Click or drag CSV here</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setBulkOpen(false)}>Cancel</Button>
+                <Button 
+                  onClick={handleBulkUpload} 
+                  disabled={bulkLoading || !bulkFile || !bulkExamId}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {bulkLoading ? <Loader2 className="mr-2 size-4 animate-spin" /> : <FileUp className="mr-2 size-4" />}
+                  Register Candidates
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700">

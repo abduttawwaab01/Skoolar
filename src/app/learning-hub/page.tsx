@@ -7,15 +7,18 @@ import {
   ThumbsUp, Send, ChevronDown, ChevronUp, Crown, Medal, Award,
   Flame, Sparkles, Loader2, X, Pin, BookOpen, PenLine, Zap,
   Swords, GraduationCap, Users, Brain, Calculator, Globe, Code,
-  ChevronRight, Quote, RefreshCw, FileText, ArrowLeft, BadgeCheck,
+  ChevronRight, Quote, RefreshCw, FileText, ArrowLeft, ArrowRight, BadgeCheck,
   FlaskConical, Bookmark, BookmarkCheck, Share2, Copy, Check,
   TrendingUp, Target, BarChart3, Play, Shield, ChevronLeft,
   Menu, MapPin, Volume2, Lock, Unlock, CheckCircle2, CircleDot,
+  Video, Music, Trash2, ShieldAlert, Flag, ThumbsDown,
+  EyeOff, CheckCircle, Ban
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,7 +32,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Progress } from '@/components/ui/progress';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { useAppStore } from '@/store/app-store';
 import { handleSilentError } from '@/lib/error-handler';
+import { cn } from '@/lib/utils';
 
 // ======================== TYPES ========================
 
@@ -102,6 +107,8 @@ interface HubPost {
   likedBy?: string[];
   commentsCount: number;
   reviewsCount: number;
+  mediaUrl?: string;
+  mediaType?: 'video' | 'audio';
   isPinned: boolean;
   isFeatured: boolean;
   isHidden: boolean;
@@ -238,6 +245,75 @@ function getChannelIcon(iconName: string): React.ElementType {
 function getGameIcon(iconName: string): React.ElementType {
   const icons: Record<string, React.ElementType> = { Calculator, BookOpen, FlaskConical, Clock, Globe, Code, Brain, Gamepad2 };
   return icons[iconName] || Gamepad2;
+}
+
+function MediaEmbed({ url }: { url?: string }) {
+  if (!url) return null;
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    const videoId = url.includes('v=') ? url.split('v=')[1].split('&')[0] : url.split('/').pop();
+    return (
+      <div className="aspect-video w-full overflow-hidden rounded-lg border bg-black mb-4">
+        <iframe src={`https://www.youtube.com/embed/${videoId}`} className="h-full w-full" allowFullScreen />
+      </div>
+    );
+  }
+  if (url.includes('vimeo.com')) {
+    const videoId = url.split('/').pop();
+    return (
+      <div className="aspect-video w-full overflow-hidden rounded-lg border bg-black mb-4">
+        <iframe src={`https://player.vimeo.com/video/${videoId}`} className="h-full w-full" allowFullScreen />
+      </div>
+    );
+  }
+  if (url.includes('soundcloud.com')) {
+    return (
+      <div className="w-full rounded-lg overflow-hidden border mb-4">
+        <iframe width="100%" height="166" src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500`} />
+      </div>
+    );
+  }
+  if (url.includes('spotify.com')) {
+    return (
+      <div className="w-full rounded-lg overflow-hidden border mb-4">
+        <iframe src={url.replace('open.spotify.com', 'open.spotify.com/embed')} width="100%" height="80" frameBorder="0" allow="encrypted-media" />
+      </div>
+    );
+  }
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-3 border rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors mb-4">
+      <Play className="size-4 text-emerald-600" />
+      <span className="text-sm font-medium text-emerald-700 underline">View External Media Content</span>
+    </a>
+  );
+}
+
+function ModeratorActions({ post, onAction }: { post: HubPost; onAction: (action: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2 p-3 bg-slate-900 rounded-xl text-white shadow-xl mb-6">
+      <div className="w-full flex items-center gap-2 mb-2 pb-2 border-b border-white/10">
+        <Shield className="size-4 text-blue-400" />
+        <span className="text-xs font-bold uppercase tracking-wider">Moderator Actions</span>
+      </div>
+      <Button size="sm" variant="ghost" className="h-8 text-[10px] bg-white/10 hover:bg-white/20 text-white" onClick={() => onAction(post.isPinned ? 'unpin' : 'pin')}>
+        <Pin className={cn("size-3 mr-1", post.isPinned && "fill-blue-400 text-blue-400")} />
+        {post.isPinned ? 'Unpin' : 'Pin'}
+      </Button>
+      <Button size="sm" variant="ghost" className="h-8 text-[10px] bg-white/10 hover:bg-white/20 text-white" onClick={() => onAction(post.isFeatured ? 'unfeature' : 'feature')}>
+        <Star className={cn("size-3 mr-1", post.isFeatured && "fill-amber-400 text-amber-400")} />
+        {post.isFeatured ? 'Unfeature' : 'Feature'}
+      </Button>
+      <Button size="sm" variant="ghost" className="h-8 text-[10px] bg-white/10 hover:bg-white/20 text-white" onClick={() => onAction(post.isHidden ? 'unhide' : 'hide')}>
+        {post.isHidden ? <Eye className="size-3 mr-1" /> : <EyeOff className="size-3 mr-1" />}
+        {post.isHidden ? 'Unhide' : 'Hide'}
+      </Button>
+      <Button size="sm" variant="ghost" className="h-8 text-[10px] bg-red-900/50 hover:bg-red-800 text-red-200" onClick={() => onAction('delete')}>
+        <Trash2 className="size-3 mr-1" /> Delete
+      </Button>
+      <Button size="sm" variant="ghost" className="h-8 text-[10px] bg-red-900/50 hover:bg-red-800 text-red-200" onClick={() => onAction('ban-author')}>
+        <Ban className="size-3 mr-1" /> Ban Author
+      </Button>
+    </div>
+  );
 }
 
 // ======================== SUB-COMPONENTS ========================
@@ -469,6 +545,7 @@ function PostCard({ post, currentUser, onOpen, onLike, isBookmarked, onBookmark,
 
         {/* Content */}
         <div>
+          {post.mediaUrl && <MediaEmbed url={post.mediaUrl} />}
           <div className="flex items-center gap-2 mb-1.5">
             <Badge className={`${post.contentTypeColor || 'bg-gray-100 text-gray-700'} text-[10px] capitalize gap-1`}>
               {contentIconEl} {post.contentTypeLabel || post.contentType}
@@ -566,6 +643,7 @@ function GameCard({ game, currentUser, onPlay }: { game: HubGame; currentUser: H
 // ======================== MAIN COMPONENT ========================
 
 export default function LearningHubPage() {
+  const { currentUser: mainUser } = useAppStore();
   // --- User State ---
   const [currentUser, setCurrentUser] = useState<HubUser | null>(null);
   const [showRegister, setShowRegister] = useState(false);
@@ -613,7 +691,7 @@ export default function LearningHubPage() {
 
   // --- Create Post ---
   const [showCreatePost, setShowCreatePost] = useState(false);
-  const [newPost, setNewPost] = useState({ title: '', content: '', channelId: 'ch1', contentType: 'text', category: '', tags: '' });
+  const [newPost, setNewPost] = useState({ title: '', content: '', channelId: 'ch1', contentType: 'text', category: '', tags: '', mediaUrl: '' });
   const [creatingPost, setCreatingPost] = useState(false);
 
   // --- Animated Stats ---
@@ -684,6 +762,26 @@ export default function LearningHubPage() {
       setLoading(false);
     }
   }, []);
+
+  const handleModeration = async (postId: string, action: string) => {
+    if (!currentUser || (mainUser?.role !== 'SUPER_ADMIN' && mainUser?.role !== 'SCHOOL_ADMIN')) return;
+    try {
+      const res = await fetch('/api/hub?action=moderate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId, action, moderatorId: currentUser.id }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(json.message);
+        fetchInitialData();
+        if (selectedPost?.id === postId) {
+          if (action === 'delete') setSelectedPost(null);
+          else openPost(selectedPost);
+        }
+      } else toast.error(json.message);
+    } catch { toast.error('Moderation failed'); }
+  };
 
   useEffect(() => { fetchInitialData(); }, [fetchInitialData]);
 
@@ -879,17 +977,16 @@ export default function LearningHubPage() {
           channelId: newPost.channelId, title: newPost.title.trim(),
           content: newPost.content.trim(), contentType: newPost.contentType,
           category: newPost.category || 'General', tags: tagsArr,
+          mediaUrl: newPost.mediaUrl.trim(),
+          mediaType: newPost.mediaUrl.includes('youtube.com') || newPost.mediaUrl.includes('vimeo.com') ? 'video' : 'audio'
         }),
       });
       const json = await res.json();
       if (json.success) {
-        setPosts(prev => [json.data, ...prev]);
+        toast.success('Post shared successfully! 🎉');
         setShowCreatePost(false);
-        setNewPost({ title: '', content: '', channelId: newPost.channelId, contentType: 'text', category: '', tags: '' });
-        const updatedUser = { ...currentUser, points: currentUser.points + 25, postsCount: currentUser.postsCount + 1 };
-        setCurrentUser(updatedUser);
-        localStorage.setItem('skoolar-hub-user', JSON.stringify(updatedUser));
-        toast.success('Post published! +25 points 🎉');
+        setNewPost({ title: '', content: '', channelId: 'ch1', contentType: 'text', category: '', tags: '', mediaUrl: '' });
+        fetchInitialData();
       } else {
         toast.error(json.message || 'Failed to create post');
       }
@@ -1147,9 +1244,15 @@ export default function LearningHubPage() {
                 <label className="text-sm font-medium text-gray-700 mb-1.5 block">Content * <span className="text-gray-400 font-normal">({newPost.content.length}/50000)</span></label>
                 <Textarea placeholder="Write your content here..." value={newPost.content} onChange={e => setNewPost(p => ({ ...p, content: e.target.value }))} rows={8} className="resize-y" />
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-1.5 block">Tags (comma separated)</label>
-                <Input placeholder="e.g., poetry, nature, creative-writing" value={newPost.tags} onChange={e => setNewPost(p => ({ ...p, tags: e.target.value }))} />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="post-tags">Tags (comma separated)</Label>
+                  <Input id="post-tags" placeholder="e.g. poetry, nature, science" value={newPost.tags} onChange={e => setNewPost(f => ({ ...f, tags: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="post-media">Media Link (YouTube, Spotify, etc.)</Label>
+                  <Input id="post-media" placeholder="https://youtube.com/watch?v=..." value={newPost.mediaUrl} onChange={e => setNewPost(f => ({ ...f, mediaUrl: e.target.value }))} />
+                </div>
               </div>
             </div>
             <DialogFooter className="gap-2 mt-4">
@@ -1190,6 +1293,10 @@ export default function LearningHubPage() {
             ) : selectedPost ? (
               <ScrollArea className="flex-1">
                 <div className="p-4 space-y-5">
+                  {/* Moderator Bar */}
+                  {(mainUser?.role === 'SUPER_ADMIN' || mainUser?.role === 'SCHOOL_ADMIN') && (
+                    <ModeratorActions post={selectedPost} onAction={(a) => handleModeration(selectedPost.id, a)} />
+                  )}
                   {/* Post Header */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-3">
@@ -1237,8 +1344,12 @@ export default function LearningHubPage() {
                     </div>
                   </div>
 
-                  {/* Post Content */}
-                  <div className={`rounded-lg p-5 border bg-white shadow-sm text-gray-700 leading-relaxed ${selectedPost.contentType === 'poem' ? 'font-serif italic whitespace-pre-wrap text-center text-base' : 'whitespace-pre-wrap'}`}>
+                  {/* Content */}
+                  {selectedPost.mediaUrl && <MediaEmbed url={selectedPost.mediaUrl} />}
+                  <div className={cn(
+                    "rounded-lg p-5 border bg-white shadow-sm text-gray-700 leading-relaxed",
+                    selectedPost.contentType === 'poem' ? 'font-serif italic whitespace-pre-wrap text-center text-base' : 'whitespace-pre-wrap'
+                  )}>
                     {selectedPost.content}
                   </div>
 
