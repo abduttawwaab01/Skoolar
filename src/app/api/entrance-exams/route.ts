@@ -502,8 +502,8 @@ async function bulkRegister(request: NextRequest) {
     if (!exam) return NextResponse.json({ error: 'Exam not found' }, { status: 404 });
     
     const results = await db.$transaction(async (tx) => {
-      const created = [];
-      const skipped = [];
+      const created: any[] = [];
+      const skipped: any[] = [];
       
       for (const cand of candidates) {
         if (!cand.applicantName) {

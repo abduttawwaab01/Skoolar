@@ -1236,13 +1236,12 @@ export async function PUT(request: NextRequest) {
         }
 
         // Verify moderator role
-        const modUser = await db.hubUser.findUnique({ 
-          where: { id: moderatorId },
-          include: { user: true }
-        });
+        const modHubUser = await db.hubUser.findUnique({ where: { id: moderatorId } });
+        if (!modHubUser?.userId) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
 
-        const isSuperAdmin = modUser?.user?.role === 'SUPER_ADMIN';
-        const isAdmin = modUser?.user?.role === 'SCHOOL_ADMIN';
+        const mainUser = await db.user.findUnique({ where: { id: modHubUser.userId } });
+        const isSuperAdmin = mainUser?.role === 'SUPER_ADMIN';
+        const isAdmin = mainUser?.role === 'SCHOOL_ADMIN';
         
         if (!isSuperAdmin && !isAdmin) {
           return NextResponse.json({ success: false, message: 'Unauthorized moderation attempt' }, { status: 403 });

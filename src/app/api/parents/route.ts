@@ -146,7 +146,7 @@ const body = await request.json();
       });
       
       if (school) {
-        const maxParents = school.subscriptionPlan?.maxParents || school.maxParents || 500;
+        const maxParents = school.subscriptionPlan?.maxParents || 500;
         // If maxParents is -1, it means unlimited
         if (maxParents !== -1) {
           const currentParentCount = await db.parent.count({

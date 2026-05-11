@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       }
 
       const results = await db.$transaction(async (tx) => {
-        const created = [];
+        const created: any[] = [];
         for (const b of books) {
           const newBook = await tx.libraryBook.create({
             data: {
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     });
     
     if (school) {
-      const maxLibraryBooks = school.subscriptionPlan?.maxLibraryBooks || school.maxLibraryBooks || 500;
+      const maxLibraryBooks = school.subscriptionPlan?.maxLibraryBooks || 500;
       // If maxLibraryBooks is -1, it means unlimited
       if (maxLibraryBooks !== -1) {
         const currentBookCount = await db.libraryBook.count({

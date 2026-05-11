@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
     });
     
     if (school) {
-      const maxClasses = school.subscriptionPlan?.maxClasses || school.maxClasses || 50;
+      const maxClasses = school.subscriptionPlan?.maxClasses || 50;
       // If maxClasses is -1, it means unlimited
       if (maxClasses !== -1) {
         const currentClassCount = await db.class.count({

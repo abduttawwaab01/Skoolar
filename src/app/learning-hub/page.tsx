@@ -643,7 +643,7 @@ function GameCard({ game, currentUser, onPlay }: { game: HubGame; currentUser: H
 // ======================== MAIN COMPONENT ========================
 
 export default function LearningHubPage() {
-  const { currentUser: mainUser } = useAppStore();
+  const { currentRole } = useAppStore();
   // --- User State ---
   const [currentUser, setCurrentUser] = useState<HubUser | null>(null);
   const [showRegister, setShowRegister] = useState(false);
@@ -764,7 +764,7 @@ export default function LearningHubPage() {
   }, []);
 
   const handleModeration = async (postId: string, action: string) => {
-    if (!currentUser || (mainUser?.role !== 'SUPER_ADMIN' && mainUser?.role !== 'SCHOOL_ADMIN')) return;
+    if (!currentUser || (currentRole !== 'SUPER_ADMIN' && currentRole !== 'SCHOOL_ADMIN')) return;
     try {
       const res = await fetch('/api/hub?action=moderate', {
         method: 'POST',
@@ -1294,7 +1294,7 @@ export default function LearningHubPage() {
               <ScrollArea className="flex-1">
                 <div className="p-4 space-y-5">
                   {/* Moderator Bar */}
-                  {(mainUser?.role === 'SUPER_ADMIN' || mainUser?.role === 'SCHOOL_ADMIN') && (
+                  {(currentRole === 'SUPER_ADMIN' || currentRole === 'SCHOOL_ADMIN') && (
                     <ModeratorActions post={selectedPost} onAction={(a) => handleModeration(selectedPost.id, a)} />
                   )}
                   {/* Post Header */}

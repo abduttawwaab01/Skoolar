@@ -320,7 +320,7 @@ export async function POST(request: NextRequest) {
     });
     
     if (school) {
-      const maxHomeworkPerMonth = school.subscriptionPlan?.maxHomeworkPerMonth || school.maxHomeworkPerMonth || 100;
+      const maxHomeworkPerMonth = school.subscriptionPlan?.maxHomeworkPerMonth || 100;
       // If maxHomeworkPerMonth is -1, it means unlimited
       if (maxHomeworkPerMonth !== -1) {
         const now = new Date();
