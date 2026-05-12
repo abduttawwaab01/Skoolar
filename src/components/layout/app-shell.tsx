@@ -374,7 +374,7 @@ function SidebarContent() {
       )}
 
       {/* Navigation */}
-      <ScrollArea className="flex-1 px-3 py-2">
+      <ScrollArea className="flex-1 min-h-0 px-3 py-2">
         <nav className="space-y-0.5">
           {navItems.map(item => (
             <NavItemButton key={item.id} item={item} collapsed={!sidebarOpen} />
@@ -487,7 +487,7 @@ function NotificationsPanel() {
 
   return (
     <div className={cn('fixed inset-y-0 right-0 z-50 w-full max-w-md transform bg-background border-l shadow-2xl transition-transform duration-300 ease-out', showNotifications ? 'translate-x-0' : 'translate-x-full')}>
-      <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
         <div className="flex items-center justify-between border-b px-4 py-3 bg-gradient-to-r from-emerald-50/50 to-teal-50/50">
           <h3 className="text-lg font-semibold flex items-center gap-2">
             🔔 Notifications
@@ -751,15 +751,15 @@ function Header() {
   const displayInitials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-1 sm:gap-2 lg:gap-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-2 sm:px-4 lg:px-6">
       {/* Mobile menu */}
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="lg:hidden size-9" onClick={() => soundEffects.click()}>
-            <Menu className="size-5" />
+          <Button variant="ghost" size="icon" className="lg:hidden size-8 sm:size-9" onClick={() => soundEffects.click()}>
+            <Menu className="size-4 sm:size-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-72 p-0">
+        <SheetContent side="left" className="w-72 p-0 overflow-y-auto" style={{ overscrollBehavior: 'contain' }}>
           <SidebarContent />
         </SheetContent>
       </Sheet>
@@ -799,8 +799,8 @@ function Header() {
       <div className="flex items-center gap-1 md:hidden">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-9" onClick={() => { soundEffects.search(); window.dispatchEvent(new CustomEvent('open-command-palette')); }}>
-              <Search className="size-4" />
+            <Button variant="ghost" size="icon" className="size-8 sm:size-9" onClick={() => { soundEffects.search(); window.dispatchEvent(new CustomEvent('open-command-palette')); }}>
+              <Search className="size-3.5 sm:size-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Search</TooltipContent>
@@ -808,8 +808,8 @@ function Header() {
         {currentRole === 'SUPER_ADMIN' && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-9" onClick={() => soundEffects.click()}>
-                <Building2 className="size-4" />
+              <Button variant="ghost" size="icon" className="size-8 sm:size-9" onClick={() => soundEffects.click()}>
+                <Building2 className="size-3.5 sm:size-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -825,8 +825,8 @@ function Header() {
       {/* Theme toggle */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" className="size-9" onClick={toggleThemeHandler}>
-            {theme === 'light' ? <Moon className="size-4" /> : <Sun className="size-4 text-amber-500" />}
+          <Button variant="ghost" size="icon" className="size-8 sm:size-9" onClick={toggleThemeHandler}>
+            {theme === 'light' ? <Moon className="size-3.5 sm:size-4" /> : <Sun className="size-3.5 sm:size-4 text-amber-500" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>{theme === 'light' ? '🌙 Dark mode' : '☀️ Light mode'}</TooltipContent>
@@ -849,7 +849,7 @@ function Header() {
       {/* Notifications */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative size-9" onClick={() => { setShowNotifications(true); soundEffects.click(); }}>
+          <Button variant="ghost" size="icon" className="relative size-8 sm:size-9" onClick={() => { setShowNotifications(true); soundEffects.click(); }}>
             <span className="relative">
               🔔
               {unreadCount > 0 && (
