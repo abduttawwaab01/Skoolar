@@ -1805,6 +1805,12 @@ model PlatformStory {
   isFeatured      Boolean   @default(false)
   isPublished     Boolean   @default(false)
   publishedAt     DateTime?
+  audioUrl        String?
+  audioDuration   Int?
+  audioPlatform   String?
+  videoUrl        String?
+  videoDuration   Int?
+  videoPlatform   String?
   readTime        Int       @default(10)
   viewCount       Int       @default(0)
   likeCount       Int       @default(0)
@@ -1836,6 +1842,8 @@ model StorySubmission {
   grade       String?
   category    String    @default("General")
   coverImage  String?
+  audioUrl    String?
+  videoUrl    String?
   status      String    @default("pending")
   adminNotes  String?
   reviewedBy  String?
