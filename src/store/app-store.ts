@@ -38,13 +38,14 @@ export type DashboardView =
 interface AppState {
   currentRole: UserRole;
   setCurrentRole: (role: UserRole) => void;
- currentUser: {
+  currentUser: {
     id: string;
     name: string;
     email: string;
     avatar: string | null;
     schoolId: string;
     schoolName: string;
+    planName: string;
   };
   setCurrentUser: (user: AppState['currentUser']) => void;
   currentView: DashboardView;
@@ -83,6 +84,7 @@ export const useAppStore = create<AppState>()(
         avatar: null,
         schoolId: '',
         schoolName: 'Skoolar Platform',
+        planName: 'free',
       },
       currentView: 'overview',
       setCurrentView: (view) => set({ currentView: view }),

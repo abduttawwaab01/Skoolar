@@ -267,24 +267,40 @@ function PlanCard({
       </ul>
 
       {/* CTA Button */}
-      <Link href="/register" className="block">
-        <Button
-          className={`w-full h-11 font-semibold text-sm transition-all ${
-            isPopular
-              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/25'
-              : plan.price === 0
-              ? 'bg-gray-900 hover:bg-gray-800 text-white'
-              : 'bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-900 hover:bg-gray-50'
-          }`}
-          variant={isPopular ? 'default' : 'outline'}
+      {plan.name === 'custom' ? (
+        <a
+          href="https://wa.me/2349152929772?text=Hello%20Skoolar%20Admin%2C%20I%27m%20interested%20in%20a%20Custom%20Plan%20for%20my%20school.%20Please%20provide%20me%20with%20a%20quote%20and%20more%20details."
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
         >
-          {plan.price === 0 ? (
-            <span className="flex items-center justify-center gap-2"><Rocket className="h-4 w-4" /> Get Started Free</span>
-          ) : (
-            <span className="flex items-center justify-center gap-2"><Zap className="h-4 w-4" /> Start Free Trial</span>
-          )}
-        </Button>
-      </Link>
+          <Button
+            className="w-full h-11 font-semibold text-sm bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-900 hover:bg-gray-50"
+            variant="outline"
+          >
+            <span className="flex items-center justify-center gap-2"><MessageSquare className="h-4 w-4" /> Contact Us</span>
+          </Button>
+        </a>
+      ) : (
+        <Link href="/register" className="block">
+          <Button
+            className={`w-full h-11 font-semibold text-sm transition-all ${
+              isPopular
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/25'
+                : plan.price === 0
+                ? 'bg-gray-900 hover:bg-gray-800 text-white'
+                : 'bg-white border-2 border-gray-200 hover:border-gray-300 text-gray-900 hover:bg-gray-50'
+            }`}
+            variant={isPopular ? 'default' : 'outline'}
+          >
+            {plan.price === 0 ? (
+              <span className="flex items-center justify-center gap-2"><Rocket className="h-4 w-4" /> Get Started Free</span>
+            ) : (
+              <span className="flex items-center justify-center gap-2"><Zap className="h-4 w-4" /> Start Free Trial</span>
+            )}
+          </Button>
+        </Link>
+      )}
     </motion.div>
   );
 }

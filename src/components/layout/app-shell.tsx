@@ -353,6 +353,26 @@ function SidebarContent() {
 
       <Separator className="opacity-60" />
 
+      {/* Free Plan Upgrade Banner */}
+      {sidebarOpen && currentUser.planName === 'free' && currentRole !== 'SUPER_ADMIN' && (
+        <div className="px-3 pt-3">
+          <Link href="/pricing">
+            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-2.5 transition-all hover:from-amber-100 hover:to-orange-100 hover:shadow-sm cursor-pointer">
+              <div className="flex size-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm">
+                <ArrowUpCircle className="size-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-amber-800">Free Plan</p>
+                <p className="text-[10px] text-amber-600 leading-tight">Upgrade to unlock more features</p>
+              </div>
+              <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 text-[10px] px-2 py-0.5">
+                Upgrade
+              </Badge>
+            </div>
+          </Link>
+        </div>
+      )}
+
       {/* Navigation */}
       <ScrollArea className="flex-1 px-3 py-2">
         <nav className="space-y-0.5">
@@ -697,11 +717,35 @@ function Header() {
         useAppStore.getState().setCurrentUser({
           id: u.id, name: u.name, email: u.email, avatar: u.avatar,
           schoolId: u.schoolId || '', schoolName: u.schoolName || 'Skoolar Platform',
+          planName: u.planName || 'free',
         });
         setCurrentRole(u.role as UserRole);
       }
     }
   }, [session, setCurrentRole]);
+
+  // Real-time plan check — refresh plan from server so upgrade banner leaves immediately after upgrade
+  useEffect(() => {
+    const schoolId = currentUser.schoolId;
+    if (!schoolId || currentRole === 'SUPER_ADMIN') return;
+
+    const fetchPlan = async () => {
+      try {
+        const res = await fetch(`/api/schools/${schoolId}`);
+        if (res.ok) {
+          const school = await res.json();
+          if (school.plan && school.plan !== currentUser.planName) {
+            useAppStore.setState((state) => ({
+              currentUser: { ...state.currentUser, planName: school.plan },
+            }));
+          }
+        }
+      } catch {
+        // Silently fail — session plan is the fallback
+      }
+    };
+    fetchPlan();
+  }, [currentUser.schoolId, currentRole]);
 
   const displayName = session?.user?.name || currentUser.name;
   const displayInitials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();

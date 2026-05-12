@@ -96,6 +96,7 @@ export const authOptions: NextAuthOptions = {
           schoolId: user.schoolId,
           schoolName: user.school?.name ?? 'Skoolar Platform',
           avatar: user.avatar,
+          planName: user.school?.plan ?? 'free',
         };
       },
     }),
@@ -116,6 +117,7 @@ export const authOptions: NextAuthOptions = {
         token.schoolId = user.schoolId;
         token.schoolName = user.schoolName;
         token.avatar = user.avatar;
+        token.planName = user.planName;
       }
       return token;
     },
@@ -126,6 +128,7 @@ export const authOptions: NextAuthOptions = {
         session.user.schoolId = token.schoolId as string | null;
         session.user.schoolName = token.schoolName as string;
         session.user.avatar = token.avatar as string | null;
+        session.user.planName = token.planName as string;
       }
       return session;
     },
@@ -144,6 +147,7 @@ declare module 'next-auth' {
       schoolId: string | null;
       schoolName: string;
       avatar: string | null;
+      planName: string;
     };
   }
 
@@ -155,6 +159,7 @@ declare module 'next-auth' {
     schoolId: string | null;
     schoolName: string;
     avatar: string | null;
+    planName: string;
   }
 }
 
@@ -165,5 +170,6 @@ declare module 'next-auth/jwt' {
     schoolId: string | null;
     schoolName: string;
     avatar: string | null;
+    planName: string;
   }
 }

@@ -250,6 +250,7 @@ export default function DashboardPage() {
         avatar: session.user.avatar || null,
         schoolId: session.user.schoolId || '',
         schoolName: session.user.schoolName || 'Skoolar Platform',
+        planName: session.user.planName || 'free',
       });
       
       const userRole = (session.user.role as UserRole) || 'STUDENT';

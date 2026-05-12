@@ -844,14 +844,34 @@ function PricingSection() {
                   </li>
                 ))}
               </ul>
-              <Button className={cn(
-                "w-full",
-                plan.popular 
-                  ? "bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600" 
-                  : "bg-gray-900 hover:bg-gray-800"
-              )}>
-                {plan.cta}
-              </Button>
+              {plan.name === 'Custom' ? (
+                <a
+                  href="https://wa.me/2349152929772?text=Hello%20Skoolar%20Admin%2C%20I%27m%20interested%20in%20a%20Custom%20Plan%20for%20my%20school.%20Please%20provide%20me%20with%20a%20quote%20and%20more%20details."
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full"
+                >
+                  <Button className={cn(
+                    "w-full",
+                    plan.popular 
+                      ? "bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600" 
+                      : "bg-gray-900 hover:bg-gray-800"
+                  )}>
+                    {plan.cta}
+                  </Button>
+                </a>
+              ) : (
+                <Link href="/register" className="block w-full">
+                  <Button className={cn(
+                    "w-full",
+                    plan.popular 
+                      ? "bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600" 
+                      : "bg-gray-900 hover:bg-gray-800"
+                  )}>
+                    {plan.cta}
+                  </Button>
+                </Link>
+              )}
             </motion.div>
           ))}
         </div>
