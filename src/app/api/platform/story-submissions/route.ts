@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, content, authorName, authorEmail, authorPhone, level, grade, category, coverImage } = body;
+    const { title, content, authorName, authorEmail, authorPhone, level, grade, category, coverImage, audioUrl, videoUrl } = body;
 
     // Validate required fields
     if (!title || typeof title !== 'string') {
@@ -131,6 +131,8 @@ export async function POST(request: NextRequest) {
         grade: grade || null,
         category: finalCategory,
         coverImage: coverImage || null,
+        audioUrl: audioUrl || null,
+        videoUrl: videoUrl || null,
         status: 'pending',
       },
     });

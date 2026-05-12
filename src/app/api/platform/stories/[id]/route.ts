@@ -61,7 +61,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { title, excerpt, content, coverImage, level, grade, category, tags, authorName, authorBio, isFeatured, isPublished } = body;
+    const { title, excerpt, content, coverImage, level, grade, category, tags, authorName, authorBio, isFeatured, isPublished, audioUrl, audioDuration, audioPlatform, videoUrl, videoDuration, videoPlatform } = body;
 
     const updateData: Record<string, unknown> = {};
     if (title !== undefined) updateData.title = title;
@@ -82,6 +82,12 @@ export async function PUT(
       updateData.isPublished = isPublished;
       if (isPublished) updateData.publishedAt = new Date();
     }
+    if (audioUrl !== undefined) updateData.audioUrl = audioUrl;
+    if (audioDuration !== undefined) updateData.audioDuration = audioDuration;
+    if (audioPlatform !== undefined) updateData.audioPlatform = audioPlatform;
+    if (videoUrl !== undefined) updateData.videoUrl = videoUrl;
+    if (videoDuration !== undefined) updateData.videoDuration = videoDuration;
+    if (videoPlatform !== undefined) updateData.videoPlatform = videoPlatform;
 
     const story = await db.platformStory.update({
       where: { id },

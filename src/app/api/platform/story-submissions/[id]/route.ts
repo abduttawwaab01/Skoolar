@@ -39,6 +39,8 @@ export async function PUT(
           content: submission.content,
           excerpt: submission.content.substring(0, 200) + '...',
           coverImage: submission.coverImage,
+          audioUrl: submission.audioUrl,
+          videoUrl: submission.videoUrl,
           level: submission.level,
           grade: submission.grade,
           category: submission.category,
