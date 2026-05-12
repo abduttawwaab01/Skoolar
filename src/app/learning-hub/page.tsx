@@ -50,6 +50,7 @@ interface HubUser {
   points: number;
   postsCount: number;
   isBanned: boolean;
+  isModerator?: boolean;
   createdAt: string;
   lastActive: string;
   interests?: string[];
@@ -654,6 +655,10 @@ export default function LearningHubPage() {
   const [registerBio, setRegisterBio] = useState('');
   const [registerInterests, setRegisterInterests] = useState<string[]>([]);
   const [registering, setRegistering] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loggingIn, setLoggingIn] = useState(false);
 
   // --- Data State ---
   const [channels, setChannels] = useState<HubChannel[]>([]);
@@ -693,6 +698,17 @@ export default function LearningHubPage() {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [newPost, setNewPost] = useState({ title: '', content: '', channelId: 'ch1', contentType: 'text', category: '', tags: '', mediaUrl: '' });
   const [creatingPost, setCreatingPost] = useState(false);
+
+  // --- Members Directory ---
+  const [members, setMembers] = useState<any[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [memberSearch, setMemberSearch] = useState('');
+
+  // --- Moderator Panel ---
+  const [showModPanel, setShowModPanel] = useState(false);
+  const [moderators, setModerators] = useState<HubUser[]>([]);
+  const [moderatorsLoading, setModeratorsLoading] = useState(false);
+  const [memberSearchForMod, setMemberSearchForMod] = useState('');
 
   // --- Animated Stats ---
   const [visibleStats, setVisibleStats] = useState(false);
@@ -848,6 +864,56 @@ export default function LearningHubPage() {
     }
   };
 
+  // --- Login ---
+  const handleLogin = async () => {
+    if (!loginEmail.trim()) {
+      toast.error('Email or display name is required');
+      return;
+    }
+    setLoggingIn(true);
+    try {
+      const res = await fetch('/api/hub?action=login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: loginEmail.trim(), displayName: loginEmail.trim() }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        const user = json.data;
+        // Merge with locally saved data if any
+        const saved = localStorage.getItem('skoolar-hub-user');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed.avatar) user.avatar = parsed.avatar;
+            if (parsed.bio) user.bio = parsed.bio;
+            if (parsed.interests) user.interests = parsed.interests;
+          } catch { /* ignore */ }
+        }
+        setCurrentUser(user);
+        localStorage.setItem('skoolar-hub-user', JSON.stringify(user));
+        setShowLogin(false);
+        setLoginEmail('');
+        setLoginPassword('');
+        toast.success(`Welcome back, ${user.displayName}!`);
+      } else {
+        toast.error(json.message || 'Login failed');
+      }
+    } catch {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
+  // --- Logout ---
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('skoolar-hub-user');
+    setShowRegister(true);
+    toast.info('Logged out');
+  };
+
   // --- Like Post ---
   const handleLike = async (postId: string) => {
     if (!currentUser) { setShowRegister(true); return; }
@@ -978,7 +1044,7 @@ export default function LearningHubPage() {
           content: newPost.content.trim(), contentType: newPost.contentType,
           category: newPost.category || 'General', tags: tagsArr,
           mediaUrl: newPost.mediaUrl.trim(),
-          mediaType: newPost.mediaUrl.includes('youtube.com') || newPost.mediaUrl.includes('vimeo.com') ? 'video' : 'audio'
+          mediaType: newPost.mediaUrl ? (newPost.mediaUrl.includes('youtube.com') || newPost.mediaUrl.includes('vimeo.com') ? 'video' : 'audio') : undefined
         }),
       });
       const json = await res.json();
@@ -1024,6 +1090,94 @@ export default function LearningHubPage() {
     }).catch(() => {
       toast.info('Share: ' + url);
     });
+  };
+
+  // --- Fetch Members ---
+  const fetchMembers = useCallback(async () => {
+    if (!currentUser) return;
+    setMembersLoading(true);
+    try {
+      const res = await fetch('/api/hub?action=members', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ viewerId: currentUser.id }),
+      });
+      const json = await res.json();
+      if (json.success) setMembers(json.data);
+    } catch { /* ignore */ }
+    finally { setMembersLoading(false); }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (activeTab === 'members') fetchMembers();
+  }, [activeTab, fetchMembers]);
+
+  // --- Follow / Unfollow ---
+  const handleFollow = async (targetId: string, isFollowed: boolean) => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch('/api/hub?action=' + (isFollowed ? 'unfollow' : 'follow'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ followerId: currentUser.id, followingId: targetId }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setMembers(prev => prev.map(m => m.id === targetId ? { ...m, isFollowedByViewer: !isFollowed, followerCount: m.followerCount + (isFollowed ? -1 : 1) } : m));
+        toast.success(isFollowed ? 'Unfollowed' : 'Following');
+      }
+    } catch { toast.error('Action failed'); }
+  };
+
+  // --- Fetch Moderators ---
+  const fetchModerators = useCallback(async () => {
+    setModeratorsLoading(true);
+    try {
+      const res = await fetch('/api/hub?action=list-moderators', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json();
+      if (json.success) setModerators(json.data);
+    } catch { /* ignore */ }
+    finally { setModeratorsLoading(false); }
+  }, []);
+
+  // --- Assign Moderator ---
+  const handleAssignModerator = async (targetId: string) => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch('/api/hub?action=assign-moderator', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: targetId, requesterId: currentUser.id }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(json.message);
+        fetchModerators();
+        fetchMembers();
+      } else toast.error(json.message);
+    } catch { toast.error('Failed to assign moderator'); }
+  };
+
+  // --- Remove Moderator ---
+  const handleRemoveModerator = async (targetId: string) => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch('/api/hub?action=remove-moderator', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: targetId, requesterId: currentUser.id }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(json.message);
+        fetchModerators();
+        fetchMembers();
+      } else toast.error(json.message);
+    } catch { toast.error('Failed to remove moderator'); }
   };
 
   // --- Play Game ---
@@ -1117,6 +1271,15 @@ export default function LearningHubPage() {
                   <label className="text-sm font-medium text-gray-700 mb-1.5 block">Email (optional)</label>
                   <Input type="email" placeholder="your@email.com" value={registerEmail} onChange={(e) => setRegisterEmail(e.target.value)} maxLength={100} className="h-11" />
                 </div>
+                <div className="text-center text-sm text-gray-500">
+                  Already have an account?{' '}
+                  <button
+                    onClick={() => { setShowRegister(false); setShowLogin(true); }}
+                    className="text-emerald-600 hover:text-emerald-700 font-medium"
+                  >
+                    Sign in
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1192,6 +1355,169 @@ export default function LearningHubPage() {
                 {registerStep < 3 && <ChevronRight className="w-4 h-4 ml-1" />}
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* ===== LOGIN DIALOG ===== */}
+        <Dialog open={showLogin} onOpenChange={setShowLogin}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <Users className="w-4 h-4 text-emerald-600" />
+                </div>
+                Welcome Back
+              </DialogTitle>
+              <DialogDescription>Sign in to your Learning Hub account</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1.5 block">Email or Display Name</label>
+                <Input
+                  placeholder="your@email.com or display name"
+                  value={loginEmail}
+                  onChange={e => setLoginEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                  className="h-11"
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2 flex-col sm:flex-row">
+              <div className="flex-1 text-sm text-gray-500">
+                New here?{' '}
+                <button
+                  onClick={() => { setShowLogin(false); setShowRegister(true); }}
+                  className="text-emerald-600 hover:text-emerald-700 font-medium"
+                >
+                  Join the community
+                </button>
+              </div>
+              <Button onClick={handleLogin} disabled={loggingIn} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[100px]">
+                {loggingIn ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                {loggingIn ? 'Signing in...' : 'Sign In'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* ===== MODERATOR PANEL DIALOG ===== */}
+        <Dialog open={showModPanel} onOpenChange={setShowModPanel}>
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Shield className="w-4 h-4 text-blue-600" />
+                </div>
+                Moderation Center
+              </DialogTitle>
+              <DialogDescription>Manage moderators and oversee the community</DialogDescription>
+            </DialogHeader>
+
+            <Tabs defaultValue="moderators" className="mt-2">
+              <TabsList className="bg-gray-100 p-1">
+                <TabsTrigger value="moderators" className="text-xs data-[state=active]:bg-white rounded-md">Moderators</TabsTrigger>
+                <TabsTrigger value="assign" className="text-xs data-[state=active]:bg-white rounded-md">Assign New</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="moderators" className="space-y-3 mt-4">
+                {moderatorsLoading ? (
+                  <div className="space-y-2">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}</div>
+                ) : moderators.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No moderators assigned yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {moderators.map(mod => {
+                      const isSelf = mod.id === currentUser?.id;
+                      const isSuperAdmin = mod.email?.toLowerCase() === 'admin@skoolar.org';
+                      return (
+                        <div key={mod.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                          <Avatar className="h-9 w-9">
+                            <AvatarFallback className={`${BADGE_CONFIG[mod.badge]?.bg || 'bg-gray-100'} ${BADGE_CONFIG[mod.badge]?.color || 'text-gray-600'} text-xs`}>
+                              {getInitials(mod.displayName)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-sm text-gray-900 truncate">{mod.displayName}</span>
+                              <Badge variant="outline" className="text-[10px] px-1 capitalize border-blue-200 text-blue-700 bg-blue-50">
+                                <Shield className="h-2.5 w-2.5 mr-0.5" /> Moderator
+                              </Badge>
+                            </div>
+                            <div className="text-xs text-gray-500">{mod.email || 'No email'}</div>
+                          </div>
+                          {currentUser && !isSelf && !isSuperAdmin && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                              onClick={() => handleRemoveModerator(mod.id)}
+                            >
+                              <ShieldAlert className="h-3 w-3 mr-1" /> Remove
+                            </Button>
+                          )}
+                          {isSuperAdmin && (
+                            <Badge className="text-[10px] bg-amber-100 text-amber-700 border-amber-200">Platform Admin</Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="assign" className="space-y-3 mt-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search members to promote..."
+                    value={memberSearchForMod}
+                    onChange={e => setMemberSearchForMod(e.target.value)}
+                    className="pl-9 h-11"
+                  />
+                </div>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {members
+                    .filter(m => {
+                      if (!memberSearchForMod) return false;
+                      const q = memberSearchForMod.toLowerCase();
+                      return (m.displayName?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q)) && !m.isModerator;
+                    })
+                    .slice(0, 20)
+                    .map(member => (
+                      <div key={member.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                        <Avatar className="h-9 w-9">
+                          <AvatarFallback className={`${BADGE_CONFIG[member.badge]?.bg || 'bg-gray-100'} ${BADGE_CONFIG[member.badge]?.color || 'text-gray-600'} text-xs`}>
+                            {member.avatar || getInitials(member.displayName)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm text-gray-900 truncate">{member.displayName}</div>
+                          <div className="text-xs text-gray-500">{member.points} pts · {member.badge}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={() => handleAssignModerator(member.id)}
+                        >
+                          <Shield className="h-3 w-3 mr-1" /> Promote
+                        </Button>
+                      </div>
+                    ))}
+                  {memberSearchForMod && members.filter(m => {
+                    const q = memberSearchForMod.toLowerCase();
+                    return (m.displayName?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q)) && !m.isModerator;
+                  }).length === 0 && (
+                    <div className="text-center py-6 text-gray-400 text-sm">No eligible members found</div>
+                  )}
+                  {!memberSearchForMod && (
+                    <div className="text-center py-6 text-gray-400 text-sm">Type a name to search for members to promote</div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </DialogContent>
         </Dialog>
 
@@ -1456,7 +1782,7 @@ export default function LearningHubPage() {
                         <div className="flex gap-2">
                           <Input placeholder="Write a comment..." value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSubmitComment()} className="flex-1 text-sm" />
                           <Button size="icon" onClick={handleSubmitComment} disabled={submittingComment || !commentText.trim()} className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0">
-                            {submittingComment ? <Loader2 className="h-4 h-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            {submittingComment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                           </Button>
                         </div>
                       </div>
@@ -1502,6 +1828,14 @@ export default function LearningHubPage() {
                       <span className="text-sm font-medium">{currentUser.displayName}</span>
                     </div>
                     <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button onClick={handleLogout} className="text-emerald-200 hover:text-white text-xs underline underline-offset-2 transition-colors">
+                          Logout
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent><p>Sign out of Learning Hub</p></TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
                       <TooltipTrigger>
                         <Badge className={`${BADGE_CONFIG[currentUser.badge].bg} ${BADGE_CONFIG[currentUser.badge].color} border capitalize text-xs cursor-help`}>
                           {BADGE_CONFIG[currentUser.badge].icon && React.createElement(BADGE_CONFIG[currentUser.badge].icon, { className: 'w-3 h-3 mr-1' })}
@@ -1521,9 +1855,14 @@ export default function LearningHubPage() {
                   </div>
                 )}
                 {!currentUser && (
-                  <Button onClick={() => setShowRegister(true)} size="lg" className="bg-white text-emerald-700 hover:bg-emerald-50 font-semibold shadow-lg shadow-emerald-900/20">
-                    <Users className="w-4 h-4 mr-2" /> Join the Community
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <Button onClick={() => setShowRegister(true)} size="lg" className="bg-white text-emerald-700 hover:bg-emerald-50 font-semibold shadow-lg shadow-emerald-900/20">
+                      <Users className="w-4 h-4 mr-2" /> Join the Community
+                    </Button>
+                    <Button onClick={() => setShowLogin(true)} variant="outline" size="lg" className="bg-transparent text-white border-white/30 hover:bg-white/10 font-semibold">
+                      Sign In
+                    </Button>
+                  </div>
                 )}
               </div>
 
@@ -1649,6 +1988,24 @@ export default function LearningHubPage() {
                       </div>
                     </div>
                   </CardContent>
+                </Card>
+              )}
+
+              {/* Moderation Panel Button (Moderators only) */}
+              {currentUser?.isModerator && (
+                <Card className="border-0 shadow-sm overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+                  <button className="w-full p-4 text-left" onClick={() => { setShowModPanel(true); fetchModerators(); }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                        <Shield className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-sm text-gray-900">Moderation</div>
+                        <div className="text-xs text-blue-600">Manage moderators & content</div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-blue-400" />
+                    </div>
+                  </button>
                 </Card>
               )}
 
@@ -1780,6 +2137,9 @@ export default function LearningHubPage() {
                   </TabsTrigger>
                   <TabsTrigger value="leaderboard" className="gap-1.5 text-xs data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 rounded-md">
                     <Trophy className="h-3.5 w-3.5" /> Leaderboard
+                  </TabsTrigger>
+                  <TabsTrigger value="members" className="gap-1.5 text-xs data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 rounded-md">
+                    <Users className="h-3.5 w-3.5" /> Members
                   </TabsTrigger>
                   <TabsTrigger value="bookmarks" className="gap-1.5 text-xs data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 rounded-md">
                     <Bookmark className="h-3.5 w-3.5" /> Saved
@@ -1987,6 +2347,106 @@ export default function LearningHubPage() {
                       ))}
                     </div>
                   </div>
+                </TabsContent>
+
+                {/* ===== MEMBERS TAB ===== */}
+                <TabsContent value="members" className="space-y-4">
+                  {!currentUser ? (
+                    <div className="text-center py-12">
+                      <Users className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+                      <h3 className="text-lg font-semibold text-gray-900">Sign in to see members</h3>
+                      <p className="text-sm text-gray-500 mt-1">Join the community to connect with others!</p>
+                      <Button onClick={() => setShowLogin(true)} className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white">
+                        Sign In
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search members..."
+                          value={memberSearch}
+                          onChange={e => setMemberSearch(e.target.value)}
+                          className="pl-9 h-11 bg-white border-gray-200 shadow-sm"
+                        />
+                      </div>
+                      {membersLoading ? (
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {[...Array(6)].map((_, i) => (
+                            <Card key={i}><CardContent className="p-4 flex items-center gap-3">
+                              <Skeleton className="h-10 w-10 rounded-full" />
+                              <div className="flex-1 space-y-1"><Skeleton className="h-4 w-24" /><Skeleton className="h-3 w-16" /></div>
+                            </CardContent></Card>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {members
+                            .filter(m => {
+                              if (!memberSearch) return true;
+                              const q = memberSearch.toLowerCase();
+                              return m.displayName.toLowerCase().includes(q) || (m.email && m.email.toLowerCase().includes(q));
+                            })
+                            .map(member => (
+                              <Card key={member.id} className="hover:shadow-md transition-shadow">
+                                <CardContent className="p-4">
+                                  <div className="flex items-start gap-3">
+                                    <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
+                                      <AvatarFallback className={`${BADGE_CONFIG[member.badge]?.bg || 'bg-gray-100'} ${BADGE_CONFIG[member.badge]?.color || 'text-gray-600'} text-xs`}>
+                                        {member.avatar || getInitials(member.displayName)}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="font-semibold text-sm text-gray-900 truncate">{member.displayName}</span>
+                                        {member.isModerator && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <Shield className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                            </TooltipTrigger>
+                                            <TooltipContent><p className="text-xs">Moderator</p></TooltipContent>
+                                          </Tooltip>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                                        <Badge variant="outline" className={`text-[10px] px-1 py-0 border capitalize ${BADGE_CONFIG[member.badge]?.bg || ''} ${BADGE_CONFIG[member.badge]?.color || ''}`}>
+                                          {member.badge || 'newcomer'}
+                                        </Badge>
+                                        <span>{member.points} pts</span>
+                                      </div>
+                                      <div className="flex items-center gap-3 text-[10px] text-gray-400 mt-1">
+                                        <span>{member.followerCount} followers</span>
+                                        <span>{member.followingCount} following</span>
+                                      </div>
+                                    </div>
+                                    {member.id !== currentUser.id && (
+                                      <Button
+                                        variant={member.isFollowedByViewer ? "outline" : "default"}
+                                        size="sm"
+                                        className={`h-8 text-xs shrink-0 ${member.isFollowedByViewer ? 'border-gray-300 text-gray-600' : 'bg-emerald-600 hover:bg-emerald-700 text-white'}`}
+                                        onClick={() => handleFollow(member.id, member.isFollowedByViewer)}
+                                      >
+                                        {member.isFollowedByViewer ? 'Following' : 'Follow'}
+                                      </Button>
+                                    )}
+                                  </div>
+                                  {member.bio && (
+                                    <p className="text-xs text-gray-500 mt-2 line-clamp-2">{member.bio}</p>
+                                  )}
+                                </CardContent>
+                              </Card>
+                            ))}
+                          {members.filter(m => !memberSearch || m.displayName.toLowerCase().includes(memberSearch.toLowerCase())).length === 0 && (
+                            <div className="col-span-full text-center py-8 text-gray-400">
+                              <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p className="text-sm">No members found</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </TabsContent>
 
                 {/* ===== BOOKMARKS TAB ===== */}

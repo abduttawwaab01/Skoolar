@@ -102,6 +102,7 @@ function formatUser(user: any) {
     points: user.points,
     postsCount: user.totalPosts,
     isBanned: user.isBanned,
+    isModerator: user.isModerator || false,
     createdAt: user.createdAt?.toISOString?.() || new Date().toISOString(),
     lastActive: user.lastSeenAt?.toISOString?.() || user.createdAt?.toISOString?.() || new Date().toISOString(),
     badgeColor: badgeColors[badge],
@@ -205,201 +206,31 @@ function formatReview(review: any, authorMap: Map<string, any>) {
   };
 }
 
-// ===================== SEED DATA =====================
+// ===================== DEFAULT CHANNEL =====================
 
-let seedPromise: Promise<void> | null = null;
+let channelPromise: Promise<void> | null = null;
 
-async function ensureSeedData() {
-  if (seedPromise) return seedPromise;
+async function ensureDefaultChannel() {
+  if (channelPromise) return channelPromise;
 
-  seedPromise = (async () => {
+  channelPromise = (async () => {
     try {
-      // Check if seed data already exists
-      const existingUser = await db.hubUser.findUnique({ where: { displayName: 'Amara Obi' } });
-      if (existingUser) return;
-
-      // Create users
-      const userData = [
-        { id: 'u1', displayName: 'Amara Obi', email: 'amara@example.com', badge: 'legend', points: 4850, totalPosts: 67, lastSeenAt: new Date('2025-01-15T10:00:00Z'), createdAt: new Date('2024-01-15T10:00:00Z') },
-        { id: 'u2', displayName: 'Chidi Nwosu', email: 'chidi@example.com', badge: 'master', points: 3200, totalPosts: 45, lastSeenAt: new Date('2025-01-14T10:00:00Z'), createdAt: new Date('2024-02-10T10:00:00Z') },
-        { id: 'u3', displayName: 'Fatima Ali', email: 'fatima@example.com', badge: 'expert', points: 2100, totalPosts: 32, lastSeenAt: new Date('2025-01-13T10:00:00Z'), createdAt: new Date('2024-03-05T10:00:00Z') },
-        { id: 'u4', displayName: 'Emeka Okafor', email: 'emeka@example.com', badge: 'contributor', points: 1200, totalPosts: 18, lastSeenAt: new Date('2025-01-12T10:00:00Z'), createdAt: new Date('2024-04-20T10:00:00Z') },
-        { id: 'u5', displayName: 'Zainab Musa', email: 'zainab@example.com', badge: 'contributor', points: 980, totalPosts: 14, lastSeenAt: new Date('2025-01-11T10:00:00Z'), createdAt: new Date('2024-05-15T10:00:00Z') },
-        { id: 'u6', displayName: 'Tunde Bakare', email: 'tunde@example.com', badge: 'learner', points: 450, totalPosts: 8, lastSeenAt: new Date('2025-01-10T10:00:00Z'), createdAt: new Date('2024-06-01T10:00:00Z') },
-        { id: 'u7', displayName: 'Amina Bello', email: 'amina@example.com', badge: 'learner', points: 320, totalPosts: 5, lastSeenAt: new Date('2025-01-09T10:00:00Z'), createdAt: new Date('2024-07-10T10:00:00Z') },
-        { id: 'u8', displayName: 'Yusuf Ibrahim', email: 'yusuf@example.com', badge: 'newcomer', points: 120, totalPosts: 2, lastSeenAt: new Date('2025-01-08T10:00:00Z'), createdAt: new Date('2024-08-20T10:00:00Z') },
-        { id: 'u9', displayName: 'Grace Okonkwo', email: 'grace@example.com', badge: 'newcomer', points: 50, totalPosts: 1, lastSeenAt: new Date('2025-01-07T10:00:00Z'), createdAt: new Date('2024-09-05T10:00:00Z') },
-      ];
-
-      for (const u of userData) {
-        await db.hubUser.create({ data: u });
-      }
-
-      // Create channels
-      const channelData = [
-        { id: 'ch1', name: 'General', description: 'General discussions and introductions', icon: 'MessageCircle', sortOrder: 0 },
-        { id: 'ch2', name: 'Creative Writing', description: 'Share poems, stories, and creative pieces', icon: 'PenLine', sortOrder: 1 },
-        { id: 'ch3', name: 'Science & Tech', description: 'Explore science, technology, and innovation', icon: 'Zap', sortOrder: 2 },
-        { id: 'ch4', name: 'Debate Club', description: 'Engage in thoughtful debates and discussions', icon: 'Swords', sortOrder: 3 },
-        { id: 'ch5', name: 'Study Tips', description: 'Share study strategies and learning resources', icon: 'BookOpen', sortOrder: 4 },
-        { id: 'ch6', name: 'Fun Zone', description: 'Games, quizzes, and fun activities', icon: 'Gamepad2', sortOrder: 5 },
-      ];
-
-      for (const c of channelData) {
-        await db.hubChannel.create({ data: c });
-      }
-
-      // Create posts
-      const postData = [
-        {
-          id: 'p1', hubUserId: 'u1', channelId: 'ch2', title: 'The Whispering Baobab',
-          content: `In the heart of the village stood a baobab tree, ancient and wise. Its branches stretched like open arms, embracing the sky. The villagers said it whispered secrets to those who listened carefully.\n\nOne evening, young Kofi sat beneath its shade, feeling the rough bark against his back. The wind rustled through the leaves, and he heard it — not words, but a feeling. A warmth that spread through his chest like the first rays of dawn.\n\n"The tree remembers," his grandmother had told him. "It remembers the rains that never came, the children who grew tall, the songs that faded into the evening air."\n\nKofi closed his eyes and listened. The baobab whispered of resilience, of roots that go deep, of branches that reach high. It whispered that even in drought, life finds a way to bloom.`,
-          contentType: 'story', category: 'Fiction', tags: JSON.stringify(['creative-writing', 'african-literature', 'short-story']),
-          likeCount: 4, commentCount: 3, isPinned: false, isFeatured: true, createdAt: new Date('2025-01-10T14:30:00Z'),
+      const existing = await db.hubChannel.findFirst({ where: { name: 'General' } });
+      if (existing) return;
+      await db.hubChannel.create({
+        data: {
+          name: 'General',
+          description: 'General discussions and introductions',
+          icon: 'MessageCircle',
+          sortOrder: 0,
         },
-        {
-          id: 'p2', hubUserId: 'u2', channelId: 'ch3', title: 'How Solar Panels Really Work',
-          content: `Solar panels convert sunlight into electricity through the photovoltaic effect. When photons from sunlight hit the semiconductor material (usually silicon) in the solar cells, they knock electrons loose from their atoms.\n\nKey Steps:\n1. Photons hit the solar panel and are absorbed by semiconducting materials\n2. Electrons are knocked loose and flow through the material\n3. The flow of electrons creates an electrical current\n4. Metal contacts on the top and bottom of the cell draw the current off\n5. An inverter converts DC to AC for home use\n\nFun fact: A typical solar panel can generate about 300 watts of power in full sun, which is enough to power a laptop and charge your phone simultaneously!`,
-          contentType: 'article', category: 'Technology', tags: JSON.stringify(['science', 'solar-energy', 'education']),
-          likeCount: 2, commentCount: 5, isPinned: true, isFeatured: false, createdAt: new Date('2025-01-11T09:15:00Z'),
-        },
-        {
-          id: 'p3', hubUserId: 'u3', channelId: 'ch2', title: 'Echoes of Dawn',
-          content: `The morning breaks in whispered gold,\nAcross the hills where winds unfold.\nA sparrow sings its quiet tune,\nBeneath the watchful, silver moon.\n\nThe river hums an ancient song,\nOf all who've passed and all who've gone.\nYet in its depths, the light still gleams,\nLike shattered stars in broken dreams.\n\nSo let the dawn remind us well,\nThat every night has tales to tell,\nAnd every sun that paints the sky\nWas once a tear the heavens cried.`,
-          contentType: 'poem', category: 'Poetry', tags: JSON.stringify(['poetry', 'nature', 'morning']),
-          likeCount: 5, commentCount: 7, isPinned: false, isFeatured: true, createdAt: new Date('2025-01-12T07:00:00Z'),
-        },
-        {
-          id: 'p4', hubUserId: 'u4', channelId: 'ch4', title: 'Should AI Replace Teachers in Classrooms?',
-          content: `This is a topic that sparks passionate debate. On one side, AI can personalize learning, provide instant feedback, and never gets tired. On the other, teachers provide empathy, mentorship, and social development that no algorithm can replicate.\n\nArguments FOR AI in classrooms:\n• Personalized learning paths for every student\n• 24/7 availability for questions\n• Consistent quality of instruction\n• Reduced educational costs\n\nArguments AGAINST:\n• Lack of emotional intelligence and empathy\n• No real-world experience to draw from\n• Students need human connection to thrive\n• Technology can fail or be misused\n\nMy take: AI should supplement, not replace, human teachers. The best approach combines both.`,
-          contentType: 'debate', category: 'Education', tags: JSON.stringify(['ai', 'education', 'debate', 'technology']),
-          likeCount: 2, commentCount: 12, isPinned: false, isFeatured: false, createdAt: new Date('2025-01-13T11:30:00Z'),
-        },
-        {
-          id: 'p5', hubUserId: 'u5', channelId: 'ch5', title: 'The Feynman Technique: Learn Anything Faster',
-          content: `The Feynman Technique is a powerful learning method named after Nobel Prize-winning physicist Richard Feynman. It works in 4 simple steps:\n\nStep 1: Choose a concept you want to learn\nStep 2: Explain it as if teaching a 12-year-old (use simple language)\nStep 3: Identify gaps in your explanation — go back to the source\nStep 4: Simplify and use analogies\n\nWhy it works: When you can explain something simply, it means you truly understand it. If you stumble or use jargon, you've found a gap in your knowledge.\n\nExample: Instead of saying "photosynthesis converts CO2 and H2O to glucose," say "Plants eat sunlight and air to make their own food."\n\nI've been using this technique for 3 months and my exam scores improved by 20%!`,
-          contentType: 'article', category: 'Study Tips', tags: JSON.stringify(['study-tips', 'feynman-technique', 'learning']),
-          likeCount: 6, commentCount: 8, isPinned: false, isFeatured: true, createdAt: new Date('2025-01-09T16:45:00Z'),
-        },
-        {
-          id: 'p6', hubUserId: 'u6', channelId: 'ch1', title: 'Hello everyone! I am new here 👋',
-          content: `Hi everyone! My name is Tunde and I'm a JSS 3 student from Lagos. I love mathematics and science. I heard about this platform from my teacher and I'm excited to join the community.\n\nI hope to make new friends, learn new things, and maybe share some of my own writings too. What are your favorite subjects?`,
-          contentType: 'text', category: 'Introduction', tags: JSON.stringify(['introduction', 'new-member']),
-          likeCount: 3, commentCount: 6, isPinned: false, isFeatured: false, createdAt: new Date('2025-01-14T08:20:00Z'),
-        },
-        {
-          id: 'p7', hubUserId: 'u1', channelId: 'ch3', title: 'Why is the Sky Blue? (Simple Explanation)',
-          content: `Here's a simple explanation of why the sky appears blue:\n\nSunlight looks white but is actually made up of all the colors of the rainbow. Each color travels as a wave, and blue light travels as shorter, smaller waves.\n\nWhen sunlight reaches Earth's atmosphere, it collides with gas molecules (mostly nitrogen and oxygen). Blue light is scattered more than other colors because it travels as shorter waves — this is called Rayleigh scattering.\n\nSo when you look up on a clear day, you're seeing scattered blue light from all directions. At sunset, light has to travel through more atmosphere, so the blue light gets scattered away, leaving reds and oranges.\n\nCool right? Nature's own color filter!`,
-          contentType: 'article', category: 'Science', tags: JSON.stringify(['science', 'physics', 'explainer']),
-          likeCount: 6, commentCount: 4, isPinned: false, isFeatured: false, createdAt: new Date('2025-01-08T13:00:00Z'),
-        },
-        {
-          id: 'p8', hubUserId: 'u3', channelId: 'ch4', title: 'Is Homework Actually Helpful?',
-          content: `Let's debate this! I've been thinking about whether homework actually helps students learn or just causes stress.\n\nPROS:\n• Reinforces what was learned in class\n• Develops time management skills\n• Allows parents to see what their children are learning\n• Prepares students for independent study\n\nCONS:\n• Can cause burnout and mental health issues\n• Takes time away from hobbies, family, and rest\n• Not all students have equal resources at home\n• Research shows benefits diminish after 2 hours for high schoolers\n\nWhat do you all think? I personally believe homework is useful in moderation, but too much can be harmful.`,
-          contentType: 'debate', category: 'Education', tags: JSON.stringify(['homework', 'education', 'debate', 'mental-health']),
-          likeCount: 4, commentCount: 15, isPinned: false, isFeatured: false, isFlagged: true, createdAt: new Date('2025-01-11T15:00:00Z'),
-        },
-      ];
-
-      for (const p of postData) {
-        await db.hubPost.create({ data: p });
-      }
-
-      // Create comments
-      const commentData = [
-        { id: 'c1', postId: 'p1', hubUserId: 'u2', content: "This is beautiful writing! The imagery of the baobab tree really resonates with me. It reminds me of the tree in my grandmother's compound.", createdAt: new Date('2025-01-10T15:00:00Z') },
-        { id: 'c2', postId: 'p1', hubUserId: 'u3', content: '"Even in drought, life finds a way to bloom" — what a powerful line! This gave me chills.', createdAt: new Date('2025-01-10T16:00:00Z') },
-        { id: 'c3', postId: 'p1', hubUserId: 'u1', content: "Thank you both! I was inspired by a real baobab in my village. Nature is the best storyteller. @Chidi, I'd love to hear about your grandmother's tree!", parentId: 'c1', createdAt: new Date('2025-01-10T17:00:00Z') },
-        { id: 'c4', postId: 'p4', hubUserId: 'u1', content: 'Great balanced view! I agree that AI should be a tool, not a replacement. The human connection in education is irreplaceable.', createdAt: new Date('2025-01-13T12:00:00Z') },
-        { id: 'c5', postId: 'p4', hubUserId: 'u6', content: 'I actually think AI could help with subjects where there are no qualified teachers. In rural areas especially.', createdAt: new Date('2025-01-13T13:00:00Z') },
-        { id: 'c6', postId: 'p4', hubUserId: 'u4', content: 'Good point @Tunde! But even with AI, we still need someone to guide students emotionally and socially.', parentId: 'c5', createdAt: new Date('2025-01-13T14:00:00Z') },
-        { id: 'c7', postId: 'p3', hubUserId: 'u2', content: 'This poem is stunning! The rhythm and imagery are perfect. "Shattered stars in broken dreams" is my favorite line.', createdAt: new Date('2025-01-12T08:00:00Z') },
-        { id: 'c8', postId: 'p5', hubUserId: 'u7', content: 'Thank you for sharing this! I tried the Feynman technique with chemistry and it really works. I explained ionic bonds to my little sister!', createdAt: new Date('2025-01-10T10:00:00Z') },
-        { id: 'c9', postId: 'p6', hubUserId: 'u1', content: "Welcome Tunde! Mathematics is amazing. You'll love it here. Feel free to share your writings anytime!", createdAt: new Date('2025-01-14T09:00:00Z') },
-        { id: 'c10', postId: 'p6', hubUserId: 'u5', content: 'Hey Tunde! Great to have you. My favorite subject is Biology. Maybe we can study together sometime!', createdAt: new Date('2025-01-14T09:30:00Z') },
-      ];
-
-      for (const c of commentData) {
-        await db.hubComment.create({ data: c });
-      }
-
-      // Create reviews
-      const reviewData = [
-        { id: 'r1', postId: 'p1', hubUserId: 'u2', rating: 5, content: 'Masterful storytelling with vivid imagery. The baobab metaphor is powerful.', createdAt: new Date('2025-01-10T18:00:00Z') },
-        { id: 'r2', postId: 'p1', hubUserId: 'u5', rating: 4, content: "Beautiful piece. Would love to see a continuation of Kofi's story.", createdAt: new Date('2025-01-11T09:00:00Z') },
-        { id: 'r3', postId: 'p3', hubUserId: 'u1', rating: 5, content: 'Exquisite poetry! The word choice and rhythm are exceptional.', createdAt: new Date('2025-01-12T10:00:00Z') },
-        { id: 'r4', postId: 'p3', hubUserId: 'u4', rating: 5, content: 'This gave me goosebumps. Pure talent!', createdAt: new Date('2025-01-12T11:00:00Z') },
-        { id: 'r5', postId: 'p5', hubUserId: 'u1', rating: 5, content: "Incredibly practical! I've shared this with all my classmates.", createdAt: new Date('2025-01-10T11:00:00Z') },
-        { id: 'r6', postId: 'p2', hubUserId: 'u3', rating: 4, content: 'Clear and well-organized explanation. The fun fact was a nice touch!', createdAt: new Date('2025-01-11T10:00:00Z') },
-        { id: 'r7', postId: 'p5', hubUserId: 'u2', rating: 5, content: 'This technique changed my study habits. Thank you!', createdAt: new Date('2025-01-10T12:00:00Z') },
-      ];
-
-      for (const r of reviewData) {
-        await db.hubReview.create({ data: r });
-      }
-
-      // Create games
-      const gameData = [
-        { id: 'g1', hubUserId: 'u1', title: 'Math Sprint', description: 'Race against the clock solving math problems', category: 'Mathematics', difficulty: 'medium', gameData: JSON.stringify({ icon: 'Calculator', color: 'from-blue-500 to-blue-600', url: '#math-sprint' }), playCount: 234, isFeatured: true, createdAt: new Date('2024-06-01T00:00:00Z') },
-        { id: 'g2', hubUserId: 'u1', title: 'Word Wizard', description: 'Build words from scrambled letters and expand vocabulary', category: 'English', difficulty: 'easy', gameData: JSON.stringify({ icon: 'BookOpen', color: 'from-purple-500 to-purple-600', url: '#word-wizard' }), playCount: 456, isFeatured: true, createdAt: new Date('2024-06-02T00:00:00Z') },
-        { id: 'g3', hubUserId: 'u1', title: 'Science Quest', description: 'Answer science questions to explore the galaxy', category: 'Science', difficulty: 'medium', gameData: JSON.stringify({ icon: 'FlaskConical', color: 'from-green-500 to-green-600', url: '#science-quest' }), playCount: 189, isFeatured: true, createdAt: new Date('2024-06-03T00:00:00Z') },
-        { id: 'g4', hubUserId: 'u1', title: 'History Timeline', description: 'Arrange historical events in the correct order', category: 'History', difficulty: 'hard', gameData: JSON.stringify({ icon: 'Clock', color: 'from-amber-500 to-amber-600', url: '#history-timeline' }), playCount: 123, isFeatured: false, createdAt: new Date('2024-06-04T00:00:00Z') },
-        { id: 'g5', hubUserId: 'u1', title: 'Geography Explorer', description: 'Identify countries, capitals, and landmarks', category: 'Geography', difficulty: 'easy', gameData: JSON.stringify({ icon: 'Globe', color: 'from-teal-500 to-teal-600', url: '#geography-explorer' }), playCount: 312, isFeatured: false, createdAt: new Date('2024-06-05T00:00:00Z') },
-        { id: 'g6', hubUserId: 'u1', title: 'Code Breaker', description: 'Solve logic puzzles and learn programming concepts', category: 'Computer Studies', difficulty: 'hard', gameData: JSON.stringify({ icon: 'Code', color: 'from-rose-500 to-rose-600', url: '#code-breaker' }), playCount: 78, isFeatured: false, createdAt: new Date('2024-06-06T00:00:00Z') },
-        { id: 'g7', hubUserId: 'u1', title: 'Quick Quiz', description: 'General knowledge quiz with multiplayer support', category: 'General', difficulty: 'easy', gameData: JSON.stringify({ icon: 'Brain', color: 'from-indigo-500 to-indigo-600', url: '#quick-quiz' }), playCount: 567, isFeatured: true, createdAt: new Date('2024-06-07T00:00:00Z') },
-        { id: 'g8', hubUserId: 'u1', title: 'Memory Match', description: 'Test and improve your memory with card matching', category: 'Brain Training', difficulty: 'easy', gameData: JSON.stringify({ icon: 'Brain', color: 'from-pink-500 to-pink-600', url: '#memory-match' }), playCount: 445, isFeatured: false, createdAt: new Date('2024-06-08T00:00:00Z') },
-      ];
-
-      for (const g of gameData) {
-        await db.hubGame.create({ data: g });
-      }
-
-      // Create likes (post likes from seed data)
-      const likeEntries = [
-        { hubUserId: 'u2', postId: 'p1' },
-        { hubUserId: 'u3', postId: 'p1' },
-        { hubUserId: 'u4', postId: 'p1' },
-        { hubUserId: 'u5', postId: 'p1' },
-        { hubUserId: 'u1', postId: 'p2' },
-        { hubUserId: 'u3', postId: 'p2' },
-        { hubUserId: 'u1', postId: 'p3' },
-        { hubUserId: 'u2', postId: 'p3' },
-        { hubUserId: 'u4', postId: 'p3' },
-        { hubUserId: 'u5', postId: 'p3' },
-        { hubUserId: 'u6', postId: 'p3' },
-        { hubUserId: 'u1', postId: 'p4' },
-        { hubUserId: 'u6', postId: 'p4' },
-        { hubUserId: 'u1', postId: 'p5' },
-        { hubUserId: 'u2', postId: 'p5' },
-        { hubUserId: 'u3', postId: 'p5' },
-        { hubUserId: 'u4', postId: 'p5' },
-        { hubUserId: 'u6', postId: 'p5' },
-        { hubUserId: 'u7', postId: 'p5' },
-        { hubUserId: 'u1', postId: 'p6' },
-        { hubUserId: 'u2', postId: 'p6' },
-        { hubUserId: 'u5', postId: 'p6' },
-        { hubUserId: 'u2', postId: 'p7' },
-        { hubUserId: 'u3', postId: 'p7' },
-        { hubUserId: 'u4', postId: 'p7' },
-        { hubUserId: 'u5', postId: 'p7' },
-        { hubUserId: 'u7', postId: 'p7' },
-        { hubUserId: 'u8', postId: 'p7' },
-        { hubUserId: 'u1', postId: 'p8' },
-        { hubUserId: 'u4', postId: 'p8' },
-        { hubUserId: 'u5', postId: 'p8' },
-        { hubUserId: 'u6', postId: 'p8' },
-      ];
-
-      for (const l of likeEntries) {
-        await db.hubLike.create({ data: l });
-      }
-
+      });
     } catch (error) {
-      console.error('Failed to seed hub data:', error);
+      console.error('Failed to ensure default channel:', error);
     }
   })();
 
-  return seedPromise;
+  return channelPromise;
 }
 
 // ===================== ROUTE HANDLERS =====================
@@ -409,8 +240,8 @@ export async function GET(request: NextRequest) {
   const action = searchParams.get('action');
 
   try {
-    // Ensure seed data exists on first call
-    await ensureSeedData();
+    // Ensure default channel exists
+    await ensureDefaultChannel();
 
     switch (action) {
       // --- Get User ---
@@ -747,7 +578,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
 
   try {
-    await ensureSeedData();
+    await ensureDefaultChannel();
 
     switch (action) {
       // --- Register ---
@@ -763,16 +594,39 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ success: false, message: 'Display name already taken' }, { status: 409 });
         }
 
+        // Auto-grant moderator for the platform super admin email
+        const isModerator = typeof email === 'string' && email.trim().toLowerCase() === 'admin@skoolar.org';
+
         const user = await db.hubUser.create({
           data: {
             displayName: displayName.trim(),
             email: typeof email === 'string' ? email.trim().slice(0, 100) : null,
+            isModerator,
             points: 10,
             badge: 'newcomer',
             lastSeenAt: new Date(),
           },
         });
 
+        return NextResponse.json({ success: true, data: formatUser(user) });
+      }
+
+      // --- Login (lookup by email or displayName) ---
+      case 'login': {
+        const { email: loginEmail, displayName: loginName } = body;
+        if ((!loginEmail || typeof loginEmail !== 'string') && (!loginName || typeof loginName !== 'string')) {
+          return NextResponse.json({ success: false, message: 'Email or display name required' }, { status: 400 });
+        }
+        const where: Record<string, unknown> = loginEmail ? { email: loginEmail.trim().toLowerCase() } : { displayName: loginName.trim() };
+        const user = await db.hubUser.findFirst({ where });
+        if (!user) {
+          return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+        }
+        if (user.isBanned) {
+          return NextResponse.json({ success: false, message: 'Account is banned' }, { status: 403 });
+        }
+        // Update last seen
+        await db.hubUser.update({ where: { id: user.id }, data: { lastSeenAt: new Date() } });
         return NextResponse.json({ success: true, data: formatUser(user) });
       }
 
@@ -1228,6 +1082,160 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ success: true, data: formatGame(updatedGame) });
       }
 
+      // --- Members (list all with follow status) ---
+      case 'members': {
+        const { viewerId } = body;
+        const members = await db.hubUser.findMany({
+          where: { isBanned: false },
+          orderBy: { points: 'desc' },
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+            avatar: true,
+            bio: true,
+            points: true,
+            badge: true,
+            isModerator: true,
+            totalPosts: true,
+            totalLikes: true,
+            lastSeenAt: true,
+            createdAt: true,
+          },
+        });
+
+        // Get follow relationships for viewer
+        let followingSet = new Set<string>();
+        if (viewerId) {
+          const follows = await db.hubFollow.findMany({
+            where: { followerId: viewerId },
+            select: { followingId: true },
+          });
+          followingSet = new Set(follows.map(f => f.followingId));
+        }
+
+        // Get follower counts for each member
+        const followerCounts = await db.hubFollow.groupBy({
+          by: ['followingId'],
+          _count: { followerId: true },
+        });
+        const followerCountMap = new Map(followerCounts.map(f => [f.followingId, f._count.followerId]));
+        // Get following counts for each member
+        const followingCounts = await db.hubFollow.groupBy({
+          by: ['followerId'],
+          _count: { followingId: true },
+        });
+        const followingCountMap = new Map(followingCounts.map(f => [f.followerId, f._count.followingId]));
+
+        const data = members.map(m => {
+          const badge = m.badge as BadgeLevel;
+          return {
+            id: m.id,
+            displayName: m.displayName,
+            email: m.email || '',
+            avatar: m.avatar || undefined,
+            bio: m.bio || undefined,
+            badge,
+            points: m.points,
+            postsCount: m.totalPosts,
+            isModerator: m.isModerator,
+            followerCount: followerCountMap.get(m.id) || 0,
+            followingCount: followingCountMap.get(m.id) || 0,
+            isFollowedByViewer: followingSet.has(m.id),
+            lastActive: m.lastSeenAt?.toISOString?.() || m.createdAt?.toISOString?.() || new Date().toISOString(),
+            badgeColor: badgeColors[badge],
+          };
+        });
+
+        return NextResponse.json({ success: true, data });
+      }
+
+      // --- Follow a member ---
+      case 'follow': {
+        const { followerId, followingId } = body;
+        if (!followerId || !followingId || followerId === followingId) {
+          return NextResponse.json({ success: false, message: 'Invalid follow request' }, { status: 400 });
+        }
+        const existing = await db.hubFollow.findUnique({
+          where: { followerId_followingId: { followerId, followingId } },
+        });
+        if (existing) {
+          return NextResponse.json({ success: true, data: { followed: true } });
+        }
+        await db.hubFollow.create({ data: { followerId, followingId } });
+        return NextResponse.json({ success: true, data: { followed: true } });
+      }
+
+      // --- Unfollow a member ---
+      case 'unfollow': {
+        const { followerId: uFollowerId, followingId: uFollowingId } = body;
+        if (!uFollowerId || !uFollowingId) {
+          return NextResponse.json({ success: false, message: 'Invalid unfollow request' }, { status: 400 });
+        }
+        await db.hubFollow.deleteMany({
+          where: { followerId: uFollowerId, followingId: uFollowingId },
+        });
+        return NextResponse.json({ success: true, data: { followed: false } });
+      }
+
+      // --- List all moderators ---
+      case 'list-moderators': {
+        const mods = await db.hubUser.findMany({
+          where: { isModerator: true, isBanned: false },
+          orderBy: { points: 'desc' },
+        });
+        return NextResponse.json({ success: true, data: mods.map(formatUser) });
+      }
+
+      // --- Assign moderator ---
+      case 'assign-moderator': {
+        const { targetUserId, requesterId } = body;
+        if (!targetUserId || !requesterId) {
+          return NextResponse.json({ success: false, message: 'Missing user IDs' }, { status: 400 });
+        }
+        const requester = await db.hubUser.findUnique({ where: { id: requesterId } });
+        if (!requester?.isModerator) {
+          return NextResponse.json({ success: false, message: 'Only moderators can assign moderators' }, { status: 403 });
+        }
+        const target = await db.hubUser.findUnique({ where: { id: targetUserId } });
+        if (!target) {
+          return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+        }
+        if (target.isBanned) {
+          return NextResponse.json({ success: false, message: 'Cannot promote a banned user' }, { status: 400 });
+        }
+        const updated = await db.hubUser.update({
+          where: { id: targetUserId },
+          data: { isModerator: true },
+        });
+        return NextResponse.json({ success: true, data: formatUser(updated), message: `${target.displayName} is now a moderator` });
+      }
+
+      // --- Remove moderator ---
+      case 'remove-moderator': {
+        const { targetUserId: rmTargetId, requesterId: rmRequesterId } = body;
+        if (!rmTargetId || !rmRequesterId) {
+          return NextResponse.json({ success: false, message: 'Missing user IDs' }, { status: 400 });
+        }
+        const rmRequester = await db.hubUser.findUnique({ where: { id: rmRequesterId } });
+        if (!rmRequester?.isModerator) {
+          return NextResponse.json({ success: false, message: 'Only moderators can remove moderators' }, { status: 403 });
+        }
+        // Cannot remove the super admin moderator
+        const rmTarget = await db.hubUser.findUnique({ where: { id: rmTargetId } });
+        if (!rmTarget) {
+          return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+        }
+        if (rmTarget.email?.toLowerCase() === 'admin@skoolar.org') {
+          return NextResponse.json({ success: false, message: 'Cannot remove the platform admin moderator' }, { status: 403 });
+        }
+        const updated = await db.hubUser.update({
+          where: { id: rmTargetId },
+          data: { isModerator: false },
+        });
+        return NextResponse.json({ success: true, data: formatUser(updated), message: `Moderator privileges removed from ${rmTarget.displayName}` });
+      }
+
       // --- Moderation ---
       case 'moderate': {
         const { postId, action: modAction, reason, moderatorId } = body;
@@ -1237,14 +1245,8 @@ export async function PUT(request: NextRequest) {
 
         // Verify moderator role
         const modHubUser = await db.hubUser.findUnique({ where: { id: moderatorId } });
-        if (!modHubUser?.userId) return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
-
-        const mainUser = await db.user.findUnique({ where: { id: modHubUser.userId } });
-        const isSuperAdmin = mainUser?.role === 'SUPER_ADMIN';
-        const isAdmin = mainUser?.role === 'SCHOOL_ADMIN';
-        
-        if (!isSuperAdmin && !isAdmin) {
-          return NextResponse.json({ success: false, message: 'Unauthorized moderation attempt' }, { status: 403 });
+        if (!modHubUser || !modHubUser.isModerator) {
+          return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
         }
 
         let result;

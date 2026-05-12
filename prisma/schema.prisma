@@ -1793,6 +1793,7 @@ model HubUser {
   points         Int              @default(0)
   level          Int              @default(1)
   badge          String           @default("newcomer")
+  isModerator    Boolean          @default(false)
   totalPosts     Int              @default(0)
   totalReviews   Int              @default(0)
   totalLikes     Int              @default(0)
@@ -1812,11 +1813,26 @@ model HubUser {
   likes          HubLike[]
   posts          HubPost[]
   reviews        HubReview[]
+  followers      HubFollow[]      @relation("following")
+  following      HubFollow[]      @relation("followers")
 
   @@index([points])
   @@index([level])
   @@index([badge])
   @@index([displayName])
+}
+
+model HubFollow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  follower  HubUser @relation("followers", fields: [followerId], references: [id], onDelete: Cascade)
+  following HubUser @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
 }
 
 model HubPost {

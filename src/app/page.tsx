@@ -214,6 +214,7 @@ function PublicNavbar() {
     { href: '/stories', label: 'Stories' },
     { href: '/entrance', label: 'Entrance Exam' },
     { href: '/careers', label: 'Jobs' },
+    { href: '/learning-hub', label: 'Hub' },
   ];
 
   const mobileNavLinks = [
@@ -223,6 +224,7 @@ function PublicNavbar() {
     { href: '/stories', label: 'Stories' },
     { href: '/entrance', label: 'Entrance Exam' },
     { href: '/careers', label: 'Jobs' },
+    { href: '/learning-hub', label: 'Hub' },
     { href: '/login', label: 'Log in' },
     { href: '/register', label: 'Get Started' },
   ];
