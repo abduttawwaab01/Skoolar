@@ -17,7 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Plus, Pencil, Trash2, Eye, EyeOff, Megaphone, Quote,
   FileText, BookOpen, Inbox, Settings, Shield, Loader2, ExternalLink,
-  Star, ThumbsUp, ThumbsDown, Image as ImageIcon,
+  Star, ThumbsUp, ThumbsDown, Image as ImageIcon, Headphones, Film,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { handleSilentError } from '@/lib/error-handler';
@@ -103,6 +103,8 @@ interface PlatformStory {
   approvedAt: string | null; rejectedAt: string | null;
   rejectionReason: string | null; createdBy: string | null;
   createdAt: string; updatedAt: string;
+  audioUrl: string | null; audioDuration: number | null; audioPlatform: string | null;
+  videoUrl: string | null; videoDuration: number | null; videoPlatform: string | null;
 }
 
 interface StorySubmission {
@@ -1047,11 +1049,13 @@ function StoriesTab() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<PlatformStory | null>(null);
-   const [form, setForm] = useState({
-     title: '', excerpt: '', content: '', coverImage: '', level: '', grade: '',
-     category: 'General', tags: '', authorName: '', authorBio: '',
-     isFeatured: false, isPublished: false,
-   });
+    const [form, setForm] = useState({
+      title: '', excerpt: '', content: '', coverImage: '', level: '', grade: '',
+      category: 'General', tags: '', authorName: '', authorBio: '',
+      isFeatured: false, isPublished: false,
+      audioUrl: '', audioDuration: '', audioPlatform: '',
+      videoUrl: '', videoDuration: '', videoPlatform: '',
+    });
    const confirm = useConfirm();
 
   const fetchItems = useCallback(async () => {
@@ -1065,7 +1069,7 @@ function StoriesTab() {
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
   const resetForm = () => {
-    setForm({ title: '', excerpt: '', content: '', coverImage: '', level: '', grade: '', category: 'General', tags: '', authorName: '', authorBio: '', isFeatured: false, isPublished: false });
+    setForm({ title: '', excerpt: '', content: '', coverImage: '', level: '', grade: '', category: 'General', tags: '', authorName: '', authorBio: '', isFeatured: false, isPublished: false, audioUrl: '', audioDuration: '', audioPlatform: '', videoUrl: '', videoDuration: '', videoPlatform: '' });
     setEditing(null);
   };
 
@@ -1073,7 +1077,14 @@ function StoriesTab() {
     if (!form.title || !form.content) return toast.error('Title and content are required');
     try {
       const url = editing ? `/api/platform/stories/${editing.id}` : '/api/platform/stories';
-      const res = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
+      const payload = {
+        ...form,
+        audioDuration: form.audioDuration ? Number(form.audioDuration) : undefined,
+        videoDuration: form.videoDuration ? Number(form.videoDuration) : undefined,
+        audioPlatform: form.audioPlatform || undefined,
+        videoPlatform: form.videoPlatform || undefined,
+      };
+      const res = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const json = await res.json();
       if (json.success) { toast.success(editing ? 'Updated' : 'Created'); setDialogOpen(false); resetForm(); fetchItems(); }
       else toast.error(json.message);
@@ -1133,6 +1144,8 @@ function StoriesTab() {
                       coverImage: story.coverImage || '', level: story.level || '', grade: story.grade || '',
                       category: story.category, tags: '', authorName: story.authorName || '',
                       authorBio: story.authorBio || '', isFeatured: story.isFeatured, isPublished: story.isPublished,
+                      audioUrl: story.audioUrl || '', audioDuration: story.audioDuration?.toString() || '', audioPlatform: story.audioPlatform || '',
+                      videoUrl: story.videoUrl || '', videoDuration: story.videoDuration?.toString() || '', videoPlatform: story.videoPlatform || '',
                     });
                     setDialogOpen(true);
                   }}>
@@ -1201,6 +1214,63 @@ function StoriesTab() {
               <div><Label>Author Bio</Label><Input value={form.authorBio} onChange={(e) => setForm({ ...form, authorBio: e.target.value })} /></div>
             </div>
             <div><Label>Tags (comma-separated)</Label><Input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} /></div>
+            <Separator />
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <Headphones className="h-4 w-4 text-emerald-600" /> Audiobook Settings
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <Label className="text-xs text-gray-500">Audio URL (Spotify, SoundCloud, or direct MP3)</Label>
+                  <Input value={form.audioUrl} onChange={(e) => setForm({ ...form, audioUrl: e.target.value })} placeholder="https://open.spotify.com/track/..." className="text-xs" />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Platform</Label>
+                  <Select value={form.audioPlatform} onValueChange={(v) => setForm({ ...form, audioPlatform: v })}>
+                    <SelectTrigger className="text-xs"><SelectValue placeholder="Auto" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Auto-detect</SelectItem>
+                      <SelectItem value="spotify">Spotify</SelectItem>
+                      <SelectItem value="soundcloud">SoundCloud</SelectItem>
+                      <SelectItem value="direct">Direct MP3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="mt-2">
+                <Label className="text-xs text-gray-500">Duration (seconds, optional)</Label>
+                <Input type="number" min="0" value={form.audioDuration} onChange={(e) => setForm({ ...form, audioDuration: e.target.value })} placeholder="e.g., 3600" className="text-xs w-40" />
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <Film className="h-4 w-4 text-purple-600" /> Videobook Settings
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <Label className="text-xs text-gray-500">Video URL (YouTube, Vimeo, or direct MP4)</Label>
+                  <Input value={form.videoUrl} onChange={(e) => setForm({ ...form, videoUrl: e.target.value })} placeholder="https://www.youtube.com/watch?v=..." className="text-xs" />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-500">Platform</Label>
+                  <Select value={form.videoPlatform} onValueChange={(v) => setForm({ ...form, videoPlatform: v })}>
+                    <SelectTrigger className="text-xs"><SelectValue placeholder="Auto" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Auto-detect</SelectItem>
+                      <SelectItem value="youtube">YouTube</SelectItem>
+                      <SelectItem value="vimeo">Vimeo</SelectItem>
+                      <SelectItem value="dailymotion">Dailymotion</SelectItem>
+                      <SelectItem value="direct">Direct MP4</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="mt-2">
+                <Label className="text-xs text-gray-500">Duration (seconds, optional)</Label>
+                <Input type="number" min="0" value={form.videoDuration} onChange={(e) => setForm({ ...form, videoDuration: e.target.value })} placeholder="e.g., 600" className="text-xs w-40" />
+              </div>
+            </div>
+            <Separator />
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2"><Switch checked={form.isPublished} onCheckedChange={(v) => setForm({ ...form, isPublished: v })} /><Label>Published</Label></div>
               <div className="flex items-center gap-2"><Switch checked={form.isFeatured} onCheckedChange={(v) => setForm({ ...form, isFeatured: v })} /><Label>Featured</Label></div>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Search, BookOpen, Star, Filter, Clock, Eye, Heart, ChevronRight,
   TrendingUp, Sparkles, ArrowLeft, ArrowRight, BookmarkPlus,
-  Flame, BookMarked, User, Layers, ChevronLeft, X
+  Flame, BookMarked, User, Layers, ChevronLeft, X, Headphones, Film
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,8 @@ interface Story {
   likeCount: number;
   publishedAt: string | null;
   content?: string;
+  audioUrl: string | null;
+  videoUrl: string | null;
 }
 
 const levels = ['All', 'Beginner', 'Intermediate', 'Advanced'];
@@ -108,6 +110,23 @@ function StoryCard({ story }: { story: Story }) {
               <div className="flex items-center gap-1 bg-amber-500/90 backdrop-blur-sm text-white rounded-full px-2.5 py-1 text-[10px] font-bold shadow-sm">
                 <Star className="h-3 w-3 fill-white" />
                 Featured
+              </div>
+            </div>
+          )}
+          {/* Audio/Video badges */}
+          {story.audioUrl && (
+            <div className="absolute bottom-3 left-3">
+              <div className="flex items-center gap-1 bg-emerald-500/90 backdrop-blur-sm text-white rounded-full px-2 py-1 text-[10px] font-medium shadow-sm">
+                <Headphones className="h-3 w-3" />
+                Audio
+              </div>
+            </div>
+          )}
+          {story.videoUrl && (
+            <div className="absolute bottom-3 left-3" style={{ marginLeft: story.audioUrl ? '52px' : '0' }}>
+              <div className="flex items-center gap-1 bg-purple-500/90 backdrop-blur-sm text-white rounded-full px-2 py-1 text-[10px] font-medium shadow-sm">
+                <Film className="h-3 w-3" />
+                Video
               </div>
             </div>
           )}
@@ -377,6 +396,8 @@ export default function StoriesPage() {
   const [sortBy, setSortBy] = useState('newest');
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [hasAudio, setHasAudio] = useState(false);
+  const [hasVideo, setHasVideo] = useState(false);
 
   useEffect(() => {
     const fetchStories = async () => {
@@ -396,7 +417,7 @@ export default function StoriesPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [search, activeLevel, activeGrade, activeCategory, sortBy, activeTab]);
+  }, [search, activeLevel, activeGrade, activeCategory, sortBy, activeTab, hasAudio, hasVideo]);
 
   const filteredStories = stories
     .filter((story) => {
@@ -407,7 +428,9 @@ export default function StoriesPage() {
       const matchesLevel = activeLevel === 'All' || story.level === activeLevel;
       const matchesGrade = activeGrade === 'All' || story.grade === activeGrade;
       const matchesCategory = activeCategory === 'All' || story.category === activeCategory;
-      return matchesSearch && matchesLevel && matchesGrade && matchesCategory;
+      const matchesAudio = !hasAudio || !!story.audioUrl;
+      const matchesVideo = !hasVideo || !!story.videoUrl;
+      return matchesSearch && matchesLevel && matchesGrade && matchesCategory && matchesAudio && matchesVideo;
     })
     .filter((story) => {
       if (activeTab === 'featured') return story.isFeatured;
@@ -429,7 +452,7 @@ export default function StoriesPage() {
   const totalPages = Math.ceil(regularStories.length / ITEMS_PER_PAGE);
   const paginatedStories = regularStories.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  const hasActiveFilters = activeLevel !== 'All' || activeGrade !== 'All' || activeCategory !== 'All' || search !== '';
+  const hasActiveFilters = activeLevel !== 'All' || activeGrade !== 'All' || activeCategory !== 'All' || search !== '' || hasAudio || hasVideo;
 
   const clearFilters = () => {
     setSearch('');
@@ -438,6 +461,8 @@ export default function StoriesPage() {
     setActiveCategory('All');
     setSortBy('newest');
     setActiveTab('all');
+    setHasAudio(false);
+    setHasVideo(false);
   };
 
   if (loading) {
@@ -607,9 +632,29 @@ export default function StoriesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end">
-              <div className="text-sm text-gray-500 bg-gray-50 rounded-lg px-4 py-2.5 w-full">
-                <span className="font-semibold text-gray-700">{filteredStories.length}</span> stori{filteredStories.length === 1 ? 'y' : 'ies'} found
+            <div>
+              <label className="text-xs font-semibold text-gray-500 mb-1.5 block uppercase tracking-wide">Media</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setHasAudio(!hasAudio); setHasVideo(false); }}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all border ${
+                    hasAudio
+                      ? 'bg-emerald-100 text-emerald-700 border-emerald-300 shadow-sm'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-emerald-200 hover:text-emerald-600'
+                  }`}
+                >
+                  <Headphones className="h-3.5 w-3.5" /> Audiobooks
+                </button>
+                <button
+                  onClick={() => { setHasVideo(!hasVideo); setHasAudio(false); }}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all border ${
+                    hasVideo
+                      ? 'bg-purple-100 text-purple-700 border-purple-300 shadow-sm'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-purple-200 hover:text-purple-600'
+                  }`}
+                >
+                  <Film className="h-3.5 w-3.5" /> Videobooks
+                </button>
               </div>
             </div>
           </div>

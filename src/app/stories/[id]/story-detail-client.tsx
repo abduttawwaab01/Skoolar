@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, Clock, Eye, Heart, Share2, BookOpen, Calendar, User,
   Bookmark, Printer, Type, Minus, Plus, List, ChevronDown, ChevronUp,
-  Star, TrendingUp, Layers, Sparkles
+  Star, TrendingUp, Layers, Sparkles, Headphones, Film
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { PublicLayout } from '@/components/layout/public-layout';
+import { getEmbedUrl, getAudioEmbedUrl, detectVideoPlatform, formatDuration } from '@/lib/media-utils';
 
 interface Story {
   id: string;
@@ -38,6 +39,12 @@ interface Story {
   viewCount: number;
   likeCount: number;
   publishedAt: string | null;
+  audioUrl: string | null;
+  audioDuration: number | null;
+  audioPlatform: string | null;
+  videoUrl: string | null;
+  videoDuration: number | null;
+  videoPlatform: string | null;
 }
 
 interface RelatedStory {
@@ -255,6 +262,96 @@ function ReadingSettings({
               </Button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AudioPlayer({ story }: { story: Story }) {
+  if (!story.audioUrl) return null;
+
+  const audioEmbed = getAudioEmbedUrl(story.audioUrl);
+  const platform = story.audioPlatform || (audioEmbed?.platform) || '';
+  const duration = formatDuration(story.audioDuration || 0);
+  const platformLabel = platform.charAt(0).toUpperCase() + platform.slice(1);
+
+  return (
+    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-5 border border-emerald-100/50 mb-8 print:hidden">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+          <Headphones className="h-4 w-4 text-emerald-600" />
+        </div>
+        <span className="text-sm font-semibold text-gray-900">Audiobook</span>
+        {platform && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">{platformLabel}</Badge>}
+        {duration && <span className="text-xs text-gray-400 ml-auto">{duration}</span>}
+      </div>
+
+      {audioEmbed?.platform === 'spotify' ? (
+        <iframe
+          src={audioEmbed.embedUrl}
+          width="100%"
+          height="80"
+          frameBorder="0"
+          allow="encrypted-media"
+          className="rounded-xl"
+          title="Spotify Audio"
+        />
+      ) : audioEmbed?.platform === 'soundcloud' ? (
+        <iframe
+          src={audioEmbed.embedUrl}
+          width="100%"
+          height="120"
+          frameBorder="0"
+          allow="encrypted-media"
+          className="rounded-xl"
+          title="SoundCloud Audio"
+        />
+      ) : (
+        <audio controls className="w-full rounded-xl" preload="metadata">
+          <source src={story.audioUrl} />
+          Your browser does not support the audio element.
+        </audio>
+      )}
+    </div>
+  );
+}
+
+function VideoPlayer({ story }: { story: Story }) {
+  if (!story.videoUrl) return null;
+
+  const embedUrl = getEmbedUrl(story.videoUrl);
+  const platform = story.videoPlatform || detectVideoPlatform(story.videoUrl) || 'video';
+  const duration = formatDuration(story.videoDuration || 0);
+  const platformLabel = platform.charAt(0).toUpperCase() + platform.slice(1);
+  const isDirectVideo = platform === 'direct' || story.videoUrl.match(/\.(mp4|webm|ogg|mov)(\?.*)?$/i);
+
+  return (
+    <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-5 border border-purple-100/50 mb-8 print:hidden">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+          <Film className="h-4 w-4 text-purple-600" />
+        </div>
+        <span className="text-sm font-semibold text-gray-900">Videobook</span>
+        {platform && <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-[10px]">{platformLabel}</Badge>}
+        {duration && <span className="text-xs text-gray-400 ml-auto">{duration}</span>}
+      </div>
+
+      {isDirectVideo ? (
+        <video controls className="w-full rounded-xl" preload="metadata" poster={story.coverImage || undefined}>
+          <source src={story.videoUrl} />
+          Your browser does not support the video element.
+        </video>
+      ) : (
+        <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+          <iframe
+            src={embedUrl}
+            className="absolute inset-0 w-full h-full rounded-xl"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title="Video"
+          />
         </div>
       )}
     </div>
@@ -586,6 +683,16 @@ export default function StoryDetailClient({ id }: { id: string }) {
                     <Star className="h-3 w-3 fill-amber-500" /> Featured
                   </Badge>
                 )}
+                {story.audioUrl && (
+                  <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-xs flex items-center gap-1">
+                    <Headphones className="h-3 w-3" /> Audiobook
+                  </Badge>
+                )}
+                {story.videoUrl && (
+                  <Badge className="bg-purple-100 text-purple-700 border-purple-200 text-xs flex items-center gap-1">
+                    <Film className="h-3 w-3" /> Videobook
+                  </Badge>
+                )}
               </div>
 
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 leading-tight tracking-tight print:text-2xl">
@@ -693,6 +800,9 @@ export default function StoryDetailClient({ id }: { id: string }) {
               </div>
             </div>
 
+            <AudioPlayer story={story} />
+            <VideoPlayer story={story} />
+
             {story.authorBio && (
               <div className="mb-8 print:mb-4">
                 <AuthorCard story={story} />
@@ -778,6 +888,8 @@ export default function StoryDetailClient({ id }: { id: string }) {
                   { label: 'Word Count', value: wordCount.toLocaleString() },
                   { label: 'Views', value: story.viewCount.toLocaleString() },
                   { label: 'Likes', value: story.likeCount.toLocaleString() },
+                  { label: 'Audiobook', value: story.audioUrl ? 'Available' : null },
+                  { label: 'Videobook', value: story.videoUrl ? 'Available' : null },
                 ].map((item) => (
                   item.value && (
                     <div key={item.label} className="flex items-center justify-between text-sm">

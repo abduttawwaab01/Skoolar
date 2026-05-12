@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Send, BookOpen, CheckCircle2, AlertCircle, ArrowLeft, ArrowRight,
   ChevronRight, Sparkles, Lightbulb, FileText, Image as ImageIcon, Eye,
-  PenLine, Target, Type, Clock, Hash, User, Mail, Phone
+  PenLine, Target, Type, Clock, Hash, User, Mail, Phone, Headphones, Film
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,6 +94,8 @@ interface FormData {
   grade: string;
   category: string;
   coverImage: string;
+  audioUrl: string;
+  videoUrl: string;
 }
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
@@ -363,6 +365,8 @@ export default function SubmitStoryPage() {
     grade: '',
     category: 'General',
     coverImage: '',
+    audioUrl: '',
+    videoUrl: '',
   });
 
   const updateForm = (key: keyof FormData, value: string) => {
@@ -447,7 +451,7 @@ export default function SubmitStoryPage() {
                   </Button>
                 </Link>
                 <Link href="/submit-story">
-                  <Button variant="outline" className="gap-2 w-full sm:w-auto" onClick={() => { setSubmitted(false); setStep(1); setForm({ title: '', content: '', authorName: '', authorEmail: '', authorPhone: '', level: '', grade: '', category: 'General', coverImage: '' }); }}>
+                  <Button variant="outline" className="gap-2 w-full sm:w-auto" onClick={() => { setSubmitted(false); setStep(1); setForm({ title: '', content: '', authorName: '', authorEmail: '', authorPhone: '', level: '', grade: '', category: 'General', coverImage: '', audioUrl: '', videoUrl: '' }); }}>
                     <Sparkles className="h-4 w-4" /> Submit Another
                   </Button>
                 </Link>
@@ -676,6 +680,46 @@ export default function SubmitStoryPage() {
                               <p className="text-xs text-gray-300 mt-1">Your story will use a default cover</p>
                             </div>
                           )}
+                        </div>
+
+                        {/* Audio URL */}
+                        <div className="space-y-2">
+                          <Label htmlFor="audioUrl" className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                            <Headphones className="h-3.5 w-3.5" />
+                            Audiobook URL (Optional)
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              id="audioUrl"
+                              value={form.audioUrl}
+                              onChange={(e) => updateForm('audioUrl', e.target.value)}
+                              placeholder="https://open.spotify.com/track/... or https://soundcloud.com/..."
+                              className="h-11"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            Link to an audio version of your story (Spotify, SoundCloud, or direct MP3 URL)
+                          </p>
+                        </div>
+
+                        {/* Video URL */}
+                        <div className="space-y-2">
+                          <Label htmlFor="videoUrl" className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                            <Film className="h-3.5 w-3.5" />
+                            Videobook URL (Optional)
+                          </Label>
+                          <div className="relative">
+                            <Input
+                              id="videoUrl"
+                              value={form.videoUrl}
+                              onChange={(e) => updateForm('videoUrl', e.target.value)}
+                              placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/..."
+                              className="h-11"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-400">
+                            Link to a video version of your story (YouTube, Vimeo, Dailymotion, or direct MP4 URL)
+                          </p>
                         </div>
 
                         <Separator />
