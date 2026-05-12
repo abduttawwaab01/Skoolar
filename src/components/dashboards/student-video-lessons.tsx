@@ -199,11 +199,36 @@ export function StudentVideoLessons() {
   const [activeVideo, setActiveVideo] = useState<VideoLesson | null>(null);
   const [viewIncremented, setViewIncremented] = useState<string | null>(null);
 
-  // Derived data
-  const uniqueSubjects = [...new Set(lessons.map((l) => l.subjectName).filter(Boolean))] as string[];
+  // DB-sourced subject options for filters
+  const [subjectOptions, setSubjectOptions] = useState<{ id: string; name: string }[]>([]);
 
-  // Track watched lessons (in-memory for this session)
+  useEffect(() => {
+    if (!schoolId) return;
+    fetch(`/api/subjects?schoolId=${schoolId}&limit=50`)
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then(j => setSubjectOptions(j.data || []))
+      .catch(() => {});
+  }, [schoolId]);
+
+  // Track watched lessons (persisted via API)
   const [watchedIds, setWatchedIds] = useState<Set<string>>(new Set());
+
+  // Load watch progress when lessons are fetched
+  useEffect(() => {
+    if (!currentUser?.id || lessons.length === 0) return;
+    const lessonIds = lessons.map(l => l.id);
+    Promise.all(
+      lessonIds.map(lid =>
+        fetch(`/api/video-progress?lessonId=${lid}&studentId=${currentUser.id}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(d => d?.data?.completed ? lid : null)
+          .catch(() => null)
+      )
+    ).then(results => {
+      const completed = new Set(results.filter(Boolean) as string[]);
+      if (completed.size > 0) setWatchedIds(prev => new Set([...prev, ...completed]));
+    });
+  }, [currentUser?.id, lessons.length]);
 
   // Debounced search
   useEffect(() => {
@@ -286,6 +311,15 @@ export function StudentVideoLessons() {
     setActiveVideo(lesson);
     setPlayerOpen(true);
     setWatchedIds((prev) => new Set(prev).add(lesson.id));
+
+    // Persist watch progress
+    if (currentUser?.id) {
+      fetch('/api/video-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonId: lesson.id, studentId: currentUser.id, progress: 0 }),
+      }).catch(() => {});
+    }
 
     // Increment view count (only once per session per video)
     if (!viewIncremented?.includes(lesson.id)) {
@@ -418,8 +452,8 @@ export function StudentVideoLessons() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Subjects</SelectItem>
-              {uniqueSubjects.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
+              {subjectOptions.map((s) => (
+                <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

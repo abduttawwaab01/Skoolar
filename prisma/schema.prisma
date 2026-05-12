@@ -456,6 +456,7 @@ model Student {
   weeklyEvaluations      WeeklyEvaluation[]
   studentParents         StudentParent[]            @relation("StudentParents")
   videoCheckpointProgress VideoCheckpointProgress[]
+  videoProgress           StudentVideoProgress[]
   performanceSnapshots   StudentPerformanceSnapshot[]
   badges                 PerformanceBadge[]
   encouragements         EncouragementMessage[]
@@ -1251,9 +1252,10 @@ model VideoLesson {
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   deletedAt    DateTime?
-  quizzes      LessonQuiz[]
-  checkpoints  VideoCheckpoint[]
-  school       School            @relation(fields: [schoolId], references: [id])
+  quizzes        LessonQuiz[]
+  checkpoints    VideoCheckpoint[]
+  studentProgress StudentVideoProgress[]
+  school         School            @relation(fields: [schoolId], references: [id])
 
   @@index([schoolId])
   @@index([subjectId])
@@ -2379,6 +2381,24 @@ model VideoCheckpointProgress {
   @@unique([studentId, checkpointId])
   @@index([studentId])
   @@index([checkpointId])
+}
+
+model StudentVideoProgress {
+  id            String    @id @default(cuid())
+  studentId     String
+  lessonId      String
+  progress      Int       @default(0)  // 0-100 percentage
+  completed     Boolean   @default(false)
+  lastWatchedAt DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  student Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson  VideoLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
+  @@index([studentId])
+  @@index([lessonId])
 }
 
 // ============================================

@@ -162,9 +162,38 @@ export default function VideoLessons() {
     tags: '',
   });
 
-  // Derived data
-  const uniqueSubjects = [...new Set(lessons.map((l) => l.subjectName).filter(Boolean))] as string[];
-  const uniqueClasses = [...new Set(lessons.map((l) => l.className).filter(Boolean))] as string[];
+  // DB-sourced subject/class options for filters
+  const [subjectOptions, setSubjectOptions] = useState<{ id: string; name: string }[]>([]);
+  const [classOptions, setClassOptions] = useState<{ id: string; name: string }[]>([]);
+  const [watchedIds, setWatchedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!schoolId) return;
+    Promise.all([
+      fetch(`/api/subjects?schoolId=${schoolId}&limit=50`).then(r => r.ok ? r.json() : { data: [] }),
+      fetch(`/api/classes?schoolId=${schoolId}&limit=50`).then(r => r.ok ? r.json() : { data: [] }),
+    ]).then(([subjectsRes, classesRes]) => {
+      setSubjectOptions(subjectsRes.data || []);
+      setClassOptions(classesRes.data || []);
+    }).catch(() => {});
+  }, [schoolId]);
+
+  // Load watched progress for all fetched lessons
+  useEffect(() => {
+    if (!currentUser?.id || lessons.length === 0) return;
+    const lessonIds = lessons.map(l => l.id);
+    Promise.all(
+      lessonIds.map(lid =>
+        fetch(`/api/video-progress?lessonId=${lid}&studentId=${currentUser.id}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(d => d?.data?.completed ? lid : null)
+          .catch(() => null)
+      )
+    ).then(results => {
+      const completed = new Set(results.filter(Boolean) as string[]);
+      if (completed.size > 0) setWatchedIds(prev => new Set([...prev, ...completed]));
+    });
+  }, [currentUser?.id, lessons.length]);
 
   const featuredLessons = lessons.filter((l) => l.isFeatured).slice(0, 3);
   const filteredLessons = lessons.filter((lesson) => {
@@ -199,8 +228,18 @@ export default function VideoLessons() {
     fetchLessons();
   }, [fetchLessons]);
 
+  const isTeacher = currentRole === 'TEACHER' || currentRole === 'SCHOOL_ADMIN' || currentRole === 'SUPER_ADMIN';
+
   const handlePlayVideo = async (lesson: VideoLesson) => {
     setActiveVideo(lesson);
+    if (!isTeacher && currentUser?.id) {
+      setWatchedIds(prev => new Set(prev).add(lesson.id));
+      fetch('/api/video-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonId: lesson.id, studentId: currentUser.id, progress: 0 }),
+      }).catch(() => {});
+    }
     // Increment view count
     try {
       await fetch('/api/video-lessons', {
@@ -258,8 +297,6 @@ export default function VideoLessons() {
       setUploading(false);
     }
   };
-
-  const isTeacher = currentRole === 'TEACHER' || currentRole === 'SCHOOL_ADMIN' || currentRole === 'SUPER_ADMIN';
 
   return (
     <div className="space-y-6">
@@ -319,23 +356,23 @@ export default function VideoLessons() {
                       <SelectTrigger id="upload-subject">
                         <SelectValue placeholder="Select subject" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {uniqueSubjects.map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="upload-class">Class</Label>
-                    <Select value={uploadForm.classId} onValueChange={(v) => setUploadForm((f) => ({ ...f, classId: v }))}>
-                      <SelectTrigger id="upload-class">
-                        <SelectValue placeholder="Select class" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {uniqueClasses.map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
+                       <SelectContent>
+                         {subjectOptions.map((s) => (
+                           <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                         ))}
+                       </SelectContent>
+                     </Select>
+                   </div>
+                   <div className="space-y-2">
+                     <Label htmlFor="upload-class">Class</Label>
+                     <Select value={uploadForm.classId} onValueChange={(v) => setUploadForm((f) => ({ ...f, classId: v }))}>
+                       <SelectTrigger id="upload-class">
+                         <SelectValue placeholder="Select class" />
+                       </SelectTrigger>
+                       <SelectContent>
+                         {classOptions.map((c) => (
+                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                         ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -626,108 +663,15 @@ export default function VideoLessons() {
             <SelectTrigger className="w-40 h-8 text-xs">
               <SelectValue placeholder="All Subjects" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Subjects</SelectItem>
-              {uniqueSubjects.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterClass} onValueChange={setFilterClass}>
-            <SelectTrigger className="w-40 h-8 text-xs">
-              <SelectValue placeholder="All Classes" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Classes</SelectItem>
-              {uniqueClasses.map((c) => (
-                <SelectItem key={c} value={c}>{c}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {(filterSubject !== 'all' || filterClass !== 'all') && (
-            <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setFilterSubject('all'); setFilterClass('all'); }}>
-              <X className="h-3 w-3 mr-1" />
-              Clear Filters
-            </Button>
-          )}
-        </div>
-
-        {/* All Lessons Tab */}
-        <TabsContent value="all" className="mt-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-8 w-8 text-rose-500 animate-spin" />
-              <span className="ml-3 text-gray-500">Loading lessons...</span>
-            </div>
-          ) : filteredLessons.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Video className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-700">No Video Lessons Found</h3>
-              <p className="text-sm text-gray-400 mt-1">
-                {searchQuery || filterSubject !== 'all' || filterClass !== 'all'
-                  ? 'Try adjusting your search or filters'
-                  : 'Be the first to upload a video lesson!'}
-              </p>
-              {isTeacher && !searchQuery && (
-                <Button
-                  className="mt-4 gap-2 bg-rose-600 hover:bg-rose-700"
-                  onClick={() => setUploadOpen(true)}
-                >
-                  <Plus className="h-4 w-4" />
-                  Upload First Lesson
-                </Button>
-              )}
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredLessons.map((lesson) => (
-                <VideoCard
-                  key={lesson.id}
-                  lesson={lesson}
-                  onPlay={handlePlayVideo}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* My Uploads Tab */}
-        {isTeacher && (
-          <TabsContent value="my-uploads" className="mt-4">
-            {loading ? (
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="h-8 w-8 text-rose-500 animate-spin" />
+              <SelectContent>
+                    <SelectItem value="all">All Subjects</SelectItem>
+                    {subjectOptions.map((s) => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ) : filteredLessons.length === 0 ? (
-              <Card className="p-12 text-center">
-                <Upload className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                <h3 className="text-lg font-medium text-gray-700">No Uploads Yet</h3>
-                <p className="text-sm text-gray-400 mt-1">Start sharing your knowledge with video lessons</p>
-                <Button className="mt-4 gap-2 bg-rose-600 hover:bg-rose-700" onClick={() => setUploadOpen(true)}>
-                  <Plus className="h-4 w-4" />
-                  Upload Your First Lesson
-                </Button>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredLessons.map((lesson) => (
-                  <VideoCard key={lesson.id} lesson={lesson} onPlay={handlePlayVideo} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        )}
-
-        {/* Watch History Tab */}
-        <TabsContent value="history" className="mt-4">
-          <Card className="p-12 text-center">
-            <Clock className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-700">Watch History</h3>
-            <p className="text-sm text-gray-400 mt-1">Videos you watch will appear here</p>
-            <p className="text-xs text-gray-300 mt-2">Start watching a video to build your history</p>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            </Tabs>
     </div>
   );
 }

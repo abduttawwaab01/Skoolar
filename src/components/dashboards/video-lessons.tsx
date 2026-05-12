@@ -260,10 +260,22 @@ export function VideoLessonsView() {
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Derived data
-  const uniqueSubjects = [...new Set(lessons.map((l) => l.subjectName).filter(Boolean))] as string[];
-  const uniqueClasses = [...new Set(lessons.map((l) => l.className).filter(Boolean))] as string[];
+  // DB-sourced subject/class options for filters
+  const [subjectOptions, setSubjectOptions] = useState<{ id: string; name: string }[]>([]);
+  const [classOptions, setClassOptions] = useState<{ id: string; name: string }[]>([]);
 
+  useEffect(() => {
+    if (!schoolId) return;
+    Promise.all([
+      fetch(`/api/subjects?schoolId=${schoolId}&limit=50`).then(r => r.ok ? r.json() : { data: [] }),
+      fetch(`/api/classes?schoolId=${schoolId}&limit=50`).then(r => r.ok ? r.json() : { data: [] }),
+    ]).then(([subjectsRes, classesRes]) => {
+      setSubjectOptions(subjectsRes.data || []);
+      setClassOptions(classesRes.data || []);
+    }).catch(() => {});
+  }, [schoolId]);
+
+  // Derived data (only stats)
   const featuredCount = lessons.filter((l) => l.isFeatured).length;
   const publishedCount = lessons.filter((l) => l.isPublished).length;
   const totalViews = lessons.reduce((acc, l) => acc + l.viewCount, 0);
@@ -756,24 +768,24 @@ export function VideoLessonsView() {
           <SelectTrigger className="w-40 h-8 text-xs">
             <SelectValue placeholder="All Subjects" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Subjects</SelectItem>
-            {uniqueSubjects.map((s) => (
-              <SelectItem key={s} value={s}>{s}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterClass} onValueChange={setFilterClass}>
-          <SelectTrigger className="w-40 h-8 text-xs">
-            <SelectValue placeholder="All Classes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Classes</SelectItem>
-            {uniqueClasses.map((c) => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            <SelectContent>
+                    <SelectItem value="all">All Subjects</SelectItem>
+                    {subjectOptions.map((s) => (
+                      <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={filterClass} onValueChange={setFilterClass}>
+                  <SelectTrigger className="w-40 h-8 text-xs">
+                    <SelectValue placeholder="All Classes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Classes</SelectItem>
+                    {classOptions.map((c) => (
+                      <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
         {(filterSubject !== 'all' || filterClass !== 'all' || filterStatus !== 'all') && (
           <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => {
             setFilterSubject('all');
@@ -936,8 +948,8 @@ export function VideoLessonsView() {
                 <Select value={uploadForm.subjectId} onValueChange={(v) => setUploadForm((f) => ({ ...f, subjectId: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
                   <SelectContent>
-                    {uniqueSubjects.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    {subjectOptions.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -947,8 +959,8 @@ export function VideoLessonsView() {
                 <Select value={uploadForm.classId} onValueChange={(v) => setUploadForm((f) => ({ ...f, classId: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
                   <SelectContent>
-                    {uniqueClasses.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    {classOptions.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1054,8 +1066,8 @@ export function VideoLessonsView() {
                 <Select value={editForm.subjectId} onValueChange={(v) => setEditForm((f) => ({ ...f, subjectId: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
                   <SelectContent>
-                    {uniqueSubjects.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    {subjectOptions.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1065,8 +1077,8 @@ export function VideoLessonsView() {
                 <Select value={editForm.classId} onValueChange={(v) => setEditForm((f) => ({ ...f, classId: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
                   <SelectContent>
-                    {uniqueClasses.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    {classOptions.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
