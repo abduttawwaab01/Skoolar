@@ -14,22 +14,28 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useAppStore } from '@/store/app-store';
 import {
-  Plus, BookText, Sparkles, Calendar, CheckCircle2, FileText, Target, ListChecks, Lightbulb, GraduationCap,
+  Plus, BookText, Sparkles, Calendar, CheckCircle2, FileText, Target, ListChecks, Lightbulb, GraduationCap, MoreVertical, Pencil, Trash2, Archive,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface LessonPlan {
   id: string;
-  subject: string;
-  class: string;
+  subjectId: string | null;
+  classId: string | null;
   topic: string;
-  date: string;
-  status: 'Published' | 'Draft' | 'Archived';
-  objectives: string;
-  activities: string;
-  resources: string;
+  objectives: string | null;
+  activities: string | null;
+  resources: string | null;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  subject: { id: string; name: string; code?: string | null } | null;
+  class: { id: string; name: string; section?: string | null } | null;
 }
 
 interface SubjectData {
@@ -48,7 +54,7 @@ interface ClassData {
 
 interface AiLessonPlan {
   subject: string;
-  class: string;
+  className: string;
   topic: string;
   objectives: string;
   activities: string;
@@ -77,11 +83,13 @@ export function TeacherLessonPlans() {
   const [subjects, setSubjects] = useState<SubjectData[]>([]);
   const [classes, setClasses] = useState<ClassData[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editPlan, setEditPlan] = useState<LessonPlan | null>(null);
   const [showAiPlan, setShowAiPlan] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
-    subject: '', class: '', topic: '', objectives: '', activities: '', resources: '',
+    subjectId: '', classId: '', topic: '', objectives: '', activities: '', resources: '',
   });
   const [aiPlan, setAiPlan] = useState<AiLessonPlan | null>(null);
 
@@ -92,9 +100,10 @@ export function TeacherLessonPlans() {
     }
     setLoading(true);
     try {
-      const [subjectsRes, classesRes] = await Promise.all([
+      const [subjectsRes, classesRes, plansRes] = await Promise.all([
         fetch(`/api/subjects?schoolId=${selectedSchoolId}&limit=50`),
         fetch(`/api/classes?schoolId=${selectedSchoolId}&limit=50`),
+        fetch(`/api/lesson-plans?schoolId=${selectedSchoolId}&limit=50`),
       ]);
 
       if (subjectsRes.ok) {
@@ -105,23 +114,9 @@ export function TeacherLessonPlans() {
         const classesJson = await classesRes.json();
         setClasses(classesJson.data || []);
       }
-
-      // Fetch homework assignments as lesson plans
-      const homeworkRes = await fetch(`/api/homework?schoolId=${selectedSchoolId}&limit=20`);
-      if (homeworkRes.ok) {
-        const homeworkJson = await homeworkRes.json();
-        const homeworkPlans: LessonPlan[] = (homeworkJson.data || []).map((hw: { id: string; title: string; description?: string | null; subject?: { name?: string } | null; class?: { name?: string } | null; createdAt?: string; status?: string }) => ({
-          id: hw.id,
-          subject: hw.subject?.name || 'General',
-          class: hw.class?.name || 'All Classes',
-          topic: hw.title,
-          date: hw.createdAt ? new Date(hw.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          status: (hw.status === 'completed' ? 'Archived' : 'Published') as LessonPlan['status'],
-          objectives: hw.description || '',
-          activities: '',
-          resources: '',
-        }));
-        setPlans(homeworkPlans);
+      if (plansRes.ok) {
+        const plansJson = await plansRes.json();
+        setPlans(plansJson.data || []);
       }
     } catch (err) {
       console.error(err);
@@ -135,21 +130,102 @@ export function TeacherLessonPlans() {
     fetchData();
   }, [fetchData]);
 
-  const handleCreate = () => {
-    const newPlan: LessonPlan = {
-      id: `lp-${Date.now()}`,
-      subject: formData.subject,
-      class: formData.class,
-      topic: formData.topic,
-      date: new Date().toISOString().split('T')[0],
-      status: 'Draft',
-      objectives: formData.objectives,
-      activities: formData.activities,
-      resources: formData.resources,
-    };
-    setPlans(prev => [newPlan, ...prev]);
-    setDialogOpen(false);
-    setFormData({ subject: '', class: '', topic: '', objectives: '', activities: '', resources: '' });
+  const resetForm = () => {
+    setFormData({ subjectId: '', classId: '', topic: '', objectives: '', activities: '', resources: '' });
+    setEditPlan(null);
+  };
+
+  const openCreateDialog = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (plan: LessonPlan) => {
+    setEditPlan(plan);
+    setFormData({
+      subjectId: plan.subjectId || '',
+      classId: plan.classId || '',
+      topic: plan.topic,
+      objectives: plan.objectives || '',
+      activities: plan.activities || '',
+      resources: plan.resources || '',
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!selectedSchoolId || !formData.topic) return;
+    setSaving(true);
+    try {
+      const body = {
+        schoolId: selectedSchoolId,
+        subjectId: formData.subjectId || undefined,
+        classId: formData.classId || undefined,
+        topic: formData.topic,
+        objectives: formData.objectives || undefined,
+        activities: formData.activities || undefined,
+        resources: formData.resources || undefined,
+      };
+
+      if (editPlan) {
+        const res = await fetch(`/api/lesson-plans/${editPlan.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error('Failed to update');
+        const json = await res.json();
+        setPlans(prev => prev.map(p => p.id === editPlan.id ? json.data : p));
+        toast.success('Lesson plan updated');
+      } else {
+        const res = await fetch('/api/lesson-plans', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error('Failed to create');
+        const json = await res.json();
+        setPlans(prev => [json.data, ...prev]);
+        toast.success('Lesson plan created');
+      }
+
+      setDialogOpen(false);
+      resetForm();
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save lesson plan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/lesson-plans/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete');
+      setPlans(prev => prev.filter(p => p.id !== id));
+      toast.success('Lesson plan deleted');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to delete lesson plan');
+    }
+  };
+
+  const handleStatusChange = async (id: string, status: string) => {
+    try {
+      const res = await fetch(`/api/lesson-plans/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error('Failed to update status');
+      const json = await res.json();
+      setPlans(prev => prev.map(p => p.id === id ? json.data : p));
+      toast.success(`Lesson plan ${status}`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to update status');
+    }
   };
 
   const handleAiGenerate = async () => {
@@ -159,8 +235,8 @@ export function TeacherLessonPlans() {
     setAiPlan(null);
 
     try {
-      const subjectName = subjects.find(s => s.id === formData.subject)?.name || formData.subject || 'Mathematics';
-      const className = classes.find(c => c.id === formData.class)?.name || formData.class || 'JSS 2A';
+      const subjectName = subjects.find(s => s.id === formData.subjectId)?.name || formData.subjectId || 'Mathematics';
+      const className = classes.find(c => c.id === formData.classId)?.name || formData.classId || 'JSS 2A';
 
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -187,25 +263,22 @@ Format your response as JSON with these exact keys: topic, objectives, activitie
       const json = await res.json();
       const content = json.message?.content || '';
 
-      // Try to parse JSON from the response
       try {
-        // Find JSON in the response
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           setAiPlan({
             subject: subjectName,
-            class: className,
+            className,
             topic: parsed.topic || 'Lesson Plan',
             objectives: parsed.objectives || '',
             activities: parsed.activities || '',
             resources: parsed.resources || '',
           });
         } else {
-          // Fallback: use the raw content as objectives
           setAiPlan({
             subject: subjectName,
-            class: className,
+            className,
             topic: `${subjectName} Lesson Plan`,
             objectives: content,
             activities: '',
@@ -213,10 +286,9 @@ Format your response as JSON with these exact keys: topic, objectives, activitie
           });
         }
       } catch {
-        // If JSON parsing fails, use raw content
         setAiPlan({
           subject: subjectName,
-          class: className,
+          className,
           topic: `${subjectName} Lesson Plan`,
           objectives: content,
           activities: '',
@@ -234,11 +306,51 @@ Format your response as JSON with these exact keys: topic, objectives, activitie
     }
   };
 
-  const statusColors: Record<string, string> = {
-    Published: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    Draft: 'bg-amber-100 text-amber-700 border-amber-200',
-    Archived: 'bg-gray-100 text-gray-500 border-gray-200',
+  const saveAiPlan = async () => {
+    if (!selectedSchoolId || !aiPlan) return;
+    setSaving(true);
+    try {
+      const subjectId = subjects.find(s => s.name === aiPlan.subject)?.id || formData.subjectId;
+      const classId = classes.find(c => c.name === aiPlan.className)?.id || formData.classId;
+
+      const res = await fetch('/api/lesson-plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schoolId: selectedSchoolId,
+          subjectId: subjectId || undefined,
+          classId: classId || undefined,
+          topic: aiPlan.topic,
+          objectives: aiPlan.objectives || undefined,
+          activities: aiPlan.activities || undefined,
+          resources: aiPlan.resources || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      const json = await res.json();
+      setPlans(prev => [json.data, ...prev]);
+      setShowAiPlan(false);
+      setAiPlan(null);
+      toast.success('AI lesson plan saved');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to save AI lesson plan');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const subjectName = (plan: LessonPlan) => plan.subject?.name || 'General';
+  const className = (plan: LessonPlan) => plan.class?.name || plan.classId || 'All Classes';
+  const planDate = (plan: LessonPlan) => new Date(plan.createdAt).toISOString().split('T')[0];
+
+  const statusColors: Record<string, string> = {
+    published: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    draft: 'bg-amber-100 text-amber-700 border-amber-200',
+    archived: 'bg-gray-100 text-gray-500 border-gray-200',
+  };
+
+  const statusLabel = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
   if (loading) return <LoadingSkeleton />;
 
@@ -252,6 +364,9 @@ Format your response as JSON with these exact keys: topic, objectives, activitie
     );
   }
 
+  const dialogTitle = editPlan ? 'Edit Lesson Plan' : 'Create Lesson Plan';
+  const dialogDesc = editPlan ? 'Update your lesson objectives, activities, and resources' : 'Plan your lesson objectives, activities, and resources';
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -263,18 +378,18 @@ Format your response as JSON with these exact keys: topic, objectives, activitie
         <div className="flex items-center gap-2">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline"><Plus className="size-4 mr-2" /> Create Lesson Plan</Button>
+              <Button variant="outline" onClick={openCreateDialog}><Plus className="size-4 mr-2" /> Create Lesson Plan</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Create Lesson Plan</DialogTitle>
-                <DialogDescription>Plan your lesson objectives, activities, and resources</DialogDescription>
+                <DialogTitle>{dialogTitle}</DialogTitle>
+                <DialogDescription>{dialogDesc}</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Subject</Label>
-                    <Select value={formData.subject} onValueChange={v => setFormData(p => ({ ...p, subject: v }))}>
+                    <Select value={formData.subjectId} onValueChange={v => setFormData(p => ({ ...p, subjectId: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
                         {subjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -283,7 +398,7 @@ Format your response as JSON with these exact keys: topic, objectives, activitie
                   </div>
                   <div className="space-y-2">
                     <Label>Class</Label>
-                    <Select value={formData.class} onValueChange={v => setFormData(p => ({ ...p, class: v }))}>
+                    <Select value={formData.classId} onValueChange={v => setFormData(p => ({ ...p, classId: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                       <SelectContent>
                         {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.section ? ` (${c.section})` : ''}</SelectItem>)}
@@ -309,8 +424,10 @@ Format your response as JSON with these exact keys: topic, objectives, activitie
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreate} disabled={!formData.topic}><Plus className="size-4 mr-2" /> Create</Button>
+                <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>Cancel</Button>
+                <Button onClick={handleSave} disabled={!formData.topic || saving}>
+                  {saving ? 'Saving...' : <>{editPlan ? 'Update' : 'Create'}</>}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -331,16 +448,41 @@ Format your response as JSON with these exact keys: topic, objectives, activitie
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="outline" className="text-[10px]">{plan.subject}</Badge>
-                    <Badge variant="outline" className="text-[10px]">{plan.class}</Badge>
+                    <Badge variant="outline" className="text-[10px]">{subjectName(plan)}</Badge>
+                    <Badge variant="outline" className="text-[10px]">{className(plan)}</Badge>
                   </div>
                   <h3 className="font-semibold text-sm">{plan.topic}</h3>
                   <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                    <Calendar className="size-3" /> {plan.date}
+                    <Calendar className="size-3" /> {planDate(plan)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{plan.objectives}</p>
                 </div>
-                <Badge variant="outline" className={statusColors[plan.status]}>{plan.status}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={statusColors[plan.status]}>{statusLabel(plan.status)}</Badge>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="size-7"><MoreVertical className="size-3.5" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem onClick={() => openEditDialog(plan)}>
+                        <Pencil className="size-3.5 mr-2" /> Edit
+                      </DropdownMenuItem>
+                      {plan.status !== 'published' && (
+                        <DropdownMenuItem onClick={() => handleStatusChange(plan.id, 'published')}>
+                          <CheckCircle2 className="size-3.5 mr-2" /> Publish
+                        </DropdownMenuItem>
+                      )}
+                      {plan.status !== 'archived' && (
+                        <DropdownMenuItem onClick={() => handleStatusChange(plan.id, 'archived')}>
+                          <Archive className="size-3.5 mr-2" /> Archive
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(plan.id)}>
+                        <Trash2 className="size-3.5 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -379,7 +521,7 @@ Format your response as JSON with these exact keys: topic, objectives, activitie
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2">
               <Badge variant="outline">{aiPlan.subject}</Badge>
-              <Badge variant="outline">{aiPlan.class}</Badge>
+              <Badge variant="outline">{aiPlan.className}</Badge>
               <Badge className="bg-purple-600">AI Generated</Badge>
             </div>
             <h3 className="text-lg font-bold">{aiPlan.topic}</h3>
@@ -417,22 +559,9 @@ Format your response as JSON with these exact keys: topic, objectives, activitie
             </div>
 
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => {
-                const newPlan: LessonPlan = {
-                  id: `lp-${Date.now()}`,
-                  subject: aiPlan.subject,
-                  class: aiPlan.class,
-                  topic: aiPlan.topic,
-                  date: new Date().toISOString().split('T')[0],
-                  status: 'Draft',
-                  objectives: aiPlan.objectives,
-                  activities: aiPlan.activities,
-                  resources: aiPlan.resources,
-                };
-                setPlans(prev => [newPlan, ...prev]);
-                toast.success('Lesson plan saved');
-              }}><CheckCircle2 className="size-4 mr-2" /> Save Plan</Button>
-              <Button size="sm" variant="outline" onClick={() => toast.success('Opening editor...')}><FileText className="size-4 mr-2" /> Edit</Button>
+              <Button size="sm" onClick={saveAiPlan} disabled={saving}>
+                <CheckCircle2 className="size-4 mr-2" /> {saving ? 'Saving...' : 'Save Plan'}
+              </Button>
             </div>
           </CardContent>
         )}
