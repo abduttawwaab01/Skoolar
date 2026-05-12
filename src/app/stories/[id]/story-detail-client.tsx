@@ -392,20 +392,19 @@ export default function StoryDetailClient({ id }: { id: string }) {
 
   useEffect(() => {
     const fetchRelated = async () => {
+      if (!story) return;
       try {
-        const res = await fetch('/api/platform/stories');
+        const res = await fetch(`/api/platform/stories?category=${encodeURIComponent(story.category)}&limit=6`);
         const json = await res.json();
-        if (json.success && story) {
-          const related = (json.data || [])
-            .filter((s: Story) => s.id !== story.id && s.category === story.category)
-            .slice(0, 5);
+        if (json.success) {
+          const related = (json.data || []).filter((s: Story) => s.id !== story.id).slice(0, 5);
           setRelatedStories(related);
         }
       } catch {
         /* silent */
       }
     };
-    if (story) fetchRelated();
+    fetchRelated();
   }, [story]);
 
   const handleScroll = useCallback(() => {
@@ -444,9 +443,23 @@ export default function StoryDetailClient({ id }: { id: string }) {
     window.print();
   };
 
-  const toggleLike = () => {
-    setLiked(!liked);
-    toast.success(liked ? 'Removed from likes' : 'Added to likes!');
+  const toggleLike = async () => {
+    if (!story) return;
+    try {
+      const res = await fetch(`/api/platform/stories/${story.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'like' }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setStory({ ...story, likeCount: json.data.likeCount });
+        setLiked(!liked);
+        toast.success(liked ? 'Removed from likes' : 'Added to likes!');
+      }
+    } catch {
+      toast.error('Failed to update like');
+    }
   };
 
   const toggleBookmark = () => {

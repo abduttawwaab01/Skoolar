@@ -36,57 +36,47 @@ interface PlanData {
 
 const defaultPlans = [
   {
-    id: '1', name: 'basic', displayName: 'Basic', price: 0, yearlyPrice: 0,
-    maxStudents: 100, maxTeachers: 10, maxClasses: 15,
-    features: JSON.stringify(['Up to 100 students', 'Up to 10 teachers', 'Basic attendance tracking', 'Simple report cards', 'Calendar & events', 'Notice board', 'Email support']),
+    id: 'free', name: 'free', displayName: 'Free', price: 0, yearlyPrice: 0,
+    maxStudents: 50, maxTeachers: 5, maxClasses: 10,
+    features: JSON.stringify(['Up to 50 students', 'Up to 5 teachers', 'Up to 10 classes', 'Basic report cards', 'Attendance tracking', 'Community support']),
     isActive: true,
   },
   {
-    id: '2', name: 'standard', displayName: 'Standard', price: 15000, yearlyPrice: 150000,
-    maxStudents: 500, maxTeachers: 30, maxClasses: 30,
-    features: JSON.stringify(['Up to 500 students', 'Up to 30 teachers', 'Advanced attendance with QR scanning', 'Comprehensive report cards', 'AI Grading Assistant', 'Homework management', 'Video lessons', 'Parent portal', 'In-app messaging', 'Priority email & chat support']),
+    id: 'pro', name: 'pro', displayName: 'Pro', price: 9999, yearlyPrice: 99990,
+    maxStudents: 500, maxTeachers: 50, maxClasses: -1,
+    features: JSON.stringify(['Up to 500 students', 'Up to 50 teachers', 'Unlimited classes', 'Advanced report cards', 'Video lessons', 'AI grading assistant', 'Homework management', 'Email support', 'Transport tracking']),
     isActive: true,
   },
   {
-    id: '3', name: 'premium', displayName: 'Premium', price: 35000, yearlyPrice: 350000,
-    maxStudents: 2000, maxTeachers: 100, maxClasses: 80,
-    features: JSON.stringify(['Up to 2,000 students', 'Up to 100 teachers', 'Everything in Standard', 'AI Quiz Generator', 'ID Card generator', 'Multi-school support', 'Advanced analytics & AI insights', 'Data import/export', 'Transport management', 'Library management', 'Custom branding', 'Dedicated support manager', 'API access']),
-    isActive: true,
-  },
-  {
-    id: '4', name: 'enterprise', displayName: 'Enterprise', price: 75000, yearlyPrice: 750000,
-    maxStudents: 5000, maxTeachers: 300, maxClasses: 200,
-    features: JSON.stringify(['Unlimited students', 'Up to 300 teachers', 'Everything in Premium', 'White-label solution', 'Custom integrations', 'On-premise deployment option', 'SLA guarantee 99.9%', 'Advanced security & SSO', 'Custom training & onboarding', 'Dedicated engineering support', 'Executive dashboard']),
+    id: 'custom', name: 'custom', displayName: 'Custom', price: 0, yearlyPrice: 0,
+    maxStudents: -1, maxTeachers: -1, maxClasses: -1,
+    features: JSON.stringify(['Unlimited students', 'Unlimited teachers', 'Unlimited classes', 'Custom features', 'Custom pricing', 'Dedicated support', '_whatsapp:+2349152929772']),
     isActive: true,
   },
 ];
 
 const planIcons: Record<string, React.ElementType> = {
-  basic: GraduationCap,
-  standard: Building2,
-  premium: Crown,
-  enterprise: Shield,
+  free: GraduationCap,
+  pro: Building2,
+  custom: Shield,
 };
 
 const planGradients: Record<string, string> = {
-  basic: 'from-gray-100 to-gray-50',
-  standard: 'from-blue-100 to-blue-50',
-  premium: 'from-emerald-100 to-emerald-50',
-  enterprise: 'from-amber-100 to-amber-50',
+  free: 'from-gray-100 to-gray-50',
+  pro: 'from-emerald-100 to-emerald-50',
+  custom: 'from-blue-100 to-blue-50',
 };
 
 const planIconBg: Record<string, string> = {
-  basic: 'bg-gray-100 text-gray-600',
-  standard: 'bg-blue-100 text-blue-600',
-  premium: 'bg-emerald-100 text-emerald-600',
-  enterprise: 'bg-amber-100 text-amber-600',
+  free: 'bg-gray-100 text-gray-600',
+  pro: 'bg-emerald-100 text-emerald-600',
+  custom: 'bg-blue-100 text-blue-600',
 };
 
 const planDescriptions: Record<string, string> = {
-  basic: 'Perfect for small schools just getting started with digital management.',
-  standard: 'Ideal for growing schools that need advanced features and parent engagement.',
-  premium: 'Best for established schools wanting AI-powered tools and customization.',
-  enterprise: 'Designed for school groups and large institutions needing full control.',
+  free: 'Perfect for small schools just getting started with digital management.',
+  pro: 'Ideal for growing schools that need advanced features and AI-powered tools.',
+  custom: 'Designed for institutions needing custom features and dedicated support.',
 };
 
 const faqItems = [
@@ -104,7 +94,7 @@ const faqItems = [
   },
   {
     question: 'Do you offer discounts for multiple schools?',
-    answer: 'Yes, we offer special pricing for school groups, districts, and educational networks. Contact our sales team at sales@skoolar.com for custom enterprise pricing.',
+    answer: 'Yes, we offer special pricing for school groups, districts, and educational networks. Contact us at hello@skoolar.com for custom enterprise pricing.',
   },
   {
     question: 'What payment methods do you accept?',
@@ -112,7 +102,7 @@ const faqItems = [
   },
   {
     question: 'Is my data safe and secure?',
-    answer: 'Absolutely. We use industry-standard encryption (SSL/TLS), regular backups, and enterprise-grade infrastructure. Enterprise plans include additional security features like SSO and custom data residency options.',
+    answer: 'Absolutely. We use industry-standard encryption (SSL/TLS), regular backups, and enterprise-grade infrastructure. Custom plans include additional security features like SSO and custom data residency options.',
   },
   {
     question: 'Can I cancel my subscription?',
@@ -129,60 +119,60 @@ const testimonials = [
     name: 'Mrs. Adebayo',
     role: 'Proprietress, Graceville Academy',
     content: 'Skoolar has transformed how we manage our school. The attendance and grading features save us hours every week.',
-    plan: 'Standard',
+    plan: 'Pro',
     avatar: '👩‍🏫',
   },
   {
     name: 'Mr. Okonkwo',
     role: 'Principal, Apex College',
     content: 'The AI grading assistant is incredible. It has reduced our teachers\' workload by 40% while maintaining quality.',
-    plan: 'Premium',
+    plan: 'Pro',
     avatar: '👨‍💼',
   },
   {
     name: 'Dr. Fatimah',
     role: 'Director, Horizon Schools',
-    content: 'Managing 5 schools from one dashboard is a game-changer. Enterprise plan is worth every naira.',
-    plan: 'Enterprise',
+    content: 'Managing multiple schools from one dashboard is a game-changer. The Custom plan is worth every naira.',
+    plan: 'Custom',
     avatar: '👩‍💼',
   },
 ];
 
 const comparisonFeatures = [
   { category: 'Core', features: [
-    { name: 'Student Management', basic: '100', standard: '500', premium: '2,000', enterprise: 'Unlimited' },
-    { name: 'Teacher Management', basic: '10', standard: '30', premium: '100', enterprise: '300' },
-    { name: 'Class Management', basic: '15', standard: '30', premium: '80', enterprise: '200' },
-    { name: 'Attendance Tracking', basic: true, standard: true, premium: true, enterprise: true },
+    { name: 'Student Management', free: '50', pro: '500', custom: 'Unlimited' },
+    { name: 'Teacher Management', free: '5', pro: '50', custom: 'Unlimited' },
+    { name: 'Class Management', free: '10', pro: 'Unlimited', custom: 'Unlimited' },
+    { name: 'Attendance Tracking', free: true, pro: true, custom: true },
   ]},
   { category: 'Academics', features: [
-    { name: 'Report Cards', basic: 'Basic', standard: 'Advanced', premium: 'Advanced', enterprise: 'Advanced' },
-    { name: 'Score Types & Weights', basic: false, standard: true, premium: true, enterprise: true },
-    { name: 'Homework Management', basic: false, standard: true, premium: true, enterprise: true },
-    { name: 'AI Grading Assistant', basic: false, standard: true, premium: true, enterprise: true },
-    { name: 'AI Quiz Generator', basic: false, standard: false, premium: true, enterprise: true },
+    { name: 'Report Cards', free: 'Basic', pro: 'Advanced', custom: 'Advanced' },
+    { name: 'Score Types & Weights', free: false, pro: true, custom: true },
+    { name: 'Homework Management', free: false, pro: true, custom: true },
+    { name: 'AI Grading Assistant', free: false, pro: true, custom: true },
+    { name: 'AI Quiz Generator', free: false, pro: false, custom: true },
   ]},
   { category: 'Communication', features: [
-    { name: 'Parent Portal', basic: false, standard: true, premium: true, enterprise: true },
-    { name: 'In-App Messaging', basic: false, standard: true, premium: true, enterprise: true },
-    { name: 'Announcements', basic: true, standard: true, premium: true, enterprise: true },
-    { name: 'Notice Board', basic: true, standard: true, premium: true, enterprise: true },
+    { name: 'Parent Portal', free: false, pro: true, custom: true },
+    { name: 'In-App Messaging', free: false, pro: true, custom: true },
+    { name: 'Announcements', free: true, pro: true, custom: true },
+    { name: 'Notice Board', free: true, pro: true, custom: true },
   ]},
   { category: 'Advanced', features: [
-    { name: 'Video Lessons', basic: false, standard: true, premium: true, enterprise: true },
-    { name: 'Student AI Chat', basic: false, standard: true, premium: true, enterprise: true },
-    { name: 'ID Card Generator', basic: false, standard: false, premium: true, enterprise: true },
-    { name: 'Multi-School Support', basic: false, standard: false, premium: true, enterprise: true },
-    { name: 'Custom Branding', basic: false, standard: false, premium: true, enterprise: true },
-    { name: 'Data Import/Export', basic: false, standard: false, premium: true, enterprise: true },
-    { name: 'API Access', basic: false, standard: false, premium: true, enterprise: true },
+    { name: 'Video Lessons', free: false, pro: true, custom: true },
+    { name: 'Student AI Chat', free: false, pro: true, custom: true },
+    { name: 'ID Card Generator', free: false, pro: false, custom: true },
+    { name: 'Multi-School Support', free: false, pro: false, custom: true },
+    { name: 'Custom Branding', free: false, pro: true, custom: true },
+    { name: 'Data Import/Export', free: false, pro: true, custom: true },
+    { name: 'API Access', free: false, pro: false, custom: true },
   ]},
   { category: 'Support', features: [
-    { name: 'Email Support', basic: true, standard: true, premium: true, enterprise: true },
-    { name: 'Chat Support', basic: false, standard: true, premium: true, enterprise: true },
-    { name: 'Dedicated Manager', basic: false, standard: false, premium: true, enterprise: true },
-    { name: 'Custom Training', basic: false, standard: false, premium: false, enterprise: true },
-    { name: 'SLA Guarantee', basic: false, standard: false, premium: false, enterprise: true },
+    { name: 'Email Support', free: true, pro: true, custom: true },
+    { name: 'Chat Support', free: false, pro: true, custom: true },
+    { name: 'Dedicated Manager', free: false, pro: false, custom: true },
+    { name: 'Custom Training', free: false, pro: false, custom: true },
+    { name: 'SLA Guarantee', free: false, pro: false, custom: true },
   ]},
 ];
 
@@ -445,14 +435,14 @@ export default function PricingPage() {
        {/* Plans Grid */}
       <div className="max-w-6xl mx-auto px-4 py-16">
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-[600px] rounded-2xl" />
             ))}
           </div>
         ) : (
           <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-50px' }}
@@ -462,7 +452,7 @@ export default function PricingPage() {
               <PlanCard
                 key={plan.id}
                 plan={plan}
-                isPopular={plan.name === 'premium'}
+                isPopular={plan.name === 'pro'}
                 billingPeriod={billingPeriod}
               />
             ))}
@@ -596,7 +586,7 @@ export default function PricingPage() {
                 <th className="text-left p-4 text-sm font-semibold text-gray-700 w-1/4">Feature</th>
                 {displayPlans.map((plan) => {
                   const Icon = planIcons[plan.name] || GraduationCap;
-                  const isPopular = plan.name === 'premium';
+                  const isPopular = plan.name === 'pro';
                   return (
                     <th
                       key={plan.id}
@@ -619,7 +609,7 @@ export default function PricingPage() {
                   {/* Category Header */}
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={4}
                       className="bg-gray-50 px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider"
                     >
                       {category.category}
@@ -629,10 +619,9 @@ export default function PricingPage() {
                   {category.features.map((feature) => (
                     <tr key={feature.name} className="border-t border-gray-100 hover:bg-gray-50/50 transition-colors">
                       <td className="p-4 text-sm text-gray-700 font-medium">{feature.name}</td>
-                      <td className="p-4 text-center"><FeatureCell value={feature.basic} /></td>
-                      <td className="p-4 text-center bg-emerald-50/30"><FeatureCell value={feature.standard} /></td>
-                      <td className="p-4 text-center bg-emerald-50/50"><FeatureCell value={feature.premium} /></td>
-                      <td className="p-4 text-center"><FeatureCell value={feature.enterprise} /></td>
+                      <td className="p-4 text-center"><FeatureCell value={feature.free} /></td>
+                      <td className="p-4 text-center bg-emerald-50/50"><FeatureCell value={feature.pro} /></td>
+                      <td className="p-4 text-center"><FeatureCell value={feature.custom} /></td>
                     </tr>
                   ))}
                 </React.Fragment>

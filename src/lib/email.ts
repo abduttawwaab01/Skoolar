@@ -148,3 +148,47 @@ export async function sendVerificationEmail(options: { to: string; name?: string
   const { subject, html } = createEmailVerificationEmail(name, verifyUrl);
   return sendEmail({ to, subject, html });
 }
+
+export function createAdmissionLetterEmail(
+  recipientName: string,
+  schoolName: string,
+  letterType: 'admission' | 'offer',
+  letterUrl: string,
+) {
+  const typeLabel = letterType === 'admission' ? 'Admission Offer' : 'Employment Offer';
+  const subject = `${typeLabel} - ${schoolName}`;
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8" /></head>
+    <body style="font-family:Arial,sans-serif;padding:20px;max-width:600px;margin:0 auto">
+      <div style="background:#059669;padding:20px;text-align:center;border-radius:8px 8px 0 0">
+        <h1 style="color:white;margin:0;font-size:20px">${schoolName}</h1>
+      </div>
+      <div style="padding:24px;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">
+        <p style="font-size:16px;color:#333">Dear ${recipientName},</p>
+        <p style="font-size:14px;color:#555;line-height:1.6">
+          Congratulations! Your ${letterType === 'admission' ? 'admission offer letter' : 'letter of employment'} from <strong>${schoolName}</strong> is ready.
+        </p>
+        <p style="font-size:14px;color:#555;line-height:1.6">
+          Please click the button below to view and download your letter.
+        </p>
+        <div style="text-align:center;margin:24px 0">
+          <a href="${letterUrl}" style="display:inline-block;background:#059669;color:white;padding:12px 32px;border-radius:6px;text-decoration:none;font-size:15px;font-weight:600">
+            View ${typeLabel} Letter
+          </a>
+        </div>
+        <p style="font-size:13px;color:#888;line-height:1.5">
+          If you have any questions, please contact the school administration.
+        </p>
+        <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0" />
+        <p style="font-size:12px;color:#aaa;text-align:center">
+          This email was sent by Skoolar on behalf of ${schoolName}.
+        </p>
+      </div>
+    </body>
+    </html>
+  `;
+  return { subject, html };
+}
+

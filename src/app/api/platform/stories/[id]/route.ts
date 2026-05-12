@@ -2,27 +2,46 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
-// GET /api/platform/stories/[id] - Public: get story by ID
+function parseTags(tags: unknown): string[] {
+  if (Array.isArray(tags)) return tags.filter(Boolean);
+  if (typeof tags === 'string') return tags.split(',').map((t) => t.trim()).filter(Boolean);
+  return [];
+}
+
+function calculateReadTime(content: string): number {
+  const wordsPerMinute = 200;
+  const wordCount = content.trim().split(/\s+/).length;
+  return Math.max(1, Math.ceil(wordCount / wordsPerMinute));
+}
+
+// GET /api/platform/stories/[id] - Public: get story by ID. Admin: ?all=true bypasses isPublished check.
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const showAll = searchParams.get('all') === 'true';
 
-    const story = await db.platformStory.findUnique({ where: { id, isPublished: true } });
+    const where: Record<string, unknown> = { id };
+    if (!showAll) where.isPublished = true;
+
+    const story = await db.platformStory.findFirst({ where });
 
     if (!story) {
       return NextResponse.json({ success: false, message: 'Story not found' }, { status: 404 });
     }
 
-    // Increment view count
-    await db.platformStory.update({
-      where: { id },
-      data: { viewCount: { increment: 1 } },
-    });
+    // Only increment view count for public views
+    if (!showAll) {
+      await db.platformStory.update({
+        where: { id },
+        data: { viewCount: { increment: 1 } },
+      });
+    }
 
-    return NextResponse.json({ success: true, data: story });
+    return NextResponse.json({ success: true, data: { ...story, viewCount: story.viewCount + (showAll ? 0 : 1) } });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ success: false, message }, { status: 500 });
@@ -47,12 +66,15 @@ export async function PUT(
     const updateData: Record<string, unknown> = {};
     if (title !== undefined) updateData.title = title;
     if (excerpt !== undefined) updateData.excerpt = excerpt;
-    if (content !== undefined) updateData.content = content;
+    if (content !== undefined) {
+      updateData.content = content;
+      updateData.readTime = calculateReadTime(content);
+    }
     if (coverImage !== undefined) updateData.coverImage = coverImage;
     if (level !== undefined) updateData.level = level;
     if (grade !== undefined) updateData.grade = grade;
     if (category !== undefined) updateData.category = category;
-    if (tags !== undefined) updateData.tags = tags ? JSON.stringify(tags) : null;
+    if (tags !== undefined) updateData.tags = JSON.stringify(parseTags(tags));
     if (authorName !== undefined) updateData.authorName = authorName;
     if (authorBio !== undefined) updateData.authorBio = authorBio;
     if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
@@ -88,6 +110,30 @@ export async function DELETE(
     await db.platformStory.delete({ where: { id } });
 
     return NextResponse.json({ success: true, message: 'Story deleted' });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ success: false, message }, { status: 500 });
+  }
+}
+
+// PATCH /api/platform/stories/[id] - Public: increment like count
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+
+    if (body.action === 'like') {
+      const story = await db.platformStory.update({
+        where: { id },
+        data: { likeCount: { increment: 1 } },
+      });
+      return NextResponse.json({ success: true, data: { likeCount: story.likeCount } });
+    }
+
+    return NextResponse.json({ success: false, message: 'Unknown action' }, { status: 400 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ success: false, message }, { status: 500 });

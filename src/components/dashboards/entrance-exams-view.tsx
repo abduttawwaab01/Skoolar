@@ -24,7 +24,7 @@ import {
   Plus, AlertCircle, Loader2, Copy, Eye, Trash2, ClipboardCheck,
   CheckCircle2, Users, FileQuestion, Shield, Link2, GraduationCap,
   Briefcase, Timer, ToggleLeft, ArrowUpDown, RefreshCw, Pencil,
-  FileUp, Download
+  FileUp, Download, FileText
 } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
@@ -1159,6 +1159,18 @@ export function EntranceExamsView() {
                                       </div>
                                     </DialogContent>
                                   </Dialog>
+                                )}
+                                {reg.registrationStatus === 'admitted' && (
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                                      onClick={() => window.open(`/api/admission-letter/student/${reg.id}`, '_blank')}
+                                    >
+                                      <FileText className="h-3.5 w-3.5 mr-1" /> Admission Letter
+                                    </Button>
+                                  </div>
                                 )}
                               </div>
                             </CardContent>

@@ -2,7 +2,19 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
-// GET /api/platform/stories - Public: list published stories
+function parseTags(tags: unknown): string[] {
+  if (Array.isArray(tags)) return tags.filter(Boolean);
+  if (typeof tags === 'string') return tags.split(',').map((t) => t.trim()).filter(Boolean);
+  return [];
+}
+
+function calculateReadTime(content: string): number {
+  const wordsPerMinute = 200;
+  const wordCount = content.trim().split(/\s+/).length;
+  return Math.max(1, Math.ceil(wordCount / wordsPerMinute));
+}
+
+// GET /api/platform/stories - Public: list published stories. Admin: ?all=true lists all.
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -11,10 +23,19 @@ export async function GET(request: NextRequest) {
     const grade = searchParams.get('grade') || '';
     const search = searchParams.get('search') || '';
     const featured = searchParams.get('featured');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const showAll = searchParams.get('all') === 'true';
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20')));
 
-    const where: Record<string, unknown> = { isPublished: true };
+    if (showAll) {
+      const token = await getToken({ req: request });
+      if (!token || token.role !== 'SUPER_ADMIN') {
+        return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
+      }
+    }
+
+    const where: Record<string, unknown> = {};
+    if (!showAll) where.isPublished = true;
     if (category) where.category = category;
     if (level) where.level = level;
     if (grade) where.grade = grade;
@@ -31,7 +52,7 @@ export async function GET(request: NextRequest) {
         where,
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: [{ isFeatured: 'desc' }, { publishedAt: 'desc' }],
+        orderBy: [{ isFeatured: 'desc' }, { publishedAt: 'desc' }, { createdAt: 'desc' }],
       }),
       db.platformStory.count({ where }),
     ]);
@@ -73,11 +94,12 @@ export async function POST(request: NextRequest) {
         level: level || null,
         grade: grade || null,
         category: category || 'General',
-        tags: tags ? JSON.stringify(tags) : null,
+        tags: JSON.stringify(parseTags(tags)),
         authorName: authorName || null,
         authorBio: authorBio || null,
         isFeatured: isFeatured || false,
         isPublished: isPublished || false,
+        readTime: calculateReadTime(content),
         publishedAt: isPublished ? new Date() : null,
         createdBy: token.id as string,
       },

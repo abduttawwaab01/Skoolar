@@ -19,11 +19,12 @@ UPDATE "SubscriptionPlan"
 SET 
   name = 'pro',
   "displayName" = 'Pro',
-  -- Keep existing price or set to 0 for admin control
+  price = 9999,
+  "yearlyPrice" = 99990,
   "maxStudents" = 500,
   "maxTeachers" = 50,
   "maxClasses" = -1,
-  features = '["Up to 500 students", "Up to 50 teachers", "Unlimited classes", "Advanced report cards", "Video lessons", "AI grading assistant", "Homework management", "Email support"]'
+  features = '["Up to 500 students", "Up to 50 teachers", "Unlimited classes", "Advanced report cards", "Video lessons", "AI grading assistant", "Homework management", "Email support", "Transport tracking"]'
 WHERE name ILIKE '%professional%' OR "displayName" ILIKE '%professional%' OR name = 'pro';
 
 -- If you have an "Enterprise" plan, update it to "Custom"
@@ -50,7 +51,7 @@ WHERE NOT EXISTS (SELECT 1 FROM "SubscriptionPlan" WHERE name = 'free');
 
 -- Insert Pro plan if it doesn't exist
 INSERT INTO "SubscriptionPlan" (id, name, "displayName", price, "yearlyPrice", "maxStudents", "maxTeachers", "maxClasses", "maxParents", "maxLibraryBooks", "maxVideoLessons", "maxHomeworkPerMonth", "storageLimit", "supportLevel", "customDomain", "apiAccess", "whiteLabel", features, "isActive", "paystackPlanCode", "createdAt", "updatedAt")
-SELECT gen_random_uuid(), 'pro', 'Pro', 0, NULL, 500, 50, -1, -1, -1, -1, -1, -1, 'email', false, false, false, '["Up to 500 students", "Up to 50 teachers", "Unlimited classes", "Advanced report cards", "Video lessons", "AI grading assistant", "Homework management", "Email support"]', true, NULL, NOW(), NOW()
+SELECT gen_random_uuid(), 'pro', 'Pro', 9999, 99990, 500, 50, -1, -1, -1, -1, -1, -1, 'email', false, false, false, '["Up to 500 students", "Up to 50 teachers", "Unlimited classes", "Advanced report cards", "Video lessons", "AI grading assistant", "Homework management", "Email support", "Transport tracking"]', true, NULL, NOW(), NOW()
 WHERE NOT EXISTS (SELECT 1 FROM "SubscriptionPlan" WHERE name = 'pro');
 
 -- Insert Custom plan if it doesn't exist

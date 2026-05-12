@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
         address: address || null,
         motto: motto || null,
         website: website || null,
-        plan: plan || 'basic',
+        plan: plan || 'free',
         region: region || null,
         maxStudents: maxStudents || 500,
         maxTeachers: maxTeachers || 50,

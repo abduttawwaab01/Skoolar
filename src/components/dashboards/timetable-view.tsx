@@ -9,11 +9,28 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
+import {
+  Tooltip, TooltipContent, TooltipTrigger, TooltipProvider,
+} from '@/components/ui/tooltip';
 import { 
   Clock, Calendar, BookOpen, Users, MapPin, Plus, Save, Trash2,
-  ChevronLeft, ChevronRight, Download, Upload
+  ChevronLeft, ChevronRight, Download, Upload, BookText, Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface SchemeEntryInfo {
+  id: string;
+  weekNumber: number;
+  topic: string;
+  subTopic: string | null;
+  learningObjectives: string | null;
+  status: string;
+  schemeOfWork: {
+    id: string;
+    subjectId: string;
+    classId: string;
+  };
+}
 
 interface TimetableSlot {
   id: string;
@@ -26,6 +43,7 @@ interface TimetableSlot {
   teacherId: string | null;
   room: string | null;
   isBreak: boolean;
+  schemeOfWorkEntry: SchemeEntryInfo | null;
 }
 
 interface ClassInfo {
@@ -318,6 +336,30 @@ export function TimetableView() {
                             </span>
                           )}
                         </div>
+                        {slot.schemeOfWorkEntry && slot.schemeOfWorkEntry.topic && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1.5 mt-1 text-xs text-purple-600 cursor-help">
+                                  <BookText className="size-3" />
+                                  <span className="line-clamp-1">{slot.schemeOfWorkEntry.topic}</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="max-w-xs">
+                                <div className="space-y-1.5 text-xs">
+                                  <p className="font-semibold text-purple-700">Week {slot.schemeOfWorkEntry.weekNumber}: {slot.schemeOfWorkEntry.topic}</p>
+                                  {slot.schemeOfWorkEntry.subTopic && <p className="text-gray-600">{slot.schemeOfWorkEntry.subTopic}</p>}
+                                  {slot.schemeOfWorkEntry.learningObjectives && (
+                                    <div>
+                                      <span className="font-medium text-gray-700 flex items-center gap-1"><Target className="size-3" /> Objectives:</span>
+                                      <p className="text-gray-500 ml-4">{slot.schemeOfWorkEntry.learningObjectives}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </>
                     )}
                   </div>

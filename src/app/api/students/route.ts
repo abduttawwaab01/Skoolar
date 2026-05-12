@@ -227,15 +227,17 @@ export async function POST(request: NextRequest) {
     
     if (school) {
       const maxStudents = school.subscriptionPlan?.maxStudents || school.maxStudents || 500;
-      const currentStudentCount = await db.student.count({
-        where: { schoolId: targetSchoolId, deletedAt: null },
-      });
-      
-      if (currentStudentCount >= maxStudents) {
-        return NextResponse.json(
-          { error: `Your plan allows maximum ${maxStudents} students. Please upgrade your plan to add more.` },
-          { status: 403 }
-        );
+      if (maxStudents !== -1) {
+        const currentStudentCount = await db.student.count({
+          where: { schoolId: targetSchoolId, deletedAt: null },
+        });
+        
+        if (currentStudentCount >= maxStudents) {
+          return NextResponse.json(
+            { error: `Your plan allows maximum ${maxStudents} students. Please upgrade your plan to add more.` },
+            { status: 403 }
+          );
+        }
       }
     }
 
@@ -312,6 +314,29 @@ async function bulkUploadStudents(request: NextRequest, auth: any) {
 
     const targetSchoolId = auth.schoolId || schoolId;
     if (!targetSchoolId) return NextResponse.json({ error: 'School ID required' }, { status: 400 });
+
+    // Check plan limits before bulk creation
+    const school = await db.school.findUnique({
+      where: { id: targetSchoolId },
+      include: { subscriptionPlan: true },
+    });
+    
+    if (school) {
+      const maxStudents = school.subscriptionPlan?.maxStudents || school.maxStudents || 500;
+      if (maxStudents !== -1) {
+        const currentCount = await db.student.count({
+          where: { schoolId: targetSchoolId, deletedAt: null },
+        });
+        const totalAfterBulk = currentCount + students.filter((s: any) => s.name && s.email && s.admissionNo && s.password).length;
+        if (totalAfterBulk > maxStudents) {
+          const remaining = maxStudents - currentCount;
+          return NextResponse.json(
+            { error: `Your plan allows maximum ${maxStudents} students. You can only add ${remaining > 0 ? remaining : 0} more student(s). Please upgrade your plan.` },
+            { status: 403 }
+          );
+        }
+      }
+    }
 
     const results = await db.$transaction(async (tx) => {
       const created: any[] = [];

@@ -13,12 +13,17 @@ import {
   Twitter, Instagram, Linkedin, Facebook, Youtube,
   Sparkle, Layers, Database, Wallet, ClipboardList, Bell,
   Baby, Laptop, Smartphone, Gift, Heart,
-  Target, TrendingUp, Eye, HeadphonesIcon
+  Target, TrendingUp, Eye, HeadphonesIcon,
+  Loader2, Send, MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AnnouncementTicker } from '@/components/platform/announcement-ticker';
-import { Toaster } from 'sonner';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { Toaster, toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 const features = [
@@ -103,55 +108,31 @@ const stats = [
   { value: 'AI', label: 'Smart Assistant', suffix: '' }
 ];
 
-const testimonials = [
-  {
-    name: 'Dr. Sarah Johnson',
-    role: 'Principal, Greenwood International School',
-    image: '👩‍🎓',
-    content: 'Skoolar transformed how we manage our 2000+ students. The automated report cards alone saved us hundreds of hours.',
-    rating: 5
-  },
-  {
-    name: 'Mr. Chidi Okonkwo',
-    role: 'Administrator, Lagos British Academy',
-    image: '👨‍💼',
-    content: 'The fee collection system increased our collection rate by 40% in the first month. Parents love the convenience.',
-    rating: 5
-  },
-  {
-    name: 'Mrs. Funke Adeyemi',
-    role: 'Director, Sunshine Model School',
-    image: '👩‍🏫',
-    content: 'Finally, a system that understands African school needs. The multi-term academic structure and local support are excellent.',
-    rating: 5
-  }
-];
-
 const pricingPlans = [
   {
-    name: 'Starter',
+    name: 'Free',
     price: 'Free',
     period: 'forever',
     description: 'Perfect for small schools just getting started',
-    features: ['Up to 30 students', 'Up to 3 teachers', 'Basic analytics', 'Email support', '1 academic year'],
+    features: ['Up to 50 students', 'Up to 5 teachers', 'Up to 10 classes', 'Basic report cards', 'Attendance tracking', 'Community support'],
     cta: 'Start Free',
     popular: false
   },
   {
-    name: 'Professional',
-    price: '₦50,000',
+    name: 'Pro',
+    price: '₦9,999',
     period: '/month',
     description: 'For growing schools ready to scale',
-    features: ['Up to 500 students', 'Up to 50 teachers', 'Advanced analytics', 'Priority support', 'Custom branding', 'All integrations', 'Transport tracking'],
+    features: ['Up to 500 students', 'Up to 50 teachers', 'Unlimited classes', 'Advanced report cards', 'Video lessons', 'AI grading assistant', 'Homework management', 'Email support', 'Transport tracking'],
     cta: 'Get Started',
     popular: true
   },
   {
-    name: 'Enterprise',
+    name: 'Custom',
     price: 'Custom',
     period: '',
     description: 'For large institutions with custom needs',
-    features: ['Unlimited students', 'Unlimited teachers', 'AI-powered insights', 'Dedicated support', 'Custom development', 'On-premise option', 'SLA guarantee'],
+    features: ['Unlimited students', 'Unlimited teachers', 'Unlimited classes', 'Custom features', 'Custom pricing', 'Dedicated support'],
     cta: 'Contact Sales',
     popular: false
   }
@@ -535,6 +516,49 @@ function FeaturesSection() {
 }
 
 function TestimonialsSection() {
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [reviewModal, setReviewModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({ name: '', email: '', schoolName: '', role: '', content: '', rating: 5 });
+
+  useEffect(() => {
+    fetch('/api/testimonials')
+      .then((r) => r.json())
+      .then((d) => setReviews(d.data || []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const submitReview = async () => {
+    if (!form.name.trim() || !form.content.trim()) {
+      toast.error('Name and review are required');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/testimonials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          role: form.role.trim() || null,
+          schoolName: form.schoolName.trim() || null,
+          content: form.content.trim(),
+          rating: form.rating,
+        }),
+      });
+      if (res.ok) {
+        toast.success('Thank you! Your review will be reviewed by the admin.');
+        setReviewModal(false);
+        setForm({ name: '', email: '', schoolName: '', role: '', content: '', rating: 5 });
+      } else {
+        const j = await res.json();
+        toast.error(j.error || 'Failed to submit');
+      }
+    } catch { toast.error('Failed to submit review'); } finally { setSubmitting(false); }
+  };
+
   return (
     <section className="py-24 bg-gradient-to-br from-gray-50 via-white to-teal-50/30">
       <div className="max-w-7xl mx-auto px-4">
@@ -547,40 +571,222 @@ function TestimonialsSection() {
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Loved by Schools
           </h2>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-gray-600 mb-8">
             See what educational institutions say about Skoolar
           </p>
+          <Button
+            onClick={() => setReviewModal(true)}
+            className="bg-gradient-to-r from-teal-600 to-emerald-500 hover:from-teal-700 hover:to-emerald-600 text-white shadow-lg shadow-teal-500/20 gap-2"
+          >
+            <MessageCircle className="h-4 w-4" /> Write a Review
+          </Button>
         </motion.div>
+
+        {/* Write Review Modal */}
+        <Dialog open={reviewModal} onOpenChange={setReviewModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Write a Review</DialogTitle>
+              <DialogDescription>Share your experience using Skoolar. Your review will be reviewed by the admin.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="rev-name">Name *</Label>
+                  <Input id="rev-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your name" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="rev-email">Email</Label>
+                  <Input id="rev-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="Optional" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="rev-school">School Name</Label>
+                  <Input id="rev-school" value={form.schoolName} onChange={(e) => setForm({ ...form, schoolName: e.target.value })} placeholder="Your school" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="rev-role">Role</Label>
+                  <Input id="rev-role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="e.g. Principal" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label>Rating</Label>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button key={star} type="button" onClick={() => setForm({ ...form, rating: star })} className="p-0.5">
+                      <Star className={`h-6 w-6 ${star <= form.rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="rev-content">Your Review *</Label>
+                <Textarea id="rev-content" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} placeholder="Tell us about your experience..." rows={3} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setReviewModal(false)}>Cancel</Button>
+              <Button onClick={submitReview} disabled={submitting} className="gap-2">
+                {submitting && <Loader2 className="size-4 animate-spin" />}
+                <Send className="size-4" /> Submit Review
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         
-        <div className="grid md:grid-cols-3 gap-8">
-          {testimonials.map((testimonial, index) => (
-            <motion.div 
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.2 }}
-              className="relative p-8 rounded-3xl bg-white border border-gray-100 shadow-xl shadow-gray-900/5"
+        {/* Reviews Grid */}
+        {loading ? (
+          <div className="grid md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-8 rounded-3xl bg-white border border-gray-100 animate-pulse">
+                <div className="h-4 w-24 bg-gray-200 rounded mb-4" />
+                <div className="h-20 bg-gray-100 rounded mb-4" />
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-gray-200" />
+                  <div>
+                    <div className="h-4 w-28 bg-gray-200 rounded mb-1" />
+                    <div className="h-3 w-20 bg-gray-100 rounded" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : reviews.length === 0 ? (
+          <div className="text-center py-12">
+            <Quote className="h-12 w-12 mx-auto text-gray-300 mb-3" />
+            <p className="text-gray-500">No reviews yet. Be the first to share your experience!</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-3 gap-8">
+            {reviews.map((testimonial, index) => (
+              <motion.div 
+                key={testimonial.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.2 }}
+                className="relative p-8 rounded-3xl bg-white border border-gray-100 shadow-xl shadow-gray-900/5"
+              >
+                <div className="flex gap-1 mb-4">
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star key={i} className="h-5 w-5 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <Quote className="absolute top-6 right-6 h-8 w-8 text-teal-100" />
+                <p className="text-gray-600 mb-6 leading-relaxed">&ldquo;{testimonial.content}&rdquo;</p>
+                <div className="flex items-center gap-3">
+                  {testimonial.avatar ? (
+                    <img src={testimonial.avatar} alt="" className="w-12 h-12 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center text-white font-bold text-lg">
+                      {testimonial.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-bold text-gray-900">{testimonial.name}</p>
+                    <p className="text-sm text-gray-500">{testimonial.role || testimonial.schoolName || ''}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function TrustedBySection() {
+  const [schools, setSchools] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/trusted-schools')
+      .then((r) => r.json())
+      .then((d) => setSchools(d.data || []))
+      .catch(() => {});
+  }, []);
+
+  if (schools.length === 0) return null;
+
+  return (
+    <section className="py-16 bg-white border-y border-gray-100 overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4">
+        <motion.div
+          className="text-center mb-10"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+            Trusted by Schools Across Nigeria
+          </h2>
+          <p className="text-gray-500">
+            Join {schools.length}+ schools already using Skoolar
+          </p>
+        </motion.div>
+
+        {schools.length <= 5 ? (
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            {schools.map((s) => (
+              <div
+                key={s.id}
+                className="inline-flex items-center gap-3 px-5 py-3 rounded-full text-sm font-semibold"
+                style={{
+                  backgroundColor: s.primaryColor ? `${s.primaryColor}12` : '#f0fdf4',
+                  color: s.primaryColor || '#059669',
+                  border: `1px solid ${s.primaryColor ? `${s.primaryColor}25` : '#bbf7d0'}`,
+                }}
+              >
+                <div
+                  className="size-8 rounded-full flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: s.primaryColor || '#059669' }}
+                >
+                  {s.logo ? (
+                    <img src={s.logo} alt="" className="h-6 w-6 rounded-full object-cover" />
+                  ) : (
+                    <School className="size-4 text-white" />
+                  )}
+                </div>
+                {s.name}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="relative overflow-hidden">
+            <motion.div
+              className="flex gap-8"
+              animate={{ x: [0, -1920] }}
+              transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
             >
-              <div className="flex gap-1 mb-4">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="h-5 w-5 fill-amber-400 text-amber-400" />
-                ))}
-              </div>
-              <Quote className="absolute top-6 right-6 h-8 w-8 text-teal-100" />
-              <p className="text-gray-600 mb-6 leading-relaxed">"{testimonial.content}"</p>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center text-xl">
-                  {testimonial.image}
+              {[...schools, ...schools].map((s, i) => (
+                <div
+                  key={`${s.id}-${i}`}
+                  className="inline-flex items-center gap-3 px-5 py-3 rounded-full text-sm font-semibold whitespace-nowrap shrink-0"
+                  style={{
+                    backgroundColor: s.primaryColor ? `${s.primaryColor}12` : '#f0fdf4',
+                    color: s.primaryColor || '#059669',
+                    border: `1px solid ${s.primaryColor ? `${s.primaryColor}25` : '#bbf7d0'}`,
+                  }}
+                >
+                  <div
+                    className="size-8 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: s.primaryColor || '#059669' }}
+                  >
+                    {s.logo ? (
+                      <img src={s.logo} alt="" className="h-6 w-6 rounded-full object-cover" />
+                    ) : (
+                      <School className="size-4 text-white" />
+                    )}
+                  </div>
+                  {s.name}
                 </div>
-                <div>
-                  <p className="font-bold text-gray-900">{testimonial.name}</p>
-                  <p className="text-sm text-gray-500">{testimonial.role}</p>
-                </div>
-              </div>
+              ))}
             </motion.div>
-          ))}
-        </div>
+            <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-white to-transparent pointer-events-none" />
+            <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-white to-transparent pointer-events-none" />
+          </div>
+        )}
       </div>
     </section>
   );
@@ -795,6 +1001,7 @@ function HomeContent() {
         <StatsSection />
         <FeaturesSection />
         <TestimonialsSection />
+        <TrustedBySection />
         <PricingSection />
         <CTASection />
       </main>

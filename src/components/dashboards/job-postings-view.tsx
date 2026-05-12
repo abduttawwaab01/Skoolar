@@ -24,7 +24,7 @@ import {
   Plus, AlertCircle, Loader2, Copy, Eye, Trash2, ClipboardCheck,
   CheckCircle2, Users, FileQuestion, Shield, Link2, Briefcase,
   Timer, ToggleLeft, ArrowUpDown, RefreshCw, Pencil, MapPin,
-  Building2, DollarSign, Globe, UserCheck, X
+  Building2, DollarSign, Globe, UserCheck, X, FileText
 } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
@@ -827,9 +827,22 @@ export function JobPostingsManagement() {
     {
       id: 'actions',
       cell: ({ row }) => (
-        <Button variant="ghost" size="icon" onClick={() => setReviewApplication(row.original)}>
-          <Eye className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={() => setReviewApplication(row.original)}>
+            <Eye className="h-4 w-4" />
+          </Button>
+          {row.original.status === 'hired' && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+              onClick={() => window.open(`/api/admission-letter/staff/${row.original.id}`, '_blank')}
+              title="Generate Offer Letter"
+            >
+              <FileText className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
       ),
     },
   ];

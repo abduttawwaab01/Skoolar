@@ -36,7 +36,7 @@ interface Story {
 
 const levels = ['All', 'Beginner', 'Intermediate', 'Advanced'];
 const grades = ['All', 'JSS 1', 'JSS 2', 'JSS 3', 'SSS 1', 'SSS 2', 'SSS 3'];
-const categories = ['All', 'General', 'Adventure', 'Fantasy', 'Science Fiction', 'Mystery', 'Non-Fiction', 'Romance', 'Horror', 'Comedy', 'Drama'];
+const categories = ['All', 'General', 'Adventure', 'Fantasy', 'Science Fiction', 'Mystery', 'Non-Fiction', 'Historical', 'Motivational', 'Educational', 'Comedy', 'Drama', 'Poetry', 'Other'];
 
 const categoryIcons: Record<string, string> = {
   'Adventure': '🧭',

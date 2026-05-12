@@ -20,10 +20,29 @@ export async function GET(
       return NextResponse.json({ error: 'Timetable not found' }, { status: 404 });
     }
 
-    // Get slots for this timetable
+    // Get slots for this timetable, including scheme of work entry info
     const slots = await db.timetableSlot.findMany({
       where: { timetableId: id },
       orderBy: [{ dayOfWeek: 'asc' }, { period: 'asc' }],
+      include: {
+        schemeOfWorkEntry: {
+          select: {
+            id: true,
+            weekNumber: true,
+            topic: true,
+            subTopic: true,
+            learningObjectives: true,
+            status: true,
+            schemeOfWork: {
+              select: {
+                id: true,
+                subjectId: true,
+                classId: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     return NextResponse.json({

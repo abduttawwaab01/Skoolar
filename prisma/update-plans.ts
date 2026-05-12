@@ -59,13 +59,13 @@ async function main() {
   });
   console.log('Free plan updated/created:', freePlan.id);
 
-  // Upsert Pro plan (price set to 0 for admin control)
+  // Upsert Pro plan
   const proPlan = await prisma.subscriptionPlan.upsert({
     where: { name: 'pro' },
     update: {
       displayName: 'Pro',
-      price: 0, // Admin can set price via UI
-      yearlyPrice: null, // Admin can set via UI
+      price: 9999,
+      yearlyPrice: 99990,
       maxStudents: 500,
       maxTeachers: 50,
       maxClasses: -1,
@@ -78,15 +78,15 @@ async function main() {
       customDomain: false,
       apiAccess: false,
       whiteLabel: false,
-      features: JSON.stringify(['Up to 500 students', 'Up to 50 teachers', 'Unlimited classes', 'Advanced report cards', 'Video lessons', 'AI grading assistant', 'Homework management', 'Email support']),
+      features: JSON.stringify(['Up to 500 students', 'Up to 50 teachers', 'Unlimited classes', 'Advanced report cards', 'Video lessons', 'AI grading assistant', 'Homework management', 'Email support', 'Attendance tracking', 'Custom branding', 'Transport tracking']),
       isActive: true,
       paystackPlanCode: null,
     },
     create: {
       name: 'pro',
       displayName: 'Pro',
-      price: 0,
-      yearlyPrice: null,
+      price: 9999,
+      yearlyPrice: 99990,
       maxStudents: 500,
       maxTeachers: 50,
       maxClasses: -1,

@@ -28,9 +28,11 @@ export type DashboardView =
   | 'class-monitoring' | 'messaging-center' | 'weekly-evaluations'
   | 'entrance-exams' | 'payment-verification' | 'job-postings'
   | 'teacher-grades' | 'timetable'
+  | 'scheme-of-work'
   | 'teacher-tasks' | 'teacher-performance' | 'student-leaderboard'
   | 'parent-analytics' | 'video-checkpoints'
   | 'year-results'
+  | 'testimonials' | 'trusted-schools'
   | 'profile';
 
 interface AppState {
@@ -139,8 +141,10 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
      { id: 'notifications', label: 'Notifications', icon: 'bell' },
      { id: 'support', label: 'Support', icon: 'life-buoy' },
      { id: 'messaging-center', label: 'Messaging', icon: 'message-circle' },
-     { id: 'platform-management', label: 'Platform Manager', icon: 'shield' },
-     { id: 'school-controls', label: 'School Controls', icon: 'sliders-horizontal' },
+      { id: 'platform-management', label: 'Platform Manager', icon: 'shield' },
+      { id: 'testimonials', label: 'Testimonials', icon: 'star' },
+      { id: 'trusted-schools', label: 'Trusted Schools', icon: 'building-2' },
+      { id: 'school-controls', label: 'School Controls', icon: 'sliders-horizontal' },
      { id: 'overlay-management', label: 'Overlay Manager', icon: 'layers' },
      { id: 'plans-manager', label: 'Plan Manager', icon: 'credit-card' },
      { id: 'danger-zone', label: 'Danger Zone', icon: 'alert-triangle' },
@@ -151,8 +155,9 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
        { id: 'overview', label: 'Dashboard', icon: 'layout-dashboard' },
        { id: 'academic-structure', label: 'Academic Structure', icon: 'graduation-cap', children: [
          { id: 'classes', label: 'Classes', icon: 'users' },
-         { id: 'subjects', label: 'Subjects', icon: 'book-open' },
-       ]},
+        { id: 'subjects', label: 'Subjects', icon: 'book-open' },
+        { id: 'scheme-of-work', label: 'Scheme of Work', icon: 'book-text' },
+        ]},
        { id: 'students', label: 'Students', icon: 'user-graduate' },
        { id: 'teachers', label: 'Teachers', icon: 'chalkboard-teacher' },
        { id: 'parents', label: 'Parents', icon: 'user' },
@@ -207,6 +212,7 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
         { id: 'teacher-grades', label: 'Scores & Reports', icon: 'award' },
         { id: 'ai-grading', label: 'AI Grading', icon: 'brain' },
         { id: 'lesson-plans', label: 'Lesson Plans', icon: 'book-text' },
+        { id: 'scheme-of-work', label: 'Scheme of Work', icon: 'book-text' },
         { id: 'video-lessons', label: 'Video Lessons', icon: 'video' },
         { id: 'ai-assistant', label: 'AI Assistant', icon: 'sparkles' },
         { id: 'weekly-evaluations', label: 'Weekly Evaluations', icon: 'clipboard-list' },
@@ -223,6 +229,7 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
     { id: 'results', label: 'My Results', icon: 'file-bar-chart' },
     { id: 'report-cards', label: 'Report Cards', icon: 'award' },
     { id: 'attendance', label: 'Attendance', icon: 'calendar-check' },
+    { id: 'timetable', label: 'Timetable', icon: 'clock' },
     { id: 'homework', label: 'Homework', icon: 'book-open' },
     { id: 'exams', label: 'Take Exam', icon: 'file-edit' },
     { id: 'analytics', label: 'Performance', icon: 'trending-up' },
@@ -279,8 +286,9 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
         { id: 'students', label: 'Student Overview', icon: 'user-graduate' },
         { id: 'teachers', label: 'Teacher Overview', icon: 'chalkboard-teacher' },
       { id: 'entrance-exams', label: 'Entrance & Interviews', icon: 'clipboard-check' },
-       { id: 'job-postings', label: 'Careers', icon: 'briefcase' },
-        { id: 'weekly-evaluations', label: 'Weekly Evaluations', icon: 'clipboard-list' },
+        { id: 'job-postings', label: 'Careers', icon: 'briefcase' },
+        { id: 'scheme-of-work', label: 'Scheme of Work', icon: 'book-text' },
+         { id: 'weekly-evaluations', label: 'Weekly Evaluations', icon: 'clipboard-list' },
         { id: 'finance', label: 'Financial Overview', icon: 'wallet' },
         { id: 'attendance', label: 'Student Attendance', icon: 'calendar-check' },
         { id: 'staff-attendance', label: 'Staff Attendance', icon: 'shield' },

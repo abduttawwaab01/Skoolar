@@ -75,15 +75,15 @@ export async function POST(request: NextRequest) {
 
     if (!plan) {
       return NextResponse.json(
-        { error: 'Plan is required (basic, pro, enterprise)' },
+        { error: 'Plan is required (free, pro, custom)' },
         { status: 400 }
       );
     }
 
-    const validPlans = ['basic', 'pro', 'enterprise'];
+    const validPlans = ['free', 'pro', 'custom'];
     if (!validPlans.includes(plan)) {
       return NextResponse.json(
-        { error: 'Invalid plan. Must be: basic, pro, or enterprise' },
+        { error: 'Invalid plan. Must be: free, pro, or custom' },
         { status: 400 }
       );
     }

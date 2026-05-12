@@ -190,15 +190,18 @@ export async function POST(request: NextRequest) {
     
     if (school) {
       const maxTeachers = school.subscriptionPlan?.maxTeachers || school.maxTeachers || 50;
-      const currentTeacherCount = await db.teacher.count({
-        where: { schoolId: targetSchoolId, deletedAt: null },
-      });
-      
-      if (currentTeacherCount >= maxTeachers) {
-        return NextResponse.json(
-          { error: `Your plan allows maximum ${maxTeachers} teachers. Please upgrade your plan to add more.` },
-          { status: 403 }
-        );
+      // If maxTeachers is -1, it means unlimited
+      if (maxTeachers !== -1) {
+        const currentTeacherCount = await db.teacher.count({
+          where: { schoolId: targetSchoolId, deletedAt: null },
+        });
+        
+        if (currentTeacherCount >= maxTeachers) {
+          return NextResponse.json(
+            { error: `Your plan allows maximum ${maxTeachers} teachers. Please upgrade your plan to add more.` },
+            { status: 403 }
+          );
+        }
       }
     }
 

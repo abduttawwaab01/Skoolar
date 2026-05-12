@@ -2,6 +2,12 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
+function calculateReadTime(content: string): number {
+  const wordsPerMinute = 200;
+  const wordCount = content.trim().split(/\s+/).length;
+  return Math.max(1, Math.ceil(wordCount / wordsPerMinute));
+}
+
 // PUT /api/platform/story-submissions/[id] - Super Admin: approve/reject
 export async function PUT(
   request: NextRequest,
@@ -15,7 +21,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { action, rejectionReason, adminNotes } = body; // action: 'approve' or 'reject'
+    const { action, rejectionReason, adminNotes } = body;
 
     if (!action || !['approve', 'reject'].includes(action)) {
       return NextResponse.json({ success: false, message: 'Action must be "approve" or "reject"' }, { status: 400 });
@@ -27,7 +33,6 @@ export async function PUT(
     }
 
     if (action === 'approve') {
-      // Create a PlatformStory from the submission
       const story = await db.platformStory.create({
         data: {
           title: submission.title,
@@ -39,6 +44,7 @@ export async function PUT(
           category: submission.category,
           authorName: submission.authorName,
           submittedBy: submission.id,
+          readTime: calculateReadTime(submission.content),
           isPublished: true,
           publishedAt: new Date(),
           approvedBy: token.id as string,
@@ -72,6 +78,27 @@ export async function PUT(
 
       return NextResponse.json({ success: true, message: 'Story submission rejected' });
     }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ success: false, message }, { status: 500 });
+  }
+}
+
+// DELETE /api/platform/story-submissions/[id] - Super Admin: delete submission
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const token = await getToken({ req: request });
+    if (!token || token.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
+    }
+
+    const { id } = await params;
+    await db.storySubmission.delete({ where: { id } });
+
+    return NextResponse.json({ success: true, message: 'Submission deleted' });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ success: false, message }, { status: 500 });

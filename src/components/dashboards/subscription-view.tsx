@@ -165,12 +165,12 @@ const defaultPlans = [
   {
     name: 'pro',
     displayName: 'Pro',
-    price: 0, // Price controlled by Super Admin via database
-    priceDisplay: 'Contact admin for pricing',
+    price: 9999,
+    priceDisplay: '₦9,999/month',
     maxStudents: 500,
     maxTeachers: 50,
     maxClasses: -1,
-    features: ['Up to 500 students', 'Up to 50 teachers', 'Unlimited classes', 'Advanced report cards', 'Video lessons', 'AI grading assistant', 'Homework management', 'Email support'],
+    features: ['Up to 500 students', 'Up to 50 teachers', 'Unlimited classes', 'Advanced report cards', 'Video lessons', 'AI grading assistant', 'Homework management', 'Email support', 'Transport tracking'],
   },
   {
     name: 'custom',

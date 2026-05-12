@@ -1056,7 +1056,7 @@ function StoriesTab() {
 
   const fetchItems = useCallback(async () => {
     try {
-      const res = await fetch('/api/platform/stories');
+      const res = await fetch('/api/platform/stories?all=true');
       const json = await res.json();
       if (json.success) setStories(json.data);
     } catch (error: unknown) { handleSilentError(error, 'Failed to load data'); } finally { setLoading(false); }
@@ -1177,7 +1177,7 @@ function StoriesTab() {
                 <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {['General', 'Fiction', 'Non-Fiction', 'Science', 'History', 'Culture', 'Adventure', 'Moral', 'Biography'].map((c) => (
+                    {['General', 'Adventure', 'Fantasy', 'Science Fiction', 'Mystery', 'Non-Fiction', 'Historical', 'Motivational', 'Educational', 'Comedy', 'Drama', 'Poetry', 'Other'].map((c) => (
                       <SelectItem key={c} value={c}>{c}</SelectItem>
                     ))}
                   </SelectContent>
@@ -1226,17 +1226,25 @@ function SubmissionsTab() {
   const [selectedItem, setSelectedItem] = useState<StorySubmission | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const limit = 10;
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (statusFilter) params.set('status', statusFilter);
+      params.set('page', String(page));
+      params.set('limit', String(limit));
       const res = await fetch(`/api/platform/story-submissions?${params}`);
       const json = await res.json();
-      if (json.success) setItems(json.data);
+      if (json.success) {
+        setItems(json.data);
+        setTotalPages(json.totalPages || 1);
+      }
     } catch (error: unknown) { handleSilentError(error, 'Failed to load data'); } finally { setLoading(false); }
-  }, [statusFilter]);
+  }, [statusFilter, page]);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
 

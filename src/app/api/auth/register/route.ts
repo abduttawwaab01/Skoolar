@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      planName = regCode.plan || 'basic';
+      planName = regCode.plan || 'free';
 
       if (regCode.schoolId) {
         // Code is already linked to a school
