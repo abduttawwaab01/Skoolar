@@ -647,7 +647,7 @@ useEffect(() => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       <div className="text-center p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20">
                         <p className="text-lg font-bold text-emerald-600">{registrationCodes.length}</p>
                         <p className="text-[10px] text-muted-foreground">Total</p>

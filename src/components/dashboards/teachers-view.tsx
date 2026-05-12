@@ -413,7 +413,7 @@ export function TeachersView() {
                     </Badge>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <Card className="p-3 text-center">
                     <p className="text-lg font-bold">{detailTeacher.classesCount}</p>
                     <p className="text-xs text-muted-foreground">Classes</p>

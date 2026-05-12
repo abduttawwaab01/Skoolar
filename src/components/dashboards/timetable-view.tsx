@@ -381,7 +381,7 @@ export function TimetableView() {
             <CardDescription>Quick view of all days</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {DAYS.filter((_, i) => i >= 1 && i <= 6).map((day, i) => {
                 const daySlots = slots.filter(s => s.classId === selectedClass && s.dayOfWeek === i);
                 return (

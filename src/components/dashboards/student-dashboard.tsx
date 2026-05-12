@@ -473,8 +473,8 @@ export function StudentDashboard() {
                        <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-gray-400">Badge Board</CardTitle>
                      </CardHeader>
                      <CardContent className="pt-2">
-                        <div className="grid grid-cols-3 gap-3">
-                          {achievements.map((ach, i) => (
+                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                           {achievements.map((ach, i) => (
                             <div key={i} className={cn(
                               "aspect-square rounded-2xl flex items-center justify-center transition-all relative overflow-hidden group",
                               ach.earned ? "bg-emerald-50 text-emerald-600 shadow-inner" : "bg-gray-50 text-gray-300 contrast-50 grayscale opacity-40"

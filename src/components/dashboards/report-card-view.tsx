@@ -259,7 +259,7 @@ function ReportCardSkeleton() {
           <Skeleton key={i} className="h-7 w-full border-b" />
         ))}
       </div>
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
           <Skeleton key={i} className="h-20 rounded-lg" />
         ))}
@@ -488,7 +488,7 @@ export function ReportCardRenderer({
 
       {/* GRADE SUMMARY */}
       <div className="mx-6 mb-4">
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { label: 'Total Score', value: String(Math.round(currentCard.grandTotal)), sub: `out of ${currentCard.subjectResults.length * 100}` },
             { label: 'Average', value: `${currentCard.averageScore.toFixed(1)}%`, sub: `${currentCard.numSubjects} subjects` },
@@ -578,7 +578,7 @@ export function ReportCardRenderer({
             <h4 className="text-sm font-bold uppercase tracking-wider mb-3 text-center" style={{ color }}>
               Affective, Psychomotor &amp; Cognitive Domain Grading
             </h4>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {renderDomainTable('COGNITIVE DOMAIN', [
                 { label: 'Reasoning', value: currentCard.domainGrade.cognitive.reasoning },
                 { label: 'Memory', value: currentCard.domainGrade.cognitive.memory },
@@ -1125,7 +1125,7 @@ export function ReportCardView() {
       <div className="p-6">
         <div className="mb-6">
           <Skeleton className="h-8 w-48 mb-4" />
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             <Skeleton className="h-10 rounded-lg" />
             <Skeleton className="h-10 rounded-lg" />
             <Skeleton className="h-10 rounded-lg" />

@@ -783,7 +783,7 @@ export function EntranceExamsView() {
                     <Label>Description</Label>
                     <Textarea className="mt-1" value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))} placeholder="Brief description for candidates" rows={2} />
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <Label>Total Marks</Label>
                       <Input className="mt-1" type="number" value={createForm.totalMarks} onChange={e => setCreateForm(f => ({ ...f, totalMarks: e.target.value }))} min={1} />
@@ -811,7 +811,7 @@ export function EntranceExamsView() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <Card className="border-0 bg-gradient-to-br from-purple-50 to-purple-100/50">
           <CardContent className="p-4">
             <p className="text-xs text-purple-600 font-semibold">Total Exams</p>

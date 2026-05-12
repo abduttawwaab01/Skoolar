@@ -182,7 +182,7 @@ export function DangerZone() {
       )}
 
       <Tabs defaultValue="school-data">
-        <TabsList className="grid w-full max-w-lg grid-cols-4">
+        <TabsList className="grid w-full max-w-lg grid-cols-2 sm:grid-cols-4">
           <TabsTrigger value="school-data">School Data</TabsTrigger>
           <TabsTrigger value="school-reset">School Reset</TabsTrigger>
           <TabsTrigger value="system-reset" className="text-red-600">System Reset</TabsTrigger>

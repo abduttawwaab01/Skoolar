@@ -139,7 +139,7 @@ export function SettingsView() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:w-auto lg:inline-grid">
           <TabsTrigger value="general" className="gap-2">
             🌐 <span className="hidden sm:inline">General</span>
           </TabsTrigger>

@@ -177,7 +177,7 @@ function PageSkeleton() {
 
       {/* Summary KPIs */}
       {summary && (
-        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <Card className="p-3">
             <p className="text-xs text-muted-foreground">Students</p>
             <p className="text-lg font-bold">{summary.totalStudents.toLocaleString()}</p>
