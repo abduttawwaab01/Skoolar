@@ -189,8 +189,9 @@ function DataTable<TData, TValue>({
       </div>
 
       {/* Table */}
-<div className="rounded-lg border overflow-hidden">
-  <div className="overflow-x-auto scrollbar-thin">
+      <div className="rounded-lg border overflow-hidden">
+        <div className="overflow-x-auto scrollbar-thin relative">
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background/60 to-transparent" />
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -287,7 +288,7 @@ function DataTable<TData, TValue>({
               <Button
                 variant="outline"
                 size="icon"
-                className="size-8"
+                className="size-8 sm:size-9"
                 onClick={() => table.setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
@@ -296,7 +297,7 @@ function DataTable<TData, TValue>({
               <Button
                 variant="outline"
                 size="icon"
-                className="size-8"
+                className="size-8 sm:size-9"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
@@ -305,7 +306,7 @@ function DataTable<TData, TValue>({
               <Button
                 variant="outline"
                 size="icon"
-                className="size-8"
+                className="size-8 sm:size-9"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
@@ -314,7 +315,7 @@ function DataTable<TData, TValue>({
               <Button
                 variant="outline"
                 size="icon"
-                className="size-8"
+                className="size-8 sm:size-9"
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
