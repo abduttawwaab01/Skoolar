@@ -25,6 +25,7 @@ import {
   BookOpen, Plus, Search, ClipboardList, Clock, AlertTriangle,
   CheckCircle2, FileText, ChevronLeft, ChevronRight, Eye,
   Star, MessageSquare, GraduationCap, Users, CalendarDays,
+  Trash2, FileEdit, Save, Loader2,
 } from 'lucide-react';
 
 // ---- Types ----
@@ -150,6 +151,14 @@ export function TeacherHomework() {
   // Grading state
   const [gradingData, setGradingData] = useState<Record<string, { score: string; grade: string; comment: string }>>({});
   const [gradingId, setGradingId] = useState<string | null>(null);
+
+  // Edit/Delete state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingHw, setEditingHw] = useState<HomeworkItem | null>(null);
+  const [editForm, setEditForm] = useState({ title: '', description: '', subjectId: '', classId: '', dueDate: '', totalMarks: '100' });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleteHwId, setDeleteHwId] = useState<string | null>(null);
+  const [deletingHw, setDeletingHw] = useState(false);
 
   // Reference data
   const [subjects, setSubjects] = useState<SubjectItem[]>([]);
@@ -316,6 +325,73 @@ export function TeacherHomework() {
     setGradingData(gd);
   };
 
+  // ---- Edit/Delete handlers ----
+  const openEditHomework = (hw: HomeworkItem) => {
+    setEditingHw(hw);
+    setEditForm({
+      title: hw.title,
+      description: hw.description,
+      subjectId: hw.subjectId || '',
+      classId: hw.classId || '',
+      dueDate: hw.dueDate ? hw.dueDate.split('T')[0] : '',
+      totalMarks: String(hw.totalMarks),
+    });
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingHw) return;
+    try {
+      setSavingEdit(true);
+      const res = await fetch('/api/homework', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: editingHw.id,
+          title: editForm.title,
+          description: editForm.description,
+          subjectId: editForm.subjectId || null,
+          classId: editForm.classId || null,
+          dueDate: editForm.dueDate,
+          totalMarks: parseInt(editForm.totalMarks) || 100,
+        }),
+      });
+      if (res.ok) {
+        toast.success('Homework updated');
+        setEditOpen(false);
+        setEditingHw(null);
+        fetchHomework();
+      } else {
+        const json = await res.json();
+        toast.error(json.error || 'Failed to update homework');
+      }
+    } catch {
+      toast.error('Failed to update homework');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteHomework = async () => {
+    if (!deleteHwId) return;
+    try {
+      setDeletingHw(true);
+      const res = await fetch(`/api/homework?id=${deleteHwId}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Homework deleted');
+        setDeleteHwId(null);
+        fetchHomework();
+      } else {
+        const json = await res.json();
+        toast.error(json.error || 'Failed to delete homework');
+      }
+    } catch {
+      toast.error('Failed to delete homework');
+    } finally {
+      setDeletingHw(false);
+    }
+  };
+
   // ---- Skeleton ----
   if (loading) {
     return (
@@ -451,15 +527,33 @@ export function TeacherHomework() {
                         </TableCell>
                         <TableCell>{getStatusBadge(hw.status, hw.dueDate)}</TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openSubmissions(hw)}
-                            className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                          >
-                            <Eye className="size-4 mr-1" />
-                            <span className="hidden sm:inline">{hw._count?.submissions ? 'Grade' : 'View'}</span>
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openEditHomework(hw)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <FileEdit className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openSubmissions(hw)}
+                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                            >
+                              <Eye className="size-4 mr-1" />
+                              <span className="hidden sm:inline">{hw._count?.submissions ? 'Grade' : 'View'}</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeleteHwId(hw.id)}
+                              className="h-8 w-8 p-0 text-red-400 hover:text-red-600"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -722,6 +816,82 @@ export function TeacherHomework() {
               )}
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Homework Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileEdit className="size-5 text-emerald-600" /> Edit Homework
+            </DialogTitle>
+            <DialogDescription>Update homework details.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Title *</Label>
+              <Input id="edit-title" value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-desc">Description</Label>
+              <Textarea id="edit-desc" value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} rows={3} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Subject</Label>
+                <Select value={editForm.subjectId} onValueChange={v => setEditForm(f => ({ ...f, subjectId: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                  <SelectContent>
+                    {subjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Class</Label>
+                <Select value={editForm.classId} onValueChange={v => setEditForm(f => ({ ...f, classId: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
+                  <SelectContent>
+                    {classes.map(c => <SelectItem key={c.id} value={c.id}>{c.name}{c.section ? ` (${c.section})` : ''}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-due">Due Date *</Label>
+                <Input id="edit-due" type="date" value={editForm.dueDate} onChange={e => setEditForm(f => ({ ...f, dueDate: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-marks">Total Marks</Label>
+                <Input id="edit-marks" type="number" value={editForm.totalMarks} onChange={e => setEditForm(f => ({ ...f, totalMarks: e.target.value }))} min={0} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit || !editForm.title} className="bg-emerald-600 hover:bg-emerald-700">
+              {savingEdit ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Save className="size-4 mr-2" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Homework Confirmation */}
+      <Dialog open={!!deleteHwId} onOpenChange={() => setDeleteHwId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Homework</DialogTitle>
+            <DialogDescription>Are you sure you want to delete this homework assignment? This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteHwId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteHomework} disabled={deletingHw}>
+              {deletingHw ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Trash2 className="size-4 mr-2" />}
+              Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

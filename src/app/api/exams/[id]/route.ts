@@ -2,6 +2,20 @@ import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth-middleware';
 import { NextRequest, NextResponse } from 'next/server';
 
+// Maps frontend security settings naming to Prisma ExamSecuritySettings model fields
+function mapSecuritySettingsForDb(settings: Record<string, unknown>) {
+  const ss: Record<string, unknown> = {};
+  if (settings.fullscreen !== undefined) ss.fullscreenMode = settings.fullscreen;
+  if (settings.tabSwitchWarning !== undefined) ss.monitorTabSwitch = settings.tabSwitchWarning;
+  if (settings.tabSwitchAutoSubmit !== undefined) ss.tabSwitchAutoSubmit = settings.tabSwitchAutoSubmit;
+  if (settings.maxTabSwitches !== undefined) ss.maxTabSwitches = settings.maxTabSwitches;
+  if (settings.blockCopyPaste !== undefined) ss.blockCopyPaste = settings.blockCopyPaste;
+  if (settings.blockRightClick !== undefined) ss.blockRightClick = settings.blockRightClick;
+  if (settings.blockKeyboardShortcuts !== undefined) ss.blockKeyboardShortcuts = settings.blockKeyboardShortcuts;
+  if (settings.webcamMonitor !== undefined) ss.monitorWebcam = settings.webcamMonitor;
+  return ss;
+}
+
 // GET /api/exams/[id] - Get exam with scores
 export async function GET(
   request: NextRequest,
@@ -41,6 +55,7 @@ export async function GET(
             user: { select: { name: true } },
           },
         },
+        security: true,
         scores: {
           include: {
             student: {
@@ -138,6 +153,15 @@ export async function PUT(
       },
     });
 
+    // Dual-write ExamSecuritySettings if provided
+    if (securitySettings !== undefined) {
+      await db.examSecuritySettings.upsert({
+        where: { examId: id },
+        create: { examId: id, ...mapSecuritySettingsForDb(securitySettings) },
+        update: mapSecuritySettingsForDb(securitySettings),
+      });
+    }
+
     return NextResponse.json({ data: exam, message: 'Exam updated successfully' });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -190,6 +214,38 @@ export async function POST(
     });
 
     return NextResponse.json({ data: exam, message: `Exam ${action}ed successfully` });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// DELETE /api/exams/[id] - Soft-delete an exam
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const auth = await requireAuth(request);
+    if (auth instanceof NextResponse) return auth;
+
+    const { id } = await params;
+
+    const existing = await db.exam.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ error: 'Exam not found' }, { status: 404 });
+    }
+
+    if (existing.deletedAt) {
+      return NextResponse.json({ error: 'Exam already deleted' }, { status: 410 });
+    }
+
+    await db.exam.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+
+    return NextResponse.json({ message: 'Exam deleted successfully' });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });

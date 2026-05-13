@@ -590,7 +590,7 @@ model Exam {
   instructions     String?
   isLocked         Boolean                @default(false)
   isPublished      Boolean                @default(false)
-  /// Deprecated: Security settings moved to ExamSecuritySettings model
+  /// JSON string storing exam security settings (active approach; ExamSecuritySettings model reserved for future structured migration)
   securitySettings String?
   allowCalculator  Boolean                @default(true)
   /// "basic" or "scientific"
@@ -661,6 +661,8 @@ model ExamQuestion {
   mediaUrl      String?
   /// Display order
   order         Int      @default(0)
+  /// Word limit for ESSAY type questions
+  wordLimit     Int?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   exam          Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)

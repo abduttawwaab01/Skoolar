@@ -81,6 +81,7 @@ interface ExamQuestion {
   explanation: string | null;
   mediaUrl: string | null;
   order: number;
+  wordLimit: number | null;
 }
 
 interface ExamAttempt {
@@ -244,6 +245,13 @@ export function TeacherExams() {
   const [classList, setClassList] = useState<ApiClass[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [editOpen, setEditOpen] = useState(false);
+  const [editExam, setEditExam] = useState<Exam | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', subjectId: '', classId: '', type: '', totalMarks: '', passingMarks: '', date: '', duration: '', instructions: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleteExamId, setDeleteExamId] = useState<string | null>(null);
+  const [deleteExamOpen, setDeleteExamOpen] = useState(false);
+  const [deletingExam, setDeletingExam] = useState(false);
 
   // View: list vs detail
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
@@ -471,6 +479,80 @@ export function TeacherExams() {
     }
   };
 
+  const openEditDialog = (exam: Exam) => {
+    setEditExam(exam);
+    setEditForm({
+      name: exam.name,
+      subjectId: exam.subjectId,
+      classId: exam.classId,
+      type: exam.type,
+      totalMarks: String(exam.totalMarks),
+      passingMarks: String(exam.passingMarks),
+      date: exam.date ? exam.date.split('T')[0] : '',
+      duration: exam.duration || '',
+      instructions: exam.instructions || '',
+    });
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editExam) return;
+    try {
+      setSavingEdit(true);
+      const res = await fetch(`/api/exams/${editExam.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editForm.name,
+          subjectId: editForm.subjectId,
+          classId: editForm.classId,
+          type: editForm.type,
+          totalMarks: parseInt(editForm.totalMarks) || 0,
+          passingMarks: parseInt(editForm.passingMarks) || 0,
+          date: editForm.date || null,
+          duration: editForm.duration || null,
+          instructions: editForm.instructions || null,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to update exam');
+      }
+      toast.success('Exam updated');
+      setEditOpen(false);
+      setEditExam(null);
+      fetchExams();
+      if (selectedExam?.id === editExam.id) {
+        setSelectedExam(prev => prev ? { ...prev, ...editForm, totalMarks: parseInt(editForm.totalMarks) || 0, passingMarks: parseInt(editForm.passingMarks) || 0 } : prev);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update exam');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteExam = async () => {
+    if (!deleteExamId) return;
+    try {
+      setDeletingExam(true);
+      const res = await fetch(`/api/exams/${deleteExamId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to delete exam');
+      }
+      toast.success('Exam deleted');
+      setDeleteExamOpen(false);
+      setDeleteExamId(null);
+      if (selectedExam?.id === deleteExamId) handleBack();
+      fetchExams();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete exam');
+    } finally {
+      setDeletingExam(false);
+    }
+  };
+
   // ── Question Handlers ──
 
   const openAddQuestion = () => {
@@ -511,7 +593,7 @@ export function TeacherExams() {
     setQForm({
       type: q.type, questionText: q.questionText,
       marks: String(q.marks), explanation: q.explanation || '', mediaUrl: q.mediaUrl || '',
-      wordLimit: '',
+      wordLimit: q.wordLimit ? String(q.wordLimit) : '',
       options: parsedOptions, correctAnswer, correctAnswers,
       fillBlanks, tfAnswer, matchingPairs,
     });
@@ -538,7 +620,7 @@ export function TeacherExams() {
         return { ...base, correctAnswer: qForm.fillBlanks.filter(Boolean) };
       case 'SHORT_ANSWER':
       case 'ESSAY':
-        return { ...base };
+        return { ...base, wordLimit: qForm.wordLimit ? parseInt(qForm.wordLimit) || null : null };
       case 'MATCHING':
         return { ...base, options: { pairs: qForm.matchingPairs.filter(p => p.left && p.right) }, correctAnswer: qForm.matchingPairs.filter(p => p.left && p.right).map(p => ({ left: p.left, right: p.right })) };
       default:
@@ -602,6 +684,27 @@ export function TeacherExams() {
       toast.error('Failed to delete question');
     } finally {
       setDeletingQ(false);
+    }
+  };
+
+  const handleReorderQuestion = async (index: number, direction: 'up' | 'down') => {
+    if (!selectedExam) return;
+    const newQuestions = [...questions];
+    const swapIdx = direction === 'up' ? index - 1 : index + 1;
+    if (swapIdx < 0 || swapIdx >= newQuestions.length) return;
+    [newQuestions[index], newQuestions[swapIdx]] = [newQuestions[swapIdx], newQuestions[index]];
+    const reordered = newQuestions.map((q, i) => ({ id: q.id, order: i }));
+    try {
+      const res = await fetch(`/api/exams/${selectedExam.id}/questions`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questions: reordered }),
+      });
+      if (!res.ok) throw new Error('Failed to reorder');
+      setQuestions(newQuestions);
+      toast.success('Questions reordered');
+    } catch {
+      toast.error('Failed to reorder questions');
     }
   };
 
@@ -906,6 +1009,12 @@ export function TeacherExams() {
                 </Button>
               </>
             )}
+            <Button variant="outline" size="sm" onClick={() => openEditDialog(selectedExam)}>
+              <FileEdit className="size-3.5 mr-1.5" /> Edit
+            </Button>
+            <Button variant="outline" size="sm" className="text-red-500 hover:text-red-600 border-red-200 hover:border-red-300" onClick={() => { setDeleteExamId(selectedExam.id); setDeleteExamOpen(true); }}>
+              <Trash2 className="size-3.5 mr-1.5" /> Delete
+            </Button>
           </div>
         </div>
 
@@ -954,8 +1063,8 @@ export function TeacherExams() {
                         <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
                           <span className="text-xs font-bold text-muted-foreground bg-muted rounded-full w-7 h-7 flex items-center justify-center">{q.order !== undefined ? q.order + 1 : idx + 1}</span>
                           <div className="flex flex-col gap-0.5">
-                            <button onClick={() => { /* reorder up */ }} className="text-muted-foreground hover:text-foreground disabled:opacity-30" disabled={idx === 0}><ChevronUp className="size-3.5" /></button>
-                            <button onClick={() => { /* reorder down */ }} className="text-muted-foreground hover:text-foreground disabled:opacity-30" disabled={idx === questions.length - 1}><ChevronDown className="size-3.5" /></button>
+                            <button onClick={() => handleReorderQuestion(idx, 'up')} className="text-muted-foreground hover:text-foreground disabled:opacity-30" disabled={idx === 0}><ChevronUp className="size-3.5" /></button>
+                            <button onClick={() => handleReorderQuestion(idx, 'down')} className="text-muted-foreground hover:text-foreground disabled:opacity-30" disabled={idx === questions.length - 1}><ChevronDown className="size-3.5" /></button>
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1539,6 +1648,102 @@ export function TeacherExams() {
           </DialogContent>
         </Dialog>
 
+        {/* ── Edit Exam Dialog ── */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Exam</DialogTitle>
+              <DialogDescription>Update exam details</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label>Exam Name *</Label>
+                <Input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Subject *</Label>
+                  <Select value={editForm.subjectId} onValueChange={v => setEditForm(p => ({ ...p, subjectId: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                    <SelectContent>
+                      {subjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Class *</Label>
+                  <Select value={editForm.classId} onValueChange={v => setEditForm(p => ({ ...p, classId: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select class" /></SelectTrigger>
+                    <SelectContent>
+                      {classList.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <Select value={editForm.type} onValueChange={v => setEditForm(p => ({ ...p, type: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CA">Continuous Assessment</SelectItem>
+                      <SelectItem value="Quiz">Quiz</SelectItem>
+                      <SelectItem value="Mid-Term">Mid-Term</SelectItem>
+                      <SelectItem value="assessment">Examination</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Duration</Label>
+                  <Input value={editForm.duration} onChange={e => setEditForm(p => ({ ...p, duration: e.target.value }))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Total Marks</Label>
+                  <Input type="number" value={editForm.totalMarks} onChange={e => setEditForm(p => ({ ...p, totalMarks: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Passing Marks</Label>
+                  <Input type="number" value={editForm.passingMarks} onChange={e => setEditForm(p => ({ ...p, passingMarks: e.target.value }))} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Input type="date" value={editForm.date} onChange={e => setEditForm(p => ({ ...p, date: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Instructions</Label>
+                <Textarea rows={3} value={editForm.instructions} onChange={e => setEditForm(p => ({ ...p, instructions: e.target.value }))} />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveEdit} disabled={savingEdit || !editForm.name}>
+                {savingEdit ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Save className="size-4 mr-2" />}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* ── Delete Exam Dialog ── */}
+        <Dialog open={deleteExamOpen} onOpenChange={setDeleteExamOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete Exam</DialogTitle>
+              <DialogDescription>Are you sure you want to delete this exam? This action cannot be undone.</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setDeleteExamOpen(false); setDeleteExamId(null); }}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDeleteExam} disabled={deletingExam}>
+                {deletingExam ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Trash2 className="size-4 mr-2" />}
+                Delete Exam
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* ── Grading Dialog ── */}
         <Dialog open={gradeDialogOpen} onOpenChange={setGradeDialogOpen}>
           <DialogContent className="sm:max-w-3xl max-h-[90vh]">
@@ -1790,7 +1995,16 @@ export function TeacherExams() {
                       <h3 className="font-semibold text-sm truncate group-hover:text-emerald-600 transition-colors">{exam.name}</h3>
                       <p className="text-xs text-muted-foreground mt-0.5">{exam.subject?.name || '—'} &middot; {exam.class?.name || '—'}</p>
                     </div>
-                    {getStatusBadge(status)}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {getStatusBadge(status)}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteExamId(exam.id); setDeleteExamOpen(true); }}
+                        className="text-muted-foreground/40 hover:text-red-500 transition-colors p-0.5"
+                        title="Delete exam"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground mb-3">
                     <Badge variant="outline" className="text-[10px]">{exam.type}</Badge>

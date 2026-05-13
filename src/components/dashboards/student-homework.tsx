@@ -102,6 +102,8 @@ export function StudentHomework() {
   const [selectedHw, setSelectedHw] = useState<HomeworkItem | null>(null);
   const [answerContent, setAnswerContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   // Detail dialog
   const [detailOpen, setDetailOpen] = useState(false);
@@ -168,6 +170,23 @@ export function StudentHomework() {
     }
     try {
       setSubmitting(true);
+      let attachmentUrl: string | null = null;
+      if (attachmentFile) {
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('file', attachmentFile);
+        const uploadRes = await fetch('/api/upload?folder=homework', {
+          method: 'POST',
+          body: formData,
+        });
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({}));
+          throw new Error(err.message || 'Failed to upload file');
+        }
+        const uploadJson = await uploadRes.json();
+        attachmentUrl = uploadJson.data?.url || null;
+        setUploading(false);
+      }
       const res = await fetch('/api/homework', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -176,22 +195,25 @@ export function StudentHomework() {
           action: 'submit',
           studentId,
           content: answerContent,
+          attachments: attachmentUrl ? [attachmentUrl] : undefined,
         }),
       });
       if (res.ok) {
         toast.success('Homework submitted successfully!');
         setSubmitOpen(false);
         setAnswerContent('');
+        setAttachmentFile(null);
         setSelectedHw(null);
         fetchHomework();
       } else {
         const json = await res.json();
         toast.error(json.error || 'Failed to submit homework');
       }
-    } catch {
-      toast.error('Failed to submit homework');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to submit homework');
     } finally {
       setSubmitting(false);
+      setUploading(false);
     }
   };
 
@@ -422,13 +444,47 @@ export function StudentHomework() {
 
             <div className="space-y-2">
               <Label htmlFor="file-upload">Attachment (optional)</Label>
-              <div className="flex items-center justify-center rounded-lg border-2 border-dashed p-6 hover:bg-muted/50 transition-colors cursor-pointer">
-                <div className="text-center">
-                  <Upload className="size-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">Click to upload or drag files</p>
-                  <p className="text-xs text-muted-foreground mt-1">PDF, DOC, Images up to 10MB</p>
-                </div>
-              </div>
+              <label
+                htmlFor="file-upload"
+                className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 hover:bg-muted/50 transition-colors cursor-pointer"
+              >
+                {attachmentFile ? (
+                  <div className="text-center">
+                    <FileText className="size-8 text-emerald-600 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-emerald-700">{attachmentFile.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{(attachmentFile.size / 1024).toFixed(1)} KB</p>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); setAttachmentFile(null); }}
+                      className="text-xs text-red-500 hover:text-red-700 mt-2 underline"
+                    >
+                      Remove file
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <Upload className="size-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Click to upload or drag files</p>
+                    <p className="text-xs text-muted-foreground mt-1">PDF, DOC, Images up to 10MB</p>
+                  </div>
+                )}
+              </label>
+              <input
+                id="file-upload"
+                type="file"
+                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                className="hidden"
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    if (file.size > 10 * 1024 * 1024) {
+                      toast.error('File size must be under 10MB');
+                      return;
+                    }
+                    setAttachmentFile(file);
+                  }
+                }}
+              />
             </div>
           </div>
           <DialogFooter>

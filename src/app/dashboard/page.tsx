@@ -105,6 +105,7 @@ const viewComponents: Record<DashboardView, () => Promise<any>> = {
   profile: () => import('@/components/profile/profile-view').then(m => m.ProfileView),
   'video-checkpoints': () => import('@/components/features/video-checkpoints-view').then(m => m.VideoCheckpointsView),
   'year-results': () => import('@/components/dashboards/year-results-view').then(m => m.YearResultsView),
+  'parent-results-view': () => import('@/components/dashboards/parent-results').then(m => m.ParentResults),
   'job-postings': () => import('@/components/dashboards/job-postings-view').then(m => m.JobPostingsManagement),
 };
 

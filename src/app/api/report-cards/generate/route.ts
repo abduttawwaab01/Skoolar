@@ -807,7 +807,7 @@ export async function GET(request: NextRequest) {
           totalStudents: null,
           teacherComment: existingRC?.teacherComment || teacherComment?.comment || null,
           principalComment: existingRC?.principalComment || domainGrade?.principalComment || null,
-          isPublished: existingRC?.isPublished || false,
+          isPublished: true,
           publishedAt: existingRC?.publishedAt || null,
           createdAt: existingRC?.createdAt || new Date().toISOString(),
           student: {

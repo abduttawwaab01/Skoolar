@@ -67,17 +67,16 @@ export const ExamCreateSchema = z.object({
   instructions: z.string().max(5000).optional(),
 });
 
+// Frontend-facing security settings schema (matches Exam.securitySettings JSON shape)
 export const ExamSecuritySettingsSchema = z.object({
-  blockCopyPaste: z.boolean().optional(),
-  monitorTabSwitch: z.boolean().optional(),
+  fullscreen: z.boolean().optional(),
+  tabSwitchWarning: z.boolean().optional(),
+  tabSwitchAutoSubmit: z.boolean().optional(),
   maxTabSwitches: z.number().int().min(0).optional(),
-  monitorWebcam: z.boolean().optional(),
-  randomizeQuestions: z.boolean().optional(),
-  randomizeOptions: z.boolean().optional(),
-  fullscreenMode: z.boolean().optional(),
+  blockCopyPaste: z.boolean().optional(),
   blockRightClick: z.boolean().optional(),
   blockKeyboardShortcuts: z.boolean().optional(),
-  showResultAfterSubmit: z.boolean().optional(),
+  webcamMonitor: z.boolean().optional(),
 });
 
 export const ExamQuestionSchema = z.object({

@@ -33,7 +33,8 @@ export type DashboardView =
   | 'parent-analytics' | 'video-checkpoints'
   | 'year-results'
   | 'testimonials' | 'trusted-schools'
-  | 'profile';
+  | 'profile'
+  | 'parent-results-view';
 
 interface AppState {
   currentRole: UserRole;
@@ -247,8 +248,8 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
     PARENT: [
      { id: 'overview', label: 'Dashboard', icon: 'layout-dashboard' },
      { id: 'parent-portal', label: 'My Children', icon: 'users' },
-     { id: 'results', label: 'Child Results', icon: 'file-bar-chart' },
-     { id: 'report-cards', label: 'Report Cards', icon: 'award' },
+     { id: 'parent-results-view', label: 'Child Results', icon: 'file-bar-chart' },
+     { id: 'parent-results-view', label: 'Report Cards', icon: 'award' },
      { id: 'attendance', label: 'Attendance', icon: 'calendar-check' },
      { id: 'parent-homework', label: 'Child Homework', icon: 'book-open' },
      { id: 'parent-video-lessons', label: 'Video Lessons', icon: 'video' },

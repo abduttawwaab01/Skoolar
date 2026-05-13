@@ -1105,6 +1105,40 @@ export function ReportCardView() {
   // Print
   const handlePrint = useCallback(() => { window.print(); }, []);
 
+  // Download PDF
+  const [sendingParentEmail, setSendingParentEmail] = useState(false);
+
+  const handleDownloadPdf = useCallback(async (reportCardId: string) => {
+    if (!reportCardId) { toast.error('No report card selected'); return; }
+    try {
+      const res = await fetch(`/api/report-cards/${reportCardId}/pdf`);
+      if (!res.ok) throw new Error('Failed to generate PDF');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report-card-${reportCardId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { toast.error('Failed to download PDF'); }
+  }, []);
+
+  // Send to Parent
+  const handleSendToParent = useCallback(async (reportCardId: string) => {
+    if (!reportCardId) { toast.error('No report card selected'); return; }
+    try {
+      setSendingParentEmail(true);
+      const res = await fetch(`/api/report-cards/${reportCardId}/send-to-parent`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to send');
+      toast.success(json.message || `Report card sent to ${json.sentCount || 0} parent(s)`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to send email');
+    } finally {
+      setSendingParentEmail(false);
+    }
+  }, []);
+
   // Handle domain grade save callback
   const handleDomainGradeSave = useCallback((updatedCard: ReportCardData) => {
     setReportCards(prev => prev.map((card, i) => i === currentIndex ? updatedCard : card));
@@ -1154,6 +1188,12 @@ export function ReportCardView() {
             </Button>
             <Button size="sm" onClick={handlePrint}>
               <Printer className="size-3.5 mr-1.5" /> Print
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleDownloadPdf(currentCard?.id || '')} disabled={!currentCard?.id}>
+              <Download className="size-3.5 mr-1.5" /> Download PDF
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handleSendToParent(currentCard?.id || '')} disabled={!currentCard?.id || sendingParentEmail}>
+              <Send className="size-3.5 mr-1.5" /> {sendingParentEmail ? 'Sending...' : 'Send to Parents'}
             </Button>
             {currentCard?.isThirdTerm && (
               <Button variant="outline" size="sm" onClick={() => setDomainEditorOpen(true)} style={{ borderColor: primaryColor, color: primaryColor }}>

@@ -1053,8 +1053,8 @@ function StoriesTab() {
       title: '', excerpt: '', content: '', coverImage: '', level: '', grade: '',
       category: 'General', tags: '', authorName: '', authorBio: '',
       isFeatured: false, isPublished: false,
-      audioUrl: '', audioDuration: '', audioPlatform: '',
-      videoUrl: '', videoDuration: '', videoPlatform: '',
+      audioUrl: '', audioDuration: '', audioPlatform: 'auto',
+      videoUrl: '', videoDuration: '', videoPlatform: 'auto',
     });
    const confirm = useConfirm();
 
@@ -1069,7 +1069,7 @@ function StoriesTab() {
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
   const resetForm = () => {
-    setForm({ title: '', excerpt: '', content: '', coverImage: '', level: '', grade: '', category: 'General', tags: '', authorName: '', authorBio: '', isFeatured: false, isPublished: false, audioUrl: '', audioDuration: '', audioPlatform: '', videoUrl: '', videoDuration: '', videoPlatform: '' });
+    setForm({ title: '', excerpt: '', content: '', coverImage: '', level: '', grade: '', category: 'General', tags: '', authorName: '', authorBio: '', isFeatured: false, isPublished: false, audioUrl: '', audioDuration: '', audioPlatform: 'auto', videoUrl: '', videoDuration: '', videoPlatform: 'auto' });
     setEditing(null);
   };
 
@@ -1229,7 +1229,7 @@ function StoriesTab() {
                   <Select value={form.audioPlatform} onValueChange={(v) => setForm({ ...form, audioPlatform: v })}>
                     <SelectTrigger className="text-xs"><SelectValue placeholder="Auto" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Auto-detect</SelectItem>
+                      <SelectItem value="auto">Auto-detect</SelectItem>
                       <SelectItem value="spotify">Spotify</SelectItem>
                       <SelectItem value="soundcloud">SoundCloud</SelectItem>
                       <SelectItem value="direct">Direct MP3</SelectItem>
@@ -1256,7 +1256,7 @@ function StoriesTab() {
                   <Select value={form.videoPlatform} onValueChange={(v) => setForm({ ...form, videoPlatform: v })}>
                     <SelectTrigger className="text-xs"><SelectValue placeholder="Auto" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Auto-detect</SelectItem>
+                      <SelectItem value="auto">Auto-detect</SelectItem>
                       <SelectItem value="youtube">YouTube</SelectItem>
                       <SelectItem value="vimeo">Vimeo</SelectItem>
                       <SelectItem value="dailymotion">Dailymotion</SelectItem>

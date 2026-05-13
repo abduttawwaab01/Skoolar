@@ -53,6 +53,7 @@ export async function GET(
         explanation: q.explanation,
         mediaUrl: q.mediaUrl,
         order: q.order,
+        wordLimit: q.wordLimit,
         createdAt: q.createdAt,
         updatedAt: q.updatedAt,
       };
@@ -108,6 +109,7 @@ export async function POST(
       explanation,
       mediaUrl,
       order,
+      wordLimit,
     } = body as {
       type?: string;
       questionText?: string;
@@ -117,6 +119,7 @@ export async function POST(
       explanation?: string;
       mediaUrl?: string;
       order?: number;
+      wordLimit?: number;
     };
 
     // Validate required fields
@@ -248,6 +251,7 @@ export async function POST(
         explanation: explanation || null,
         mediaUrl: mediaUrl || null,
         order: questionOrder,
+        wordLimit: wordLimit ?? null,
       },
     });
 
@@ -321,6 +325,7 @@ export async function PUT(
         marks?: number;
         explanation?: string;
         order?: number;
+        wordLimit?: number;
       };
 
       if (!questionData.id) {
@@ -358,6 +363,9 @@ export async function PUT(
         }
         if (questionData.order !== undefined) {
           updateData.order = questionData.order;
+        }
+        if (questionData.wordLimit !== undefined) {
+          updateData.wordLimit = questionData.wordLimit;
         }
         if (questionData.options !== undefined) {
           updateData.options = questionData.options !== null

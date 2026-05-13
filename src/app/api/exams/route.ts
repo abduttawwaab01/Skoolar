@@ -2,6 +2,20 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
 
+// Maps frontend security settings naming to Prisma ExamSecuritySettings model fields
+function mapSecuritySettingsForDb(settings: Record<string, unknown>) {
+  const ss: Record<string, unknown> = {};
+  if (settings.fullscreen !== undefined) ss.fullscreenMode = settings.fullscreen;
+  if (settings.tabSwitchWarning !== undefined) ss.monitorTabSwitch = settings.tabSwitchWarning;
+  if (settings.tabSwitchAutoSubmit !== undefined) ss.tabSwitchAutoSubmit = settings.tabSwitchAutoSubmit;
+  if (settings.maxTabSwitches !== undefined) ss.maxTabSwitches = settings.maxTabSwitches;
+  if (settings.blockCopyPaste !== undefined) ss.blockCopyPaste = settings.blockCopyPaste;
+  if (settings.blockRightClick !== undefined) ss.blockRightClick = settings.blockRightClick;
+  if (settings.blockKeyboardShortcuts !== undefined) ss.blockKeyboardShortcuts = settings.blockKeyboardShortcuts;
+  if (settings.webcamMonitor !== undefined) ss.monitorWebcam = settings.webcamMonitor;
+  return ss;
+}
+
 // GET /api/exams - List exams with filters
 export async function GET(request: NextRequest) {
   try {
@@ -206,6 +220,10 @@ export async function POST(request: NextRequest) {
         shuffleOptions: shuffleOptions || false,
         showResult: showResult !== undefined ? showResult : true,
         negativeMarking: negativeMarking !== undefined ? negativeMarking : 0,
+        // Dual-write to ExamSecuritySettings model
+        security: securitySettings ? {
+          create: mapSecuritySettingsForDb(securitySettings),
+        } : undefined,
       },
     });
 

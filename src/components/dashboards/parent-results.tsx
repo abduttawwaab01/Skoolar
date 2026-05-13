@@ -181,6 +181,33 @@ export function ParentResults() {
   // Published report cards only
   const publishedCards = currentReportCards.filter(rc => rc.isPublished !== false);
 
+  // Download Report Card handler
+  const handleDownloadReportCard = async () => {
+    if (!currentChild || !selectedTermId) {
+      toast.error('No report card available to download');
+      return;
+    }
+    const storedRC = currentReportCards.find(rc => (rc.term?.id || rc.termId) === selectedTermId);
+    if (!storedRC) {
+      toast.error('No published report card found for this term');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/report-cards/${storedRC.id}/pdf`);
+      if (!res.ok) throw new Error('Failed to generate PDF');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report-card-${currentChild.user.name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Report card downloaded');
+    } catch {
+      toast.error('Failed to download report card');
+    }
+  };
+
   // View Report Card handler
   const handleViewReportCard = async (childId: string, termId: string, classId: string) => {
     if (!schoolId || !childId || !classId) {
@@ -250,7 +277,7 @@ export function ParentResults() {
               ))}
             </div>
           )}
-          <Button variant="outline" onClick={() => toast.success('Downloading report card...')}>
+          <Button variant="outline" onClick={handleDownloadReportCard}>
             <Download className="size-4 mr-2" /> Download Report Card
           </Button>
         </div>

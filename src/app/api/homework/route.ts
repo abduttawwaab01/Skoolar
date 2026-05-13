@@ -688,3 +688,55 @@ export async function PUT(request: NextRequest) {
     return errorResponse(message, 500);
   }
 }
+
+// DELETE /api/homework - Soft-delete a homework assignment
+export async function DELETE(request: NextRequest) {
+  const authResult = await requireAuthAndRole(request, [
+    'SUPER_ADMIN',
+    'SCHOOL_ADMIN',
+    'TEACHER',
+  ]);
+
+  if (!authResult.valid) return authResult.error;
+  const { auth } = authResult;
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return errorResponse('Homework id is required', 400);
+    }
+
+    const homework = await db.homework.findUnique({ where: { id } });
+    if (!homework) {
+      return errorResponse('Homework not found', 404);
+    }
+
+    // School isolation
+    if (auth.role !== 'SUPER_ADMIN' && homework.schoolId !== auth.schoolId) {
+      return errorResponse('Access denied', 403);
+    }
+
+    // Teachers can only delete their own homework
+    if (auth.role === 'TEACHER') {
+      if (!auth.userId) {
+        return errorResponse('User ID not found', 400);
+      }
+      if (homework.teacherId !== auth.userId) {
+        return errorResponse('You can only delete your own homework', 403);
+      }
+    }
+
+    await db.homework.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+
+    return successResponse(null, 'Homework deleted successfully');
+  } catch (error: unknown) {
+    console.error('[DELETE /api/homework]', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return errorResponse(message, 500);
+  }
+}

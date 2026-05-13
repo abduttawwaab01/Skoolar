@@ -43,6 +43,17 @@ interface ExamSecuritySettings {
   webcamMonitor?: boolean;
 }
 
+interface ExamSecurityRelation {
+  fullscreenMode: boolean;
+  monitorTabSwitch: boolean;
+  tabSwitchAutoSubmit?: boolean;
+  maxTabSwitches: number | null;
+  blockCopyPaste: boolean;
+  blockRightClick: boolean;
+  blockKeyboardShortcuts: boolean;
+  monitorWebcam: boolean;
+}
+
 interface Exam {
   id: string;
   name: string;
@@ -55,6 +66,7 @@ interface Exam {
   isLocked: boolean;
   isPublished: boolean;
   securitySettings: string | null;
+  security?: ExamSecurityRelation | null;
   allowCalculator: boolean;
   calculatorMode: 'none' | 'basic' | 'scientific' | 'both';
   shuffleQuestions: boolean;
@@ -300,9 +312,23 @@ export function StudentExams() {
   const progressPercent = questions.length > 0 ? Math.round((answeredCount / questions.length) * 100) : 0;
 
   const parsedSecuritySettings = useMemo((): ExamSecuritySettings => {
+    // Prefer structured ExamSecuritySettings model; fall back to JSON string
+    if (selectedExam?.security) {
+      const s = selectedExam.security;
+      return {
+        fullscreen: s.fullscreenMode,
+        tabSwitchWarning: s.monitorTabSwitch,
+        tabSwitchAutoSubmit: (s as any).tabSwitchAutoSubmit ?? false,
+        maxTabSwitches: s.maxTabSwitches ?? 5,
+        blockCopyPaste: s.blockCopyPaste,
+        blockRightClick: s.blockRightClick,
+        blockKeyboardShortcuts: s.blockKeyboardShortcuts,
+        webcamMonitor: s.monitorWebcam,
+      };
+    }
     if (!selectedExam?.securitySettings) return {};
     return safeJsonParse<ExamSecuritySettings>(selectedExam.securitySettings) ?? {};
-  }, [selectedExam?.securitySettings]);
+  }, [selectedExam?.security, selectedExam?.securitySettings]);
 
   // ── Filtered exams ──
   const availableExams = useMemo(() => {
