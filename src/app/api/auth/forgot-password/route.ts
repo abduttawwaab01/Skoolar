@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { sendEmail, createPasswordResetEmail } from '@/lib/email';
+import { validatePassword } from '@/lib/password-validator';
 
 const SALT_ROUNDS = 10;
 const RESET_TOKEN_EXPIRY_HOURS = 1;
@@ -69,8 +70,17 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Token and password are required' }, { status: 400 });
     }
 
-    if (password.length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      return NextResponse.json(
+        { 
+          error: passwordValidation.errors[0] || 'Password is too weak.',
+          errors: passwordValidation.errors,
+          suggestions: passwordValidation.suggestions,
+        },
+        { status: 400 }
+      );
     }
 
     const user = await db.user.findFirst({

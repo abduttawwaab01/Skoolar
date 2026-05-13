@@ -9,6 +9,53 @@ const nextConfig: NextConfig = {
   },
   reactStrictMode: true, // Enable strict mode for better error catching
 
+  // HTTPS enforcement - critical for security
+  redirects: async () => {
+    return [
+      {
+        source: '/:path*',
+        destination: 'https://skoolar.org/:path*',
+        permanent: true,
+        basePath: false,
+      },
+    ];
+  },
+
+  // Security headers via middleware
+  headers: async () => {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=()',
+          },
+        ],
+      },
+    ];
+  },
+
   // Cloudflare Workers have a 100 MB response body limit
   // and individual assets up to 25 MB by default
   images: {
