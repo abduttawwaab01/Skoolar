@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
+import { getGradeFromPercentage, GRADE_POINTS, REPORT_CARD_SCALE } from '@/lib/grade-calculator';
 
 // GET /api/report-cards - List report cards with filters
 export async function GET(request: NextRequest) {
@@ -150,8 +151,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Calculate totals
-    const totalScore = examScores.reduce((sum, s) => s.score, 0);
-    const totalMarks = examScores.reduce((sum, s) => s.exam.totalMarks, 0);
+    const totalScore = examScores.reduce((sum, s) => sum + s.score, 0);
+    const totalMarks = examScores.reduce((sum, s) => sum + s.exam.totalMarks, 0);
     const averageScore = examScores.length > 0
       ? Math.round((totalScore / examScores.length) * 100) / 100
       : 0;
@@ -160,21 +161,13 @@ export async function POST(request: NextRequest) {
       : 0;
 
     // Calculate GPA
-    const gradePoints: Record<string, number> = {
-      'A+': 4.0, 'A': 4.0, 'B': 3.0, 'C': 2.0, 'D': 1.0, 'F': 0,
-    };
-    const totalGradePoints = examScores.reduce((sum, s) => sum + (gradePoints[s.grade || 'F'] || 0), 0);
+    const totalGradePoints = examScores.reduce((sum, s) => sum + (GRADE_POINTS[s.grade || 'F'] || 0), 0);
     const gpa = examScores.length > 0
       ? Math.round((totalGradePoints / examScores.length) * 100) / 100
       : 0;
 
     // Calculate overall grade
-    let grade = 'F';
-    if (overallPercentage >= 90) grade = 'A+';
-    else if (overallPercentage >= 80) grade = 'A';
-    else if (overallPercentage >= 70) grade = 'B';
-    else if (overallPercentage >= 60) grade = 'C';
-    else if (overallPercentage >= 50) grade = 'D';
+    let grade = getGradeFromPercentage(overallPercentage, REPORT_CARD_SCALE).grade;
 
     // Optimize: Calculate class rank using a single query with aggregation instead of N+1
     const classScores = await db.examScore.groupBy({

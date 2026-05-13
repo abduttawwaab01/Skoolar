@@ -30,6 +30,23 @@ export const ALTERNATIVE_GRADE_SCALE: GradeScale = {
   ],
 };
 
+// Nigerian standard report card scale
+export const REPORT_CARD_SCALE: GradeScale = {
+  thresholds: [
+    { grade: 'A', min: 70, remark: 'Excellent' },
+    { grade: 'B', min: 60, remark: 'Very Good' },
+    { grade: 'C', min: 50, remark: 'Good' },
+    { grade: 'D', min: 40, remark: 'Fair' },
+    { grade: 'E', min: 30, remark: 'Poor' },
+    { grade: 'F', min: 0, remark: 'Fail' },
+  ],
+};
+
+// Grade points for GPA calculation (used across the app)
+export const GRADE_POINTS: Record<string, number> = {
+  'A+': 4.0, 'A': 4.0, 'B': 3.0, 'C': 2.0, 'D': 1.0, 'F': 0,
+};
+
 export function calculateGrade(
   score: number,
   maxScore: number,

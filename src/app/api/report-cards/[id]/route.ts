@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { calculateGrade, REPORT_CARD_SCALE } from '@/lib/grade-calculator';
 
 // GET /api/report-cards/[id] - Fetch single report card with full data
 export async function GET(
@@ -154,25 +155,11 @@ export async function GET(
           }
         }
 
-        let caScore = caMax > 0 ? (caTotal / caMax) * 40 : 0;
-        let examScore = examMax > 0 ? (examTotal / examMax) * 60 : 0;
-        let total = caScore + examScore;
+        const caScore = caMax > 0 ? Math.round(((caTotal / caMax) * 40) * 100) / 100 : 0;
+        const examScore = examMax > 0 ? Math.round(((examTotal / examMax) * 60) * 100) / 100 : 0;
+        const total = Math.round((caScore + examScore) * 100) / 100;
 
-        if (caMax > 0 && caMax <= 40 && examMax > 0 && examMax <= 60) {
-          caScore = caTotal;
-          examScore = examTotal;
-          total = caScore + examScore;
-        }
-
-        const { grade, remark } = (() => {
-          const pct = total;
-          if (pct >= 70) return { grade: 'A', remark: 'Excellent' };
-          if (pct >= 60) return { grade: 'B', remark: 'Very Good' };
-          if (pct >= 50) return { grade: 'C', remark: 'Good' };
-          if (pct >= 40) return { grade: 'D', remark: 'Fair' };
-          if (pct >= 30) return { grade: 'E', remark: 'Poor' };
-          return { grade: 'F', remark: 'Fail' };
-        })();
+        const { grade, remark } = calculateGrade(total, 100, REPORT_CARD_SCALE);
 
         return {
           subjectId,

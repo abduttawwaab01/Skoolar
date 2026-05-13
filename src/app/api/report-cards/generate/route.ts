@@ -1,16 +1,6 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
-
-// Grade calculation based on total percentage
-function getGrade(total: number, maxPossible: number): { grade: string; remark: string } {
-  const pct = maxPossible > 0 ? (total / maxPossible) * 100 : 0;
-  if (pct >= 70) return { grade: 'A', remark: 'Excellent' };
-  if (pct >= 60) return { grade: 'B', remark: 'Very Good' };
-  if (pct >= 50) return { grade: 'C', remark: 'Good' };
-  if (pct >= 40) return { grade: 'D', remark: 'Fair' };
-  if (pct >= 30) return { grade: 'E', remark: 'Poor' };
-  return { grade: 'F', remark: 'Fail' };
-}
+import { calculateGrade, REPORT_CARD_SCALE } from '@/lib/grade-calculator';
 
 function getOrdinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
@@ -272,7 +262,7 @@ export async function POST(request: NextRequest) {
         }
 
         const maxPossible = 100;
-        const { grade, remark } = getGrade(total, maxPossible);
+        const { grade, remark } = calculateGrade(total, maxPossible, REPORT_CARD_SCALE);
 
         grandTotal += total;
         grandPossible += maxPossible;
@@ -309,7 +299,7 @@ export async function POST(request: NextRequest) {
 
       const numSubjects = subjectResults.length;
       const averageScore = numSubjects > 0 ? grandTotal / numSubjects : 0;
-      const overallGrade = getGrade(averageScore, 100);
+      const overallGrade = calculateGrade(averageScore, 100, REPORT_CARD_SCALE);
 
       studentTotalScores.push({
         studentId: student.id,
@@ -727,7 +717,7 @@ export async function GET(request: NextRequest) {
         const hasAnyScores = Object.values(scoresByType).some(s => s.raw > 0);
         if (caTotal === 0 && examTotal === 0 && !hasAnyScores && subject.exams.length === 0) continue;
 
-        const { grade, remark } = getGrade(total, 100);
+        const { grade, remark } = calculateGrade(total, 100, REPORT_CARD_SCALE);
         grandTotal += total;
         grandPossible += 100;
 
@@ -751,7 +741,7 @@ export async function GET(request: NextRequest) {
 
       const numSubjects = subjectResults.length;
       const averageScore = numSubjects > 0 ? grandTotal / numSubjects : 0;
-      const overallGrade = getGrade(averageScore, 100);
+      const overallGrade = calculateGrade(averageScore, 100, REPORT_CARD_SCALE);
 
       // Attendance
       const attendanceRecords = await db.attendance.findMany({
