@@ -9,19 +9,8 @@ const nextConfig: NextConfig = {
   },
   reactStrictMode: true, // Enable strict mode for better error catching
 
-  // HTTPS enforcement - critical for security
-  redirects: async () => {
-    return [
-      {
-        source: '/:path*',
-        destination: 'https://skoolar.org/:path*',
-        permanent: true,
-        basePath: false,
-      },
-    ];
-  },
-
   // Security headers via middleware
+  // Note: HTTPS enforcement is handled by HSTS header in public/_headers (no redirect needed)
   headers: async () => {
     return [
       {
