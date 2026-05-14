@@ -329,6 +329,7 @@ export function SchoolProfileView() {
                     {ay.startDate} — {ay.endDate}
                   </span>
                 </div>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -370,6 +371,7 @@ export function SchoolProfileView() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
                 <Separator className="mt-4" />
               </div>
             ))

@@ -439,7 +439,7 @@ export function TeacherGrades() {
         {/* Grade Table */}
         <Card className="lg:col-span-3">
           <CardContent className="p-0">
-            <div className="max-h-96 overflow-y-auto">
+            <div className="max-h-96 overflow-y-auto overflow-x-auto">
               {studentsLoading ? (
                 <div className="p-4 space-y-3">
                   {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}

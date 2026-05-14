@@ -26,26 +26,13 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
   ArrowUpDown,
-  MoreHorizontal,
   Search,
-  Eye,
-  Pencil,
-  Trash2,
   Inbox,
-  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -109,44 +96,9 @@ function DataTable<TData, TValue>({
       ]
     : [];
 
-  const actionColumn: ColumnDef<TData, TValue>[] = [
-    {
-      id: 'actions',
-      enableHiding: false,
-      cell: () => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8">
-              <MoreHorizontal className="size-4" />
-              <span className="sr-only">Open menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Eye className="size-4" />
-              View
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Pencil className="size-4" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive">
-              <Trash2 className="size-4" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-      size: 40,
-    },
-  ];
-
   const table = useReactTable({
     data: loading ? ([] as TData[]) : data,
-    columns: [...selectableColumns, ...columns, ...actionColumn],
+    columns: [...selectableColumns, ...columns],
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),

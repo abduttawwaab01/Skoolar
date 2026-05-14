@@ -194,7 +194,7 @@ export function ParentFinance() {
           <CardTitle className="text-base">Fee Breakdown — Current Term</CardTitle>
           <CardDescription>Itemized fee structure</CardDescription>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -257,7 +257,7 @@ export function ParentFinance() {
           <CardDescription>Previous transactions</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

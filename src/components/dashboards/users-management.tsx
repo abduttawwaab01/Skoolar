@@ -214,7 +214,7 @@ function UserFormDialog({
       toast.error('Password is required for new users');
       return;
     }
-    if (form.role !== 'SUPER_ADMIN' && !form.schoolId) {
+    if (form.role !== 'SUPER_ADMIN' && !form.schoolId && !isSchoolAdmin) {
       toast.error('Please select a school');
       return;
     }
