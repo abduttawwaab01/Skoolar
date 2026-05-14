@@ -68,10 +68,11 @@ Rules:
 2. Do not lend to others
 3. Report loss immediately`;
 
-const CARD_WIDTH_PORTRAIT = 85.6; // mm (standard ID card)
-const CARD_HEIGHT_PORTRAIT = 53.98;
-const CARD_WIDTH_LANDSCAPE = 53.98;
-const CARD_HEIGHT_LANDSCAPE = 85.6;
+// Portrait = taller than wide (53.98×85.6mm), Landscape = wider than tall (85.6×53.98mm)
+const CARD_WIDTH_PORTRAIT = 53.98;
+const CARD_HEIGHT_PORTRAIT = 85.6;
+const CARD_WIDTH_LANDSCAPE = 85.6;
+const CARD_HEIGHT_LANDSCAPE = 53.98;
 
 function adjustColor(hex: string, amount: number): string {
   const num = parseInt(hex.replace('#', ''), 16);
@@ -285,7 +286,10 @@ export function IDCardGenerator() {
       a.href = url;
       const filename = `id-cards-${cardType}s-${new Date().toISOString().split('T')[0]}.${exportFormat === 'pdf' ? 'pdf' : 'zip'}`;
       a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       
       toast.success(`Exported ${items.length} ID cards`);
@@ -337,7 +341,10 @@ export function IDCardGenerator() {
         const a = document.createElement('a');
         a.href = url;
         a.download = `my-id-card-${Date.now()}.png`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
         toast.success('Your ID card has been downloaded');
       }
@@ -622,7 +629,10 @@ export function IDCardGenerator() {
                                   const a = document.createElement('a');
                                   a.href = url;
                                   a.download = `${person.name}-id-card.png`;
+                                  a.style.display = 'none';
+                                  document.body.appendChild(a);
                                   a.click();
+                                  document.body.removeChild(a);
                                   window.URL.revokeObjectURL(url);
                                   
                                   toast.success('ID card downloaded successfully');
@@ -860,9 +870,11 @@ function IDCardPreview({ person, cardType, colors, showPhoto, showBarcode, showQ
     generatePreview();
   }, [person, cardType, colors, showPhoto, showBarcode, showQR, backText, showBack, orientation]);
   
-  const width = orientation === 'portrait' ? CARD_WIDTH_PORTRAIT : CARD_WIDTH_LANDSCAPE;
-  const height = orientation === 'portrait' ? CARD_HEIGHT_PORTRAIT : CARD_HEIGHT_LANDSCAPE;
-  const scale = orientation === 'portrait' ? 1 : 1.2;
+  const wMm = orientation === 'portrait' ? CARD_WIDTH_PORTRAIT : CARD_WIDTH_LANDSCAPE;
+  const hMm = orientation === 'portrait' ? CARD_HEIGHT_PORTRAIT : CARD_HEIGHT_LANDSCAPE;
+  // Scale so the larger dimension is ~220px on screen for a clear preview
+  const targetPx = 220;
+  const scale = Math.min(targetPx / Math.max(wMm, hMm), 3.5);
   
   return (
     <motion.div 
@@ -871,8 +883,8 @@ function IDCardPreview({ person, cardType, colors, showPhoto, showBarcode, showQ
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       style={{ 
-        width: `${width * scale}px`, 
-        height: `${height * scale}px`,
+        width: `${wMm * scale}px`, 
+        height: `${hMm * scale}px`,
       }}
     >
       {loading ? (

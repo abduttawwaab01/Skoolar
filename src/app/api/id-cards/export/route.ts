@@ -60,14 +60,14 @@ export async function POST(request: NextRequest) {
 
     if (format === 'pdf') {
       // Convert mm to points (PDFKit uses points, 1 inch = 72 points)
-      const cardWidthMm = orientation === 'portrait' ? 85.6 : 53.98;
-      const cardHeightMm = orientation === 'portrait' ? 53.98 : 85.6;
-      const cardWidthPoints = (cardWidthMm / 25.4) * 72; // mm to inches to points
+      // Portrait = taller than wide (53.98×85.6mm), Landscape = wider than tall (85.6×53.98mm)
+      const cardWidthMm = orientation === 'portrait' ? 53.98 : 85.6;
+      const cardHeightMm = orientation === 'portrait' ? 85.6 : 53.98;
+      const cardWidthPoints = (cardWidthMm / 25.4) * 72;
       const cardHeightPoints = (cardHeightMm / 25.4) * 72;
 
       const doc = new PDFDocument({
         size: [cardWidthPoints, cardHeightPoints],
-        layout: orientation === 'portrait' ? 'portrait' : 'landscape',
         compress: true,
         autoFirstPage: false,
         margin: 0,
@@ -84,38 +84,45 @@ export async function POST(request: NextRequest) {
           type: cardData.type || 'student',
         };
         
-        // Front
-        const frontBuffer = await renderIDCard(
-          normalizedCard,
-          cardData.colors || { primary: '#059669', secondary: '#FFFFFF' },
-          cardData.backText || '',
-          cardData.showPhoto !== false,
-          cardData.showBarcode !== false,
-          cardData.showQR !== false,
-          orientation,
-          cardData.photo,
-          role
-        );
-        
-        doc.addPage({ size: [cardWidthPoints, cardHeightPoints], margin: 0 });
-        doc.image(frontBuffer, 0, 0, { width: cardWidthPoints, height: cardHeightPoints });
-        
-        // Back (if requested)
-        if (scope === 'both' || scope === 'back') {
-          const backBuffer = await renderIDCard(
-            { ...normalizedCard, name: '' },
+        try {
+          // Front
+          const frontBuffer = await renderIDCard(
+            normalizedCard,
             cardData.colors || { primary: '#059669', secondary: '#FFFFFF' },
             cardData.backText || '',
-            false,
-            false,
-            false,
+            cardData.showPhoto !== false,
+            cardData.showBarcode !== false,
+            cardData.showQR !== false,
             orientation,
-            null,
-            role,
-            true
+            cardData.photo,
+            role
           );
+          
           doc.addPage({ size: [cardWidthPoints, cardHeightPoints], margin: 0 });
-          doc.image(backBuffer, 0, 0, { width: cardWidthPoints, height: cardHeightPoints });
+          doc.image(frontBuffer, 0, 0, { width: cardWidthPoints, height: cardHeightPoints });
+          
+          // Back (if requested)
+          if (scope === 'both' || scope === 'back') {
+            const backBuffer = await renderIDCard(
+              { ...normalizedCard, name: '' },
+              cardData.colors || { primary: '#059669', secondary: '#FFFFFF' },
+              cardData.backText || '',
+              false,
+              false,
+              false,
+              orientation,
+              null,
+              role,
+              true
+            );
+            doc.addPage({ size: [cardWidthPoints, cardHeightPoints], margin: 0 });
+            doc.image(backBuffer, 0, 0, { width: cardWidthPoints, height: cardHeightPoints });
+          }
+        } catch (cardError) {
+          console.error(`Failed to render card for ${cardData.name || 'unknown'}:`, cardError);
+          // Create a placeholder page for failed cards
+          doc.addPage({ size: [cardWidthPoints, cardHeightPoints], margin: 0 });
+          doc.fontSize(10).text(`Card generation failed for ${cardData.name || 'unknown'}`, 10, cardHeightPoints / 2 - 5, { align: 'center', width: cardWidthPoints - 20 });
         }
       }
 

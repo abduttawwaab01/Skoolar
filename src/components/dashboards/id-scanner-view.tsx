@@ -47,6 +47,78 @@ export function IdScannerView() {
   const animationFrameRef = React.useRef<number | null>(null);
   const lastScanTimeRef = React.useRef<number>(0);
   const scanningRef = React.useRef(false);
+  const activeScanTypeRef = React.useRef<ScanType>(activeScanType);
+  const selectedSchoolIdRef = React.useRef(selectedSchoolId);
+
+  // Keep refs in sync with state
+  React.useEffect(() => { activeScanTypeRef.current = activeScanType; }, [activeScanType]);
+  React.useEffect(() => { selectedSchoolIdRef.current = selectedSchoolId; }, [selectedSchoolId]);
+
+  // Store scan handler in ref to avoid stale closures
+  const handleQRScanRef = React.useRef(async (qrDataString: string) => {
+    try {
+      const qrData = JSON.parse(qrDataString);
+      const response = await fetch('/api/attendance/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          qrData,
+          scanType: activeScanTypeRef.current,
+          schoolId: selectedSchoolIdRef.current,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        toast.error(result.error || 'Failed to record scan');
+        return;
+      }
+      const { person } = result.data;
+      const actionText = activeScanTypeRef.current === 'attendance' ? 'Attendance' : 
+                        activeScanTypeRef.current === 'staff_attendance' ? 'Staff Attendance' :
+                        activeScanTypeRef.current === 'library' ? 'Library Check-in' : 'ID Verified';
+      const scanRecord: ScanRecord = {
+        id: result.data.scanLog.id,
+        student: person.name,
+        action: actionText,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'success',
+        method: 'qr_scan',
+      };
+      setLastScan(scanRecord);
+      setScans(prev => [scanRecord, ...prev.slice(0, 19)]);
+      toast.success(`${person.name} - ${actionText} recorded`);
+    } catch (error) {
+      console.error('QR scan error:', error);
+      toast.error('Invalid QR code');
+    }
+  });
+
+  // Store scanLoop in ref so animation frame callback always uses latest
+  const scanLoopRef = React.useRef<(() => void) | null>(null);
+  scanLoopRef.current = () => {
+    if (!scanningRef.current || !videoRef.current || !canvasRef.current) {
+      // Still schedule next frame even if not ready
+      animationFrameRef.current = requestAnimationFrame(scanLoopRef.current!);
+      return;
+    }
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    if (video.readyState === video.HAVE_ENOUGH_DATA && context) {
+      canvas.height = video.videoHeight;
+      canvas.width = video.videoWidth;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'dontInvert',
+      });
+      if (code && Date.now() - lastScanTimeRef.current > 5000) {
+        lastScanTimeRef.current = Date.now();
+        handleQRScanRef.current(code.data);
+      }
+    }
+    animationFrameRef.current = requestAnimationFrame(scanLoopRef.current!);
+  };
 
   // Load recent scans
   React.useEffect(() => {
@@ -82,8 +154,7 @@ export function IdScannerView() {
         setCameraActive(true);
         setScanning(true);
         toast.success('Camera started');
-        // Start scanning loop
-        requestAnimationFrame(scanLoop);
+        requestAnimationFrame(scanLoopRef.current!);
       }
     } catch (err) {
       console.error('Camera access denied:', err);
@@ -105,88 +176,16 @@ export function IdScannerView() {
     setScanning(false);
   };
 
-  // Main scanning loop
-  const scanLoop = () => {
-    if (!scanningRef.current || !videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-
-    if (video.readyState === video.HAVE_ENOUGH_DATA && context) {
-      canvas.height = video.videoHeight;
-      canvas.width = video.videoWidth;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: 'dontInvert',
-      });
-
-      if (code && Date.now() - lastScanTimeRef.current > 5000) { // 5 second cooldown
-        lastScanTimeRef.current = Date.now();
-        handleQRScan(code.data);
-      }
-    }
-
-    animationFrameRef.current = requestAnimationFrame(scanLoop);
-  };
-
-  // Handle successful QR scan
-  const handleQRScan = async (qrDataString: string) => {
-    try {
-      const qrData = JSON.parse(qrDataString);
-      
-      // Send to API
-      const response = await fetch('/api/attendance/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          qrData,
-          scanType: activeScanType,
-          schoolId: selectedSchoolId,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        toast.error(result.error || 'Failed to record scan');
-        return;
-      }
-
-      const { person } = result.data;
-      const actionText = activeScanType === 'attendance' ? 'Attendance' : 
-                        activeScanType === 'staff_attendance' ? 'Staff Attendance' :
-                        activeScanType === 'library' ? 'Library Check-in' : 'ID Verified';
-
-      const scanRecord: ScanRecord = {
-        id: result.data.scanLog.id,
-        student: person.name,
-        action: actionText,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: 'success',
-        method: 'qr_scan',
-      };
-
-      setLastScan(scanRecord);
-      setScans(prev => [scanRecord, ...prev.slice(0, 19)]);
-      toast.success(`${person.name} - ${actionText} recorded`);
-
-    } catch (error) {
-      console.error('QR scan error:', error);
-      toast.error('Invalid QR code');
-    }
-  };
-
   // Cleanup on unmount
   React.useEffect(() => {
     return () => {
+      scanningRef.current = false;
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
       if (streamRef.current) {
-        stopCamera();
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
       }
     };
   }, []);

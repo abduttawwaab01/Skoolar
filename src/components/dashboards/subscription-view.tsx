@@ -373,7 +373,15 @@ setLoading(true);
   // Handle Paystack online payment
   const handlePaystackPayment = async () => {
     const plan = selectedPlan || pendingPlan;
-    if (!schoolId || !school?.email || !plan) return;
+    if (!schoolId) {
+      toast.error('School information is missing');
+      return;
+    }
+    if (!school?.email) {
+      toast.error('School email is required for online payment. Please update your school profile first.');
+      return;
+    }
+    if (!plan) return;
     try {
       setSubscribing(plan.id);
       setShowPaymentChoice(false);
@@ -387,17 +395,18 @@ setLoading(true);
           planCode: (plan as Plan).paystackPlanCode || undefined,
         }),
       });
+      const json = await res.json();
       if (res.ok) {
-        const json = await res.json();
         if (json.data?.authorization_url) {
           window.location.href = json.data.authorization_url;
-        } else if (json.data?.fallbackUrl) {
-          toast.info('Online payment is being set up. Please use bank transfer.');
-        } else {
-          toast.success('Subscription initiated! Payment record created.');
+          return;
         }
+        // No Paystack URL — fallback to bank transfer
+        toast.info('Online payment unavailable. Please use bank transfer.');
+        setSelectedPlan(plan);
+        setTransferAmount(String(plan.price));
+        setShowBankTransfer(true);
       } else {
-        const json = await res.json();
         toast.error(json.error || 'Failed to initiate subscription');
       }
     } catch {
