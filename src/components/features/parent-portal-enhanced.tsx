@@ -3,24 +3,22 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
-  Users, MessageSquare, Wallet, BarChart3, GraduationCap, Send, Download,
-  CreditCard, Calendar, CheckCircle, Clock, TrendingUp, TrendingDown,
-  Phone, Mail, FileText, Star, Heart, AlertCircle, Loader2
+  Users, MessageSquare, Wallet, BarChart3, GraduationCap,
+  CreditCard, Calendar, CheckCircle, TrendingUp, TrendingDown,
+  FileText, Star, AlertCircle, Loader2, BookOpen, Award, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppStore } from '@/store/app-store';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, Legend, Cell, PieChart, Pie
+  BarChart, Bar, Cell
 } from 'recharts';
 
 interface ChildData {
@@ -61,10 +59,31 @@ interface HomeworkData {
   }>;
 }
 
-interface TeacherData {
-  id: string;
-  user: { name: string | null; email: string | null };
-  specialization: string | null;
+interface AttendanceRecord {
+  date: string;
+  status: string;
+}
+
+interface GpaTrendItem {
+  termName: string;
+  gpa: number | null;
+  average: number | null;
+}
+
+interface ParentAnalyticsData {
+  attendance: { present: number; absent: number; late: number; total: number; rate: number };
+  gpaTrend: GpaTrendItem[];
+  behaviorScore: number;
+  subjectAnalysis: Array<{
+    subjectName: string;
+    studentAverage: number;
+    classAverage: number;
+    difference: number;
+    comparison: string;
+    examsTaken: number;
+  }>;
+  academicPerformance: { gpa: number; cumulativeGpa: number; ranking: { classRank: number; totalInClass: number; percentile: number } };
+  weeklyEvaluation: { averageScore: number; trend: string } | null;
 }
 
 export default function ParentPortalEnhanced() {
@@ -73,18 +92,15 @@ export default function ParentPortalEnhanced() {
   const parentId = currentUser.id;
 
   const [children, setChildren] = useState<ChildData[]>([]);
-  const [teachers, setTeachers] = useState<TeacherData[]>([]);
   const [announcements, setAnnouncements] = useState<AnnouncementData[]>([]);
   const [homework, setHomework] = useState<HomeworkData[]>([]);
+  const [analytics, setAnalytics] = useState<ParentAnalyticsData | null>(null);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [selectedChild, setSelectedChild] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedTeacher, setSelectedTeacher] = useState<string | null>(null);
-  const [parentMessage, setParentMessage] = useState('');
-  const [paymentForm, setPaymentForm] = useState({ cardNumber: '', expiry: '', cvv: '', name: '' });
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!schoolId) {
@@ -95,13 +111,11 @@ export default function ParentPortalEnhanced() {
     try {
       setError(null);
       setIsLoading(true);
-      const [parentStudentsRes, teachersRes, announcementsRes] = await Promise.all([
+      const [parentStudentsRes, announcementsRes] = await Promise.all([
         parentId ? fetch(`/api/parent-students?parentId=${parentId}`) : Promise.resolve(null),
-        fetch(`/api/teachers?schoolId=${schoolId}&limit=50`),
         fetch(`/api/announcements?schoolId=${schoolId}&limit=10&isPublished=true`),
       ]);
 
-      // Fetch parent's children
       if (parentStudentsRes && parentStudentsRes.ok) {
         const parentJson = await parentStudentsRes.json();
         if (parentJson.data) {
@@ -112,19 +126,6 @@ export default function ParentPortalEnhanced() {
         }
       }
 
-      // Fetch teachers
-      if (teachersRes.ok) {
-        const teachersJson = await teachersRes.json();
-        if (teachersJson.data) {
-          setTeachers(teachersJson.data.map((t: TeacherData) => ({
-            id: t.id,
-            user: t.user,
-            specialization: t.specialization,
-          })));
-        }
-      }
-
-      // Fetch announcements
       if (announcementsRes.ok) {
         const annJson = await announcementsRes.json();
         if (annJson.data) {
@@ -144,6 +145,34 @@ export default function ParentPortalEnhanced() {
     fetchData();
   }, [fetchData]);
 
+  // Fetch analytics for selected child
+  useEffect(() => {
+    if (!selectedChild) return;
+    const fetchAnalytics = async () => {
+      try {
+        const [analyticsRes, attendanceRes] = await Promise.all([
+          fetch(`/api/parent-analytics?studentId=${selectedChild}`),
+          fetch(`/api/attendance?studentId=${selectedChild}&limit=60`),
+        ]);
+        if (analyticsRes.ok) {
+          const json = await analyticsRes.json();
+          if (json.data) setAnalytics(json.data);
+        }
+        if (attendanceRes.ok) {
+          const json = await attendanceRes.json();
+          const records: AttendanceRecord[] = (json.data || []).map((r: { date: string; status: string }) => ({
+            date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            status: r.status,
+          }));
+          setAttendanceRecords(records.slice(-30));
+        }
+      } catch {
+        // skip
+      }
+    };
+    fetchAnalytics();
+  }, [selectedChild]);
+
   // Fetch homework for selected child
   useEffect(() => {
     if (!schoolId || !selectedChild) return;
@@ -161,62 +190,16 @@ export default function ParentPortalEnhanced() {
     fetchHomework();
   }, [schoolId, selectedChild]);
 
-  const attendanceHeatmap = useMemo(() => {
-    const days: { date: string; status: string }[] = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dayOfWeek = d.getDay();
-      if (dayOfWeek === 0 || dayOfWeek === 6) continue;
-      days.push({
-        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        status: 'present',
-      });
-    }
-    return days;
-  }, []);
-
   const selectedChildData = children.find(c => c.id === selectedChild);
 
-  const gpaTrend = [
-    { term: 'Term 1', gpa: 3.4 },
-    { term: 'Term 2', gpa: selectedChildData?.gpa || 3.6 },
-    { term: 'Current', gpa: selectedChildData?.gpa || 3.6 },
-  ];
+  const gpaTrend = analytics?.gpaTrend || [];
 
-  const teacherContacts = teachers.map(t => ({
-    id: t.id,
-    name: t.user.name || 'Unknown',
-    subject: t.specialization || 'General',
-    avatar: (t.user.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2),
-    messages: [
-      { id: 'tm-1', sender: 'parent', content: 'Good morning! How is my child performing?', time: '10:00 AM' },
-      { id: 'tm-2', sender: 'teacher', content: 'Good morning! Your child is doing well. Attentive in class and completing assignments on time.', time: '10:15 AM' },
-    ],
-  }));
+  const subjectColors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#f97316', '#6366f1'];
 
-  const handleSendMessage = () => {
-    if (!parentMessage.trim()) return;
-    setParentMessage('');
-    toast.success('Message sent to teacher');
-  };
-
-  const handlePayment = () => {
-    if (!paymentForm.cardNumber || !paymentForm.expiry || !paymentForm.cvv) {
-      toast.error('Please fill in all payment details');
-      return;
-    }
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      toast.success('Payment processed successfully! Receipt will be sent to your email.');
-      setPaymentForm({ cardNumber: '', expiry: '', cvv: '', name: '' });
-    }, 2000);
-  };
-
-  const handleDownloadReceipt = (id: string) => {
-    toast.info('Receipt downloaded');
-  };
+  const pendingHomework = homework.filter(h => {
+    if (!h.submissions || h.submissions.length === 0) return true;
+    return h.submissions[0]?.status !== 'submitted' && h.submissions[0]?.status !== 'graded';
+  }).length;
 
   if (isLoading) {
     return (
@@ -284,13 +267,11 @@ export default function ParentPortalEnhanced() {
     );
   }
 
-  const currentGPA = selectedChildData?.gpa || 0;
-  const attendanceRate = 96;
-  const behaviorScore = selectedChildData?.behaviorScore || 95;
-  const pendingHomework = homework.filter(h => {
-    if (!h.submissions || h.submissions.length === 0) return true;
-    return h.submissions[0]?.status !== 'submitted' && h.submissions[0]?.status !== 'graded';
-  }).length;
+  const currentGPA = analytics?.academicPerformance?.gpa || selectedChildData?.gpa || 0;
+  const attendanceRate = analytics?.attendance?.rate || 0;
+  const behaviorScore = analytics?.behaviorScore || selectedChildData?.behaviorScore || 0;
+  const classRank = analytics?.academicPerformance?.ranking?.classRank;
+  const totalInClass = analytics?.academicPerformance?.ranking?.totalInClass;
 
   return (
     <div className="space-y-6">
@@ -334,7 +315,8 @@ export default function ParentPortalEnhanced() {
             </div>
             <p className="text-2xl font-bold">{currentGPA > 0 ? currentGPA.toFixed(1) : 'N/A'}</p>
             <div className="flex items-center gap-1 text-xs text-emerald-600 mt-1">
-              <TrendingUp className="h-3 w-3" /> {selectedChildData?.class?.name || ''}
+              <TrendingUp className="h-3 w-3" />
+              {classRank ? `Rank #${classRank}${totalInClass ? ` of ${totalInClass}` : ''}` : selectedChildData?.class?.name || ''}
             </div>
           </CardContent>
         </Card>
@@ -344,9 +326,15 @@ export default function ParentPortalEnhanced() {
               <CheckCircle className="h-4 w-4 text-blue-500" />
               <span className="text-xs text-gray-500">Attendance</span>
             </div>
-            <p className="text-2xl font-bold">{attendanceRate}%</p>
-            <div className="flex items-center gap-1 text-xs text-emerald-600 mt-1">
-              <TrendingUp className="h-3 w-3" /> Above average
+            <p className="text-2xl font-bold">{attendanceRate > 0 ? `${attendanceRate}%` : 'N/A'}</p>
+            <div className="flex items-center gap-1 text-xs mt-1">
+              {attendanceRate >= 90 ? (
+                <span className="text-emerald-600 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Excellent</span>
+              ) : attendanceRate >= 75 ? (
+                <span className="text-amber-600 flex items-center gap-1"><TrendingUp className="h-3 w-3" /> Good</span>
+              ) : attendanceRate > 0 ? (
+                <span className="text-red-600 flex items-center gap-1"><TrendingDown className="h-3 w-3" /> Needs improvement</span>
+              ) : null}
             </div>
           </CardContent>
         </Card>
@@ -369,9 +357,15 @@ export default function ParentPortalEnhanced() {
               <Star className="h-4 w-4 text-purple-500" />
               <span className="text-xs text-gray-500">Behavior</span>
             </div>
-            <p className="text-2xl font-bold">{behaviorScore}/100</p>
-            <div className="flex items-center gap-1 text-xs text-emerald-600 mt-1">
-              <TrendingUp className="h-3 w-3" /> {behaviorScore >= 90 ? 'Excellent' : 'Good'}
+            <p className="text-2xl font-bold">{behaviorScore > 0 ? `${behaviorScore}/100` : 'N/A'}</p>
+            <div className="flex items-center gap-1 text-xs mt-1">
+              {behaviorScore >= 90 ? (
+                <span className="text-emerald-600"><TrendingUp className="h-3 w-3 inline" /> Excellent</span>
+              ) : behaviorScore >= 75 ? (
+                <span className="text-amber-600"><TrendingUp className="h-3 w-3 inline" /> Good</span>
+              ) : behaviorScore > 0 ? (
+                <span className="text-red-600"><TrendingDown className="h-3 w-3 inline" /> Needs attention</span>
+              ) : null}
             </div>
           </CardContent>
         </Card>
@@ -380,8 +374,7 @@ export default function ParentPortalEnhanced() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="overview" className="gap-1.5 text-xs"><BarChart3 className="h-3.5 w-3.5" /> Progress</TabsTrigger>
-          <TabsTrigger value="messages" className="gap-1.5 text-xs"><MessageSquare className="h-3.5 w-3.5" /> Messages</TabsTrigger>
-          <TabsTrigger value="announcements" className="gap-1.5 text-xs"><Mail className="h-3.5 w-3.5" /> Announcements</TabsTrigger>
+          <TabsTrigger value="announcements" className="gap-1.5 text-xs"><Users className="h-3.5 w-3.5" /> Announcements</TabsTrigger>
           <TabsTrigger value="homework" className="gap-1.5 text-xs"><FileText className="h-3.5 w-3.5" /> Homework</TabsTrigger>
         </TabsList>
 
@@ -395,15 +388,19 @@ export default function ParentPortalEnhanced() {
                 <CardDescription>Academic performance over time</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
-                  <LineChart data={gpaTrend}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="term" tick={{ fontSize: 12 }} />
-                    <YAxis domain={[0, 5]} />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="gpa" stroke="#10b981" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 7 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+                {gpaTrend.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={250}>
+                    <LineChart data={gpaTrend}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="termName" tick={{ fontSize: 12 }} />
+                      <YAxis domain={[0, 5]} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="gpa" stroke="#10b981" strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 7 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-[250px] text-gray-400 text-sm">No GPA data available yet</div>
+                )}
               </CardContent>
             </Card>
 
@@ -415,138 +412,88 @@ export default function ParentPortalEnhanced() {
                   <span className="flex items-center gap-3 text-xs">
                     <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-emerald-500" /> Present</span>
                     <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-red-400" /> Absent</span>
+                    <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-amber-400" /> Late</span>
                   </span>
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-1.5">
-                  {attendanceHeatmap.map((day, i) => (
-                    <div
-                      key={i}
-                      className={`w-8 h-8 rounded-sm flex items-center justify-center text-xs font-medium ${
-                        day.status === 'present' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                      }`}
-                      title={`${day.date}: ${day.status}`}
-                    >
-                      {day.date.split(' ')[1]}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Behavior Trend */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="text-lg">Behavior & Conduct</CardTitle>
-                <CardDescription>Overall behavior assessment</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {[
-                    { label: 'Respect for Authority', score: Math.min(behaviorScore + 5, 100) },
-                    { label: 'Class Participation', score: Math.min(behaviorScore - 3, 100) },
-                    { label: 'Homework Completion', score: Math.min(behaviorScore + 1, 100) },
-                    { label: 'Peer Relations', score: Math.min(behaviorScore + 4, 100) },
-                    { label: 'Punctuality', score: Math.min(behaviorScore - 2, 100) },
-                    { label: 'Discipline', score: Math.min(behaviorScore + 2, 100) },
-                  ].map(item => (
-                    <div key={item.label}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-gray-600">{item.label}</span>
-                        <span className="font-medium">{item.score}%</span>
-                      </div>
-                      <Progress value={item.score} className="h-2" />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        {/* Messages */}
-        <TabsContent value="messages">
-          {selectedTeacher ? (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedTeacher(null)}>
-                    ← Back
-                  </Button>
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="text-xs">
-                      {teacherContacts.find(t => t.id === selectedTeacher)?.avatar}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-base">{teacherContacts.find(t => t.id === selectedTeacher)?.name}</CardTitle>
-                    <CardDescription>{teacherContacts.find(t => t.id === selectedTeacher)?.subject}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[300px] mb-4">
-                  <div className="space-y-3">
-                    {teacherContacts.find(t => t.id === selectedTeacher)?.messages.map(msg => (
-                      <div key={msg.id} className={`flex ${msg.sender === 'parent' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-sm ${
-                          msg.sender === 'parent'
-                            ? 'bg-emerald-500 text-white rounded-br-md'
-                            : 'bg-gray-100 text-gray-800 rounded-bl-md'
-                        }`}>
-                          {msg.content}
-                          <p className={`text-[10px] mt-1 ${msg.sender === 'parent' ? 'text-emerald-100' : 'text-gray-400'}`}>{msg.time}</p>
-                        </div>
+                {attendanceRecords.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {attendanceRecords.map((day, i) => (
+                      <div
+                        key={i}
+                        className={`w-8 h-8 rounded-sm flex items-center justify-center text-xs font-medium ${
+                          day.status === 'present' ? 'bg-emerald-100 text-emerald-700' :
+                          day.status === 'late' ? 'bg-amber-100 text-amber-700' :
+                          'bg-red-100 text-red-700'
+                        }`}
+                        title={`${day.date}: ${day.status}`}
+                      >
+                        {day.date.split(' ')[1]}
                       </div>
                     ))}
                   </div>
-                </ScrollArea>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Type a message..."
-                    value={parentMessage}
-                    onChange={(e) => setParentMessage(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                  />
-                  <Button onClick={handleSendMessage} className="gap-1">
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
+                ) : (
+                  <div className="flex items-center justify-center h-[250px] text-gray-400 text-sm">No attendance records available yet</div>
+                )}
               </CardContent>
             </Card>
-          ) : (
-            teacherContacts.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6 text-center">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                  <p className="text-gray-500">No teachers found.</p>
+
+            {/* Subject Analysis / Performance by Subject */}
+            {analytics?.subjectAnalysis && analytics.subjectAnalysis.length > 0 && (
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-lg">Performance by Subject</CardTitle>
+                  <CardDescription>Comparison with class average</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={analytics.subjectAnalysis}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="subjectName" tick={{ fontSize: 11 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="studentAverage" name="Student Avg" fill="#10b981" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="classAverage" name="Class Avg" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </CardContent>
               </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {teacherContacts.map(teacher => (
-                  <Card key={teacher.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedTeacher(teacher.id)}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-center gap-3 mb-3">
-                        <Avatar className="h-12 w-12">
-                          <AvatarFallback className="bg-blue-100 text-blue-700">{teacher.avatar}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium text-sm">{teacher.name}</p>
-                          <p className="text-xs text-gray-400">{teacher.subject}</p>
-                        </div>
+            )}
+
+            {/* Behavior Score */}
+            {behaviorScore > 0 && (
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="text-lg">Behavior & Conduct</CardTitle>
+                  <CardDescription>Overall behavior assessment</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-6">
+                    <div className="relative size-32">
+                      <svg className="size-32 -rotate-90" viewBox="0 0 36 36">
+                        <circle cx="18" cy="18" r="15.5" fill="none" stroke="#e5e7eb" strokeWidth="3" />
+                        <circle cx="18" cy="18" r="15.5" fill="none" stroke={behaviorScore >= 90 ? '#10b981' : behaviorScore >= 75 ? '#f59e0b' : '#ef4444'} strokeWidth="3" strokeDasharray={`${behaviorScore}, 100`} strokeLinecap="round" />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold">{behaviorScore}</span>
                       </div>
-                      <p className="text-xs text-gray-500 line-clamp-2">
-                        {teacher.messages[teacher.messages.length - 1]?.content}
-                      </p>
-                      <p className="text-[10px] text-gray-400 mt-2">{teacher.messages[teacher.messages.length - 1]?.time}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )
-          )}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Star className="size-4 text-purple-500" />
+                        <span className="text-sm font-medium">
+                          {behaviorScore >= 90 ? 'Excellent Conduct' : behaviorScore >= 75 ? 'Good Conduct' : behaviorScore >= 60 ? 'Fair Conduct' : 'Needs Improvement'}
+                        </span>
+                      </div>
+                      <Progress value={behaviorScore} className="h-2 w-48" />
+                      <p className="text-xs text-gray-400">Overall behavior rating based on school records</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
 
         {/* Announcements */}
@@ -559,7 +506,7 @@ export default function ParentPortalEnhanced() {
             <CardContent>
               {announcements.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
-                  <Mail className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                  <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                   <p>No announcements yet.</p>
                 </div>
               ) : (
@@ -614,7 +561,7 @@ export default function ParentPortalEnhanced() {
                             <div>
                               <p className="font-medium text-sm">{hw.title}</p>
                               <p className="text-xs text-gray-400">
-                                {hw.subject?.name || 'No Subject'} • {hw.class?.name || ''} • Due: {new Date(hw.dueDate).toLocaleDateString()}
+                                {hw.subject?.name || 'No Subject'} &bull; {hw.class?.name || ''} &bull; Due: {new Date(hw.dueDate).toLocaleDateString()}
                               </p>
                             </div>
                             <Badge variant={
@@ -630,7 +577,7 @@ export default function ParentPortalEnhanced() {
                           {submission && (
                             <div className="text-xs text-gray-500 mt-2">
                               {submission.score !== null && <span>Score: {submission.score}/{hw.totalMarks}</span>}
-                              {submission.grade && <span> • Grade: {submission.grade}</span>}
+                              {submission.grade && <span> &bull; Grade: {submission.grade}</span>}
                               {submission.teacherComment && <p className="mt-1 italic">Teacher: {submission.teacherComment}</p>}
                             </div>
                           )}

@@ -224,6 +224,7 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
         { id: 'calendar', label: 'Calendar', icon: 'calendar' },
         { id: 'id-cards', label: 'ID Cards', icon: 'id-card' },
         { id: 'analytics', label: 'Performance', icon: 'trending-up' },
+        { id: 'feedback', label: 'Feedback', icon: 'message-square' },
         { id: 'profile', label: 'Profile', icon: 'user' },
     ],
   STUDENT: [
@@ -242,6 +243,7 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
     { id: 'announcements', label: 'Announcements', icon: 'megaphone' },
     { id: 'school-calendar-enhanced', label: 'Calendar', icon: 'calendar' },
     { id: 'student-ai-chat', label: 'AI Study Assistant', icon: 'sparkles' },
+    { id: 'feedback', label: 'Feedback', icon: 'message-square' },
     { id: 'notifications', label: 'Notifications', icon: 'bell' },
   ],
     PARENT: [
@@ -269,20 +271,22 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
      { id: 'expenses', label: 'Expenses', icon: 'trending-down' },
      { id: 'finance', label: 'Financial Reports', icon: 'bar-chart-3' },
      { id: 'students', label: 'Student Accounts', icon: 'user-graduate' },
-     { id: 'analytics', label: 'Analytics', icon: 'trending-up' },
-     { id: 'notifications', label: 'Notifications', icon: 'bell' },
-     { id: 'profile', label: 'Profile', icon: 'user' },
-   ],
-   LIBRARIAN: [
+      { id: 'analytics', label: 'Analytics', icon: 'trending-up' },
+      { id: 'feedback', label: 'Feedback', icon: 'message-square' },
+      { id: 'notifications', label: 'Notifications', icon: 'bell' },
+      { id: 'profile', label: 'Profile', icon: 'user' },
+    ],
+    LIBRARIAN: [
      { id: 'overview', label: 'Dashboard', icon: 'layout-dashboard' },
      { id: 'books', label: 'Books', icon: 'book-open' },
      { id: 'borrow-records', label: 'Borrow Records', icon: 'repeat' },
      { id: 'id-scanner', label: 'ID Scanner', icon: 'scan-line' },
-     { id: 'analytics', label: 'Statistics', icon: 'bar-chart-3' },
-     { id: 'notifications', label: 'Notifications', icon: 'bell' },
-     { id: 'profile', label: 'Profile', icon: 'user' },
-   ],
-      DIRECTOR: [
+      { id: 'analytics', label: 'Statistics', icon: 'bar-chart-3' },
+      { id: 'feedback', label: 'Feedback', icon: 'message-square' },
+      { id: 'notifications', label: 'Notifications', icon: 'bell' },
+      { id: 'profile', label: 'Profile', icon: 'user' },
+    ],
+       DIRECTOR: [
         { id: 'overview', label: 'Executive Dashboard', icon: 'layout-dashboard' },
         { id: 'analytics', label: 'Analytics', icon: 'bar-chart-3' },
         { id: 'students', label: 'Student Overview', icon: 'user-graduate' },

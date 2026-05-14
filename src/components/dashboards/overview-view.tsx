@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Briefcase, Users, BookOpen, BarChart3, Calendar, MessageSquare, CreditCard, Bell, GraduationCap, ClipboardList, Clock, RefreshCw, Loader2, School, UserCheck, FileEdit, Sparkles, Trophy, Target, Eye, Shield, Award, Video, BrainCircuit, HelpCircle } from 'lucide-react';
+import { Briefcase, Users, BookOpen, BarChart3, Calendar, MessageSquare, CreditCard, Bell, GraduationCap, ClipboardList, Clock, RefreshCw, Loader2, School, UserCheck, FileEdit, Sparkles, Trophy, Target, Eye, Shield, Award, Video, BrainCircuit, HelpCircle, Receipt, TrendingDown, Repeat, ScanLine } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { SafeFormattedDate } from '@/components/shared/safe-formatted-date';
 import { cn } from '@/lib/utils';
@@ -44,6 +44,39 @@ const teacherQuickActions = [
   { icon: BrainCircuit, label: 'AI Assistant', view: 'ai-assistant' as const, color: 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100', iconColor: 'text-indigo-600' },
 ];
 
+const parentQuickActions = [
+  { icon: Users, label: 'My Children', view: 'parent-portal' as const, color: 'bg-orange-50 border-orange-200 hover:bg-orange-100', iconColor: 'text-orange-600' },
+  { icon: BarChart3, label: 'Child Results', view: 'parent-results-view' as const, color: 'bg-blue-50 border-blue-200 hover:bg-blue-100', iconColor: 'text-blue-600' },
+  { icon: Calendar, label: 'Attendance', view: 'attendance' as const, color: 'bg-amber-50 border-amber-200 hover:bg-amber-100', iconColor: 'text-amber-600' },
+  { icon: BookOpen, label: 'Homework', view: 'parent-homework' as const, color: 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100', iconColor: 'text-emerald-600' },
+  { icon: CreditCard, label: 'Fee Payments', view: 'finance' as const, color: 'bg-green-50 border-green-200 hover:bg-green-100', iconColor: 'text-green-600' },
+  { icon: MessageSquare, label: 'Messages', view: 'in-app-chat' as const, color: 'bg-pink-50 border-pink-200 hover:bg-pink-100', iconColor: 'text-pink-600' },
+];
+
+const studentQuickActions = [
+  { icon: BarChart3, label: 'My Results', view: 'results' as const, color: 'bg-blue-50 border-blue-200 hover:bg-blue-100', iconColor: 'text-blue-600' },
+  { icon: BookOpen, label: 'Homework', view: 'homework' as const, color: 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100', iconColor: 'text-emerald-600' },
+  { icon: Calendar, label: 'Attendance', view: 'attendance' as const, color: 'bg-amber-50 border-amber-200 hover:bg-amber-100', iconColor: 'text-amber-600' },
+  { icon: Clock, label: 'Timetable', view: 'timetable' as const, color: 'bg-purple-50 border-purple-200 hover:bg-purple-100', iconColor: 'text-purple-600' },
+  { icon: Video, label: 'Video Lessons', view: 'student-video-lessons' as const, color: 'bg-cyan-50 border-cyan-200 hover:bg-cyan-100', iconColor: 'text-cyan-600' },
+  { icon: FileEdit, label: 'Take Exam', view: 'exams' as const, color: 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100', iconColor: 'text-indigo-600' },
+];
+
+const accountantQuickActions = [
+  { icon: CreditCard, label: 'Payments', view: 'payments' as const, color: 'bg-green-50 border-green-200 hover:bg-green-100', iconColor: 'text-green-600' },
+  { icon: Receipt, label: 'Fee Structure', view: 'fee-structure' as const, color: 'bg-blue-50 border-blue-200 hover:bg-blue-100', iconColor: 'text-blue-600' },
+  { icon: TrendingDown, label: 'Expenses', view: 'expenses' as const, color: 'bg-red-50 border-red-200 hover:bg-red-100', iconColor: 'text-red-600' },
+  { icon: BarChart3, label: 'Financial Reports', view: 'finance' as const, color: 'bg-purple-50 border-purple-200 hover:bg-purple-100', iconColor: 'text-purple-600' },
+  { icon: Users, label: 'Student Accounts', view: 'students' as const, color: 'bg-amber-50 border-amber-200 hover:bg-amber-100', iconColor: 'text-amber-600' },
+];
+
+const librarianQuickActions = [
+  { icon: BookOpen, label: 'Books', view: 'books' as const, color: 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100', iconColor: 'text-emerald-600' },
+  { icon: Repeat, label: 'Borrow Records', view: 'borrow-records' as const, color: 'bg-blue-50 border-blue-200 hover:bg-blue-100', iconColor: 'text-blue-600' },
+  { icon: BarChart3, label: 'Statistics', view: 'analytics' as const, color: 'bg-purple-50 border-purple-200 hover:bg-purple-100', iconColor: 'text-purple-600' },
+  { icon: ScanLine, label: 'Scanner', view: 'id-scanner' as const, color: 'bg-cyan-50 border-cyan-200 hover:bg-cyan-100', iconColor: 'text-cyan-600' },
+];
+
 export function OverviewView() {
   const { currentRole, setCurrentView, selectedTermId, selectedSchoolId } = useAppStore();
   const { data: analyticsData, isLoading, refetch } = useAnalytics();
@@ -55,6 +88,8 @@ export function OverviewView() {
   const isTeacher = currentRole === 'TEACHER';
   const isStudent = currentRole === 'STUDENT';
   const isParent = currentRole === 'PARENT';
+  const isAccountant = currentRole === 'ACCOUNTANT';
+  const isLibrarian = currentRole === 'LIBRARIAN';
   const showSchoolData = isSuperAdmin || isSchoolAdmin;
 
   // Fetch announcements only for SUPER_ADMIN
@@ -77,8 +112,12 @@ export function OverviewView() {
   // Determine which quick actions to show
   const quickActions = useMemo(() => {
     if (isTeacher) return teacherQuickActions;
+    if (isParent) return parentQuickActions;
+    if (isStudent) return studentQuickActions;
+    if (isAccountant) return accountantQuickActions;
+    if (isLibrarian) return librarianQuickActions;
     return adminQuickActions;
-  }, [isTeacher]);
+  }, [isTeacher, isParent, isStudent, isAccountant, isLibrarian]);
   
   const handleNavigate = (view: string) => {
     setCurrentView(view as any);

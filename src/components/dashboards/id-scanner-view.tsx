@@ -229,25 +229,26 @@ export function IdScannerView() {
           </CardHeader>
           <CardContent>
             <div className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden">
+              {/* Always render video/canvas in DOM so refs are available immediately */}
+              <video
+                ref={videoRef}
+                className={`w-full h-full object-cover ${cameraActive ? '' : 'hidden'}`}
+                playsInline
+                muted
+                autoPlay
+              />
+              <canvas ref={canvasRef} className="hidden" />
               {cameraActive ? (
                 <>
-                  <video 
-                    ref={videoRef} 
-                    className="w-full h-full object-cover"
-                    playsInline
-                    muted
-                    autoPlay
-                  />
-                  <canvas ref={canvasRef} className="hidden" />
-                  <div className="absolute inset-0 border-2 border-emerald-500 animate-pulse" />
-                  <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-[scan_2s_ease-in-out_infinite]" style={{ marginTop: -40 }} />
+                  <div className="absolute inset-0 border-2 border-emerald-500 animate-pulse pointer-events-none" />
+                  <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-[scan_2s_ease-in-out_infinite] pointer-events-none" style={{ marginTop: -40 }} />
                 </>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400">
+                <div className="absolute inset-0 flex items-center justify-center text-gray-400 pointer-events-none">
                   <div className="text-center">
                     <Smartphone className="size-12 mx-auto mb-2 opacity-50" />
                     <p>Camera inactive</p>
-                    <p className="text-xs">Click "Start Camera" to begin</p>
+                    <p className="text-xs">Click &quot;Start Camera&quot; to begin</p>
                   </div>
                 </div>
               )}

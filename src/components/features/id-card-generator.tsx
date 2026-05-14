@@ -760,13 +760,13 @@ export function IDCardGenerator() {
                   variant={orientation === 'portrait' ? 'default' : 'outline'}
                   onClick={() => setOrientation('portrait')}
                 >
-                  Portrait (85.6×53.98 mm)
+                  Portrait (53.98×85.6 mm)
                 </Button>
                 <Button
                   variant={orientation === 'landscape' ? 'default' : 'outline'}
                   onClick={() => setOrientation('landscape')}
                 >
-                  Landscape (53.98×85.6 mm)
+                  Landscape (85.6×53.98 mm)
                 </Button>
               </div>
             </div>

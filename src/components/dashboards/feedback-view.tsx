@@ -2,10 +2,11 @@
 
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -24,7 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { KpiCard } from '@/components/shared/kpi-card';
-import { MessageSquare, Star, Reply, BarChart3, AlertTriangle } from 'lucide-react';
+import { MessageSquare, Star, Reply, BarChart3, AlertTriangle, Send, Loader2 } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -74,20 +75,31 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export function FeedbackView() {
-  const { selectedSchoolId, currentUser } = useAppStore();
+  const { selectedSchoolId, currentUser, currentRole } = useAppStore();
+  const isAdmin = currentRole === 'SCHOOL_ADMIN' || currentRole === 'DIRECTOR';
+  const isSuperAdmin = currentRole === 'SUPER_ADMIN';
+
+  // Admin state
   const [statusFilter, setStatusFilter] = useState('all');
   const [replyOpen, setReplyOpen] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<FeedbackItem | null>(null);
   const [replyText, setReplyText] = useState('');
   const [replyStatus, setReplyStatus] = useState('open');
   const [submitting, setSubmitting] = useState(false);
-
   const [feedbackData, setFeedbackData] = useState<FeedbackItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch feedback data
+  // Submission state
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [submitTitle, setSubmitTitle] = useState('');
+  const [submitCategory, setSubmitCategory] = useState('Academic');
+  const [submitRating, setSubmitRating] = useState(5);
+  const [submitDescription, setSubmitDescription] = useState('');
+  const [submitAnonymous, setSubmitAnonymous] = useState(false);
+
+  // Fetch feedback data (admin only)
   useEffect(() => {
-    if (!selectedSchoolId) return;
+    if (!selectedSchoolId || !isAdmin) return;
 
     const fetchFeedback = async () => {
       const statusParam = statusFilter !== 'all' ? `&status=${statusFilter}` : '';
@@ -104,7 +116,49 @@ export function FeedbackView() {
 
     setLoading(true);
     fetchFeedback();
-  }, [selectedSchoolId, statusFilter]);
+  }, [selectedSchoolId, statusFilter, isAdmin]);
+
+  // Submit feedback (any role)
+  const handleSubmitFeedback = async () => {
+    if (!selectedSchoolId) {
+      toast.error('No school selected');
+      return;
+    }
+    if (!submitTitle.trim()) {
+      toast.error('Please enter a title');
+      return;
+    }
+
+    setSubmittingFeedback(true);
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schoolId: selectedSchoolId,
+          userId: currentUser.id,
+          category: submitCategory,
+          rating: submitRating,
+          title: submitTitle,
+          description: submitDescription || null,
+          isAnonymous: submitAnonymous,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to submit feedback');
+
+      toast.success('Feedback submitted successfully');
+      setSubmitTitle('');
+      setSubmitCategory('Academic');
+      setSubmitRating(5);
+      setSubmitDescription('');
+      setSubmitAnonymous(false);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to submit feedback');
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
 
   const totalRating = feedbackData.reduce((sum, f) => sum + (f.rating || 0), 0);
   const ratedCount = feedbackData.filter(f => f.rating !== null).length;
@@ -131,7 +185,6 @@ export function FeedbackView() {
           setReplyOpen(false);
           setReplyText('');
           setReplyStatus('open');
-          // Refresh data
           const refreshRes = await fetch(`/api/feedback?schoolId=${selectedSchoolId}${statusFilter !== 'all' ? `&status=${statusFilter}` : ''}&limit=100`);
           const refreshJson = await refreshRes.json();
           if (refreshJson.data) setFeedbackData(refreshJson.data);
@@ -144,6 +197,108 @@ export function FeedbackView() {
       .finally(() => setSubmitting(false));
   };
 
+  if (!selectedSchoolId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+        <AlertTriangle className="size-10 opacity-40 mb-3" />
+        <p className="text-sm">Please select a school to manage feedback</p>
+      </div>
+    );
+  }
+
+  // Non-admin view: simple submission form
+  if (!isAdmin) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold">Send Feedback</h2>
+          <p className="text-sm text-muted-foreground">Share your thoughts, suggestions, or concerns with the school</p>
+        </div>
+
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <div className="space-y-2">
+              <Label>Title *</Label>
+              <Input
+                placeholder="Brief summary of your feedback"
+                value={submitTitle}
+                onChange={e => setSubmitTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select value={submitCategory} onValueChange={setSubmitCategory}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Academic">Academic</SelectItem>
+                    <SelectItem value="Facility">Facility</SelectItem>
+                    <SelectItem value="Staff">Staff</SelectItem>
+                    <SelectItem value="General">General</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Rating</Label>
+                <div className="flex items-center gap-1 pt-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className="p-0.5"
+                      onClick={() => setSubmitRating(i + 1)}
+                    >
+                      <Star
+                        className={cn(
+                          'size-6 transition-colors',
+                          i < submitRating ? 'text-amber-400 fill-amber-400' : 'text-gray-300'
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Description (Optional)</Label>
+              <Textarea
+                placeholder="Provide more details about your feedback..."
+                rows={4}
+                value={submitDescription}
+                onChange={e => setSubmitDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="anonymous"
+                checked={submitAnonymous}
+                onChange={e => setSubmitAnonymous(e.target.checked)}
+                className="rounded border-input"
+              />
+              <Label htmlFor="anonymous" className="text-sm cursor-pointer">Submit anonymously</Label>
+            </div>
+
+            <Button
+              onClick={handleSubmitFeedback}
+              disabled={submittingFeedback || !submitTitle.trim()}
+              className="gap-2"
+            >
+              {submittingFeedback ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+              Submit Feedback
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Admin view
   if (loading) {
     return (
       <div className="space-y-6">
@@ -157,15 +312,6 @@ export function FeedbackView() {
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-28 rounded-lg" />)}
         </div>
-      </div>
-    );
-  }
-
-  if (!selectedSchoolId) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <AlertTriangle className="size-10 opacity-40 mb-3" />
-        <p className="text-sm">Please select a school to view feedback</p>
       </div>
     );
   }

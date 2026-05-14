@@ -2,22 +2,27 @@ import QRCode from 'qrcode';
 import sharp from 'sharp';
 import { db } from '@/lib/db';
 
-// Standard ID card dimensions at 300 DPI
-// Portrait (taller than wide): 53.98mm × 85.6mm
-// Landscape (wider than tall): 85.6mm × 53.98mm
-const CARD_W_MM = 85.6;
-const CARD_H_MM = 53.98;
-const DPI = 300;
-const MM_TO_IN = 25.4;
+const MM_PX = (mm: number) => Math.round((mm / 25.4) * 300);
 
-function mmToPx(mm: number): number {
-  return Math.round((mm / MM_TO_IN) * DPI);
+// Portrait = taller (53.98×85.6mm / 637×1011px)
+// Landscape = wider (85.6×53.98mm / 1011×637px)
+const PW = MM_PX(53.98), PH = MM_PX(85.6);
+const LW = MM_PX(85.6), LH = MM_PX(53.98);
+
+function esc(s: unknown): string {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-const CARD_W_PX_PORTRAIT = mmToPx(CARD_H_MM);  // 637
-const CARD_H_PX_PORTRAIT = mmToPx(CARD_W_MM);   // 1011
-const CARD_W_PX_LANDSCAPE = mmToPx(CARD_W_MM);   // 1011
-const CARD_H_PX_LANDSCAPE = mmToPx(CARD_H_MM);   // 637
+function px(v: number): string { return Math.round(v) + ''; }
+
+function adjustColor(c: string, amt: number): string {
+  const h = c.replace('#', '');
+  const r = Math.max(0, Math.min(255, parseInt(h.substr(0, 2), 16) + amt));
+  const g = Math.max(0, Math.min(255, parseInt(h.substr(2, 2), 16) + amt));
+  const b = Math.max(0, Math.min(255, parseInt(h.substr(4, 2), 16) + amt));
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
 
 export async function renderIDCard(
   person: any,
@@ -31,244 +36,215 @@ export async function renderIDCard(
   role: string,
   isBack = false
 ): Promise<Buffer> {
-  const isPortrait = orientation === 'portrait';
-  const W = isPortrait ? CARD_W_PX_PORTRAIT : CARD_W_PX_LANDSCAPE;
-  const H = isPortrait ? CARD_H_PX_PORTRAIT : CARD_H_PX_LANDSCAPE;
+  const port = orientation === 'portrait';
+  const W = port ? PW : LW;
+  const H = port ? PH : LH;
 
   const personType = person.type || (role === 'STUDENT' ? 'student' : 'staff');
+  const prim = colors.primary || '#059669';
+  const sec = colors.secondary || '#FFFFFF';
 
-  // Generate QR code as base64 PNG
+  // ── QR code ─────────────────────────────────────────────
   let qrBase64 = '';
   if (showQR && !isBack) {
-    const qrData = JSON.stringify({
-      type: personType,
-      id: person.displayId || person.admissionNo || person.employeeNo || 'N/A',
-      userId: person.userId,
-      personId: person.id || person.personId,
-      schoolId: person.schoolId,
-      name: person.name,
-      role: role,
-      timestamp: Date.now(),
-    });
     try {
-      const qrSize = isPortrait ? 180 : 200;
-      const qrBuffer = await QRCode.toBuffer(qrData, {
-        width: qrSize,
-        margin: 1,
-        color: { dark: colors.primary, light: colors.secondary },
-      });
-      qrBase64 = qrBuffer.toString('base64');
-    } catch (err) {
-      console.error('QR generation failed:', err);
-    }
+      const qrBuf = await QRCode.toBuffer(JSON.stringify({
+        type: personType,
+        id: esc(person.displayId || person.admissionNo || person.employeeNo || 'N/A'),
+        userId: person.userId || '',
+        personId: person.id || person.personId || '',
+        schoolId: person.schoolId || '',
+        name: esc(person.name || ''),
+        role,
+        timestamp: Date.now(),
+      }), { width: port ? 180 : 200, margin: 1, color: { dark: prim, light: sec } });
+      qrBase64 = qrBuf.toString('base64');
+    } catch (_) {}
   }
 
-  // Fetch school info
-  let schoolName = 'School';
-  let schoolAddress = 'Address';
-  let schoolPhone = 'Phone';
+  // ── School info ──────────────────────────────────────────
+  let sn = 'School', sa = '', sp = '';
   if (person.schoolId) {
-    const school = await db.school.findUnique({
-      where: { id: person.schoolId },
-      select: { name: true, address: true, phone: true, email: true },
-    });
-    if (school) {
-      schoolName = school.name || 'School';
-      schoolAddress = school.address || 'Address';
-      schoolPhone = school.phone || school.email || 'Phone';
-    }
+    try {
+      const s = await db.school.findUnique({ where: { id: person.schoolId }, select: { name: true, address: true, phone: true, email: true } });
+      if (s) { sn = s.name || 'School'; sa = s.address || ''; sp = s.phone || s.email || ''; }
+    } catch (_) {}
   }
 
-  const initials = person.name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'NA';
-  const displayId = person.displayId || 'N/A';
-  const className = person.class || 'N/A';
-  const gender = person.gender || 'N/A';
-  const phone = person.phone || '';
+  // ── Dynamic values ───────────────────────────────────────
+  const pName = esc(person.name || 'Unknown');
+  const pId = esc(person.displayId || 'N/A');
+  const pClass = esc(person.class || 'N/A');
+  const pGender = esc(person.gender || 'N/A');
+  const pPhone = esc(person.phone || '');
+  const pmE = esc(personType === 'student' ? 'Class: ' + pClass : '');
+  const pmV = esc(personType === 'student' ? 'ID: ' + pId : 'ID: ' + pId);
+  const pRl = esc(role);
+  const sName = esc(sn.substring(0, port ? 20 : 28));
+  const sAddr = esc(sa);
+  const sPh = esc(sp);
+  const initials = esc((person.name || '').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'NA');
+  const bText = esc(backText);
 
-  // ─── BACK SIDE ────────────────────────────────────────────
-  if (isBack) {
-    const hdrH = Math.round(H * 0.07);
-    const fsTitle = Math.round(H * 0.022);
-    const fsContact = Math.round(H * 0.013);
-    const fsBack = Math.round(H * 0.012);
-    const fsFooter = Math.round(H * 0.011);
-    const fsWm = Math.round(H * 0.009);
-
-    const backSVG = `
-      <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="bHdr" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="${colors.primary}" stop-opacity="1" />
-            <stop offset="100%" stop-color="${adjustColor(colors.primary, -15)}" stop-opacity="1" />
-          </linearGradient>
-        </defs>
-        <rect width="100%" height="100%" fill="${colors.secondary}"/>
-        <rect x="0" y="0" width="100%" height="${hdrH}" fill="url(#bHdr)"/>
-        <text x="50%" y="${Math.round(hdrH * 0.62)}" font-family="Arial,sans-serif" font-size="${fsTitle}" font-weight="bold" fill="white" text-anchor="middle">${schoolName}</text>
-        <text x="${Math.round(W * 0.04)}" y="${Math.round(hdrH * 1.7)}" font-family="Arial,sans-serif" font-size="${fsContact}" fill="#444">${schoolAddress} | ${schoolPhone}</text>
-        <line x1="${Math.round(W * 0.03)}" y1="${Math.round(hdrH * 2.1)}" x2="${W - Math.round(W * 0.03)}" y2="${Math.round(hdrH * 2.1)}" stroke="${colors.primary}" stroke-width="1" opacity="0.3"/>
-        <text x="${Math.round(W * 0.04)}" y="${Math.round(H * 0.24)}" font-family="Arial,sans-serif" font-size="${fsBack}" fill="#555">${backText.replace(/\n/g, '&#xa;')}</text>
-        <line x1="${Math.round(W * 0.03)}" y1="${H - Math.round(H * 0.08)}" x2="${W - Math.round(W * 0.03)}" y2="${H - Math.round(H * 0.08)}" stroke="${colors.primary}" stroke-width="1" opacity="0.3"/>
-        <text x="50%" y="${H - Math.round(H * 0.055)}" font-family="Arial,sans-serif" font-size="${fsFooter}" fill="#888" text-anchor="middle">Academic Year: ${new Date().getFullYear()}/${new Date().getFullYear() + 1}</text>
-        <text x="50%" y="${H - Math.round(H * 0.035)}" font-family="Arial,sans-serif" font-size="${fsFooter}" fill="#aaa" text-anchor="middle">Emergency Contact: ${schoolPhone}</text>
-        <text x="${W - Math.round(W * 0.03)}" y="${H - Math.round(H * 0.015)}" font-family="Arial,sans-serif" font-size="${fsWm}" fill="#ccc" text-anchor="end">Skoolar - Odebunmi Tawwāb</text>
-      </svg>`;
-    return sharp(Buffer.from(backSVG)).png().toBuffer();
-  }
-
-  // ─── FRONT SIDE ───────────────────────────────────────────
-  const phSz = Math.round(W * (isPortrait ? 0.18 : 0.12));
-  const phX = Math.round(W * 0.035);
-  const phY = Math.round(H * 0.13);
-  const phH = Math.round(phSz * 1.2);
-
-  // Build photo
-  let photoSection = '';
+  // ── Photo ────────────────────────────────────────────────
+  let photoEl = '';
   if (showPhoto) {
-    let photoBase64 = '';
-    let mime = 'image/jpeg';
+    let b64 = '', mime = 'image/jpeg';
     if (photoUrl) {
       try {
-        let absUrl = photoUrl;
-        if (photoUrl.startsWith('/')) absUrl = `https://skoolar.org${photoUrl}`;
+        const url = photoUrl.startsWith('/') ? photoUrl : photoUrl.startsWith('http') ? photoUrl : `https://skoolar.org${photoUrl}`;
         const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 5000);
-        const res = await fetch(absUrl, { signal: ctrl.signal, headers: { 'User-Agent': 'Skoolar-ID/1.0' } });
+        const tid = setTimeout(() => ctrl.abort(), 4000);
+        const r = await fetch(url, { signal: ctrl.signal, headers: { 'User-Agent': 'Skoolar-ID/1.0' } });
         clearTimeout(tid);
-        if (res.ok) {
-          const ct = res.headers.get('content-type') || '';
+        if (r.ok) {
+          const ct = r.headers.get('content-type') || '';
           if (ct.startsWith('image/')) {
-            const buf = await res.arrayBuffer();
-            photoBase64 = Buffer.from(new Uint8Array(buf)).toString('base64');
+            const ab = await r.arrayBuffer();
+            b64 = Buffer.from(new Uint8Array(ab)).toString('base64');
             mime = ct;
           }
         }
-      } catch (_) { /* photo fetch failed, fall through to placeholder */ }
+      } catch (_) {}
     }
-    if (photoBase64 && photoBase64.length > 100) {
-      photoSection = `
-        <defs><clipPath id="pc"><rect x="${phX + 2}" y="${phY + 2}" width="${phSz - 4}" height="${phH - 4}" rx="${Math.round(phSz * 0.06)}"/></clipPath></defs>
-        <rect x="${phX}" y="${phY}" width="${phSz}" height="${phH}" rx="${Math.round(phSz * 0.07)}" fill="${colors.primary}" opacity="0.08"/>
-        <image x="${phX + 2}" y="${phY + 2}" width="${phSz - 4}" height="${phH - 4}" href="data:${mime};base64,${photoBase64}" clip-path="url(#pc)" preserveAspectRatio="xMidYMid slice"/>`;
+    if (b64 && b64.length > 100) {
+      const ps = port ? Math.round(W * 0.19) : Math.round(W * 0.13);
+      const px_ = Math.round(W * 0.035);
+      const py = Math.round(H * 0.13);
+      const ph = Math.round(ps * 1.25);
+      const r4 = Math.round(ps * 0.06);
+      photoEl = `<rect x="${px(px_)}" y="${px(py)}" width="${px(ps)}" height="${px(ph)}" rx="${px(r4)}" fill="${prim}" opacity="0.07"/>
+<svg x="${px(px_ + 2)}" y="${px(py + 2)}" width="${px(ps - 4)}" height="${px(ph - 4)}" viewBox="0 0 ${ps - 4} ${ph - 4}" preserveAspectRatio="xMidYMid slice"><clipPath id="pc"><rect width="${ps - 4}" height="${ph - 4}" rx="${px(r4 - 1)}"/></clipPath></svg>
+<image x="${px(px_ + 2)}" y="${px(py + 2)}" width="${px(ps - 4)}" height="${px(ph - 4)}" href="data:${mime};base64,${b64}" preserveAspectRatio="xMidYMid slice" clip-path="url(#pc)"/>`;
     } else {
-      photoSection = `
-        <rect x="${phX}" y="${phY}" width="${phSz}" height="${phH}" rx="${Math.round(phSz * 0.07)}" fill="${colors.primary}" opacity="0.06"/>
-        <rect x="${phX + 2}" y="${phY + 2}" width="${phSz - 4}" height="${phH - 4}" rx="${Math.round(phSz * 0.06)}" fill="none" stroke="${colors.primary}" stroke-width="1.5" opacity="0.3"/>
-        <circle cx="${phX + phSz / 2}" cy="${phY + phH * 0.45}" r="${Math.round(phSz * 0.28)}" fill="${colors.primary}" opacity="0.12"/>
-        <text x="${phX + phSz / 2}" y="${phY + phH * 0.45 + Math.round(phSz * 0.1)}" font-family="Arial,sans-serif" font-size="${Math.round(phSz * 0.3)}" font-weight="bold" fill="${colors.primary}" text-anchor="middle">${initials}</text>
-        <text x="${phX + phSz / 2}" y="${phY + phH * 0.88}" font-family="Arial,sans-serif" font-size="${Math.round(phSz * 0.09)}" fill="#666" text-anchor="middle">PHOTO</text>`;
+      const ps = port ? Math.round(W * 0.19) : Math.round(W * 0.13);
+      const px_ = Math.round(W * 0.035);
+      const py = Math.round(H * 0.13);
+      const ph = Math.round(ps * 1.25);
+      photoEl = `<rect x="${px(px_)}" y="${px(py)}" width="${px(ps)}" height="${px(ph)}" rx="${px(Math.round(ps * 0.07))}" fill="${prim}" opacity="0.06"/>
+<rect x="${px(px_ + 2)}" y="${px(py + 2)}" width="${px(ps - 4)}" height="${px(ph - 4)}" rx="${px(Math.round(ps * 0.06))}" fill="none" stroke="${prim}" stroke-width="2" opacity="0.35"/>
+<circle cx="${px(px_ + ps / 2)}" cy="${px(py + ph * 0.42)}" r="${px(Math.round(ps * 0.3))}" fill="${prim}" opacity="0.12"/>
+<text x="${px(px_ + ps / 2)}" y="${px(py + ph * 0.42 + Math.round(ps * 0.12))}" font-family="sans-serif" font-size="${px(Math.round(ps * 0.35))}" font-weight="bold" fill="${prim}" text-anchor="middle">${initials}</text>
+<text x="${px(px_ + ps / 2)}" y="${px(py + ph * 0.88)}" font-family="sans-serif" font-size="${px(Math.round(ps * 0.1))}" fill="#666" text-anchor="middle">PHOTO</text>`;
     }
   }
 
-  // ─── SVG Dimensions ───────────────────────────────────────
-  const hdrH = Math.round(H * 0.065);
-  const fsHdrTitle = Math.round(H * 0.022);
-  const fsHdrSub = Math.round(H * 0.014);
+  // ── Layout calculations ──────────────────────────────────
+  const hdrH = Math.round(H * 0.07);
+  const hdrFs = Math.round(H * 0.024);
+  const hdrSubFs = Math.round(H * 0.015);
+  const photoW = port ? Math.round(W * 0.19) : Math.round(W * 0.13);
+  const photoX = Math.round(W * 0.035);
+  const photoY = Math.round(H * 0.13);
+  const photoH = Math.round(photoW * 1.25);
+  const txtX = Math.round(photoX + photoW + W * 0.03);
+  const nameY = Math.round(photoY + photoH * 0.28);
+  const nameFs = Math.round(H * 0.025);
+  const badgeY = Math.round(photoY + photoH * 0.4);
+  const badgeH = Math.round(H * 0.022);
+  const badgeFs = Math.round(H * 0.013);
+  const idY = Math.round(photoY + photoH * 0.54);
+  const detailFs = Math.round(H * 0.013);
+  const lh = Math.round(H * 0.025);
+  const wmFs = Math.round(H * 0.009);
 
-  const infoLeft = Math.round(phX + phSz + W * 0.035);
-  const infoTop = phY;
-
-  const fsName = Math.round(H * 0.026);
-  const fsBadge = Math.round(H * 0.014);
-  const fsDetail = Math.round(H * 0.014);
-  const fsWm = Math.round(H * 0.009);
-
-  const lh = Math.round(H * 0.026); // line height for details
-
-  // QR
+  // QR dimensions
   let qrSz = 0, qrX = 0, qrY = 0;
   if (showQR && qrBase64) {
-    qrSz = Math.round(isPortrait ? H * 0.22 : W * 0.20);
+    qrSz = port ? Math.round(H * 0.24) : Math.round(W * 0.22);
     qrX = Math.round(W - qrSz - W * 0.035);
-    qrY = Math.round(H - qrSz - H * 0.045);
+    qrY = Math.round(H - qrSz - H * 0.055);
   }
 
-  // Layout info lines
-  const infoLines: { label: string; value: string }[] = [];
+  // Info lines after ID
+  const infoLines: { lab: string; val: string }[] = [];
   if (personType === 'student') {
-    infoLines.push({ label: 'Class', value: className });
-    infoLines.push({ label: 'Gender', value: gender });
+    infoLines.push({ lab: 'Class', val: pClass });
+    infoLines.push({ lab: 'Gender', val: pGender });
   } else {
-    if (role) infoLines.push({ label: 'Role', value: role });
-    if (phone) infoLines.push({ label: 'Phone', value: phone });
+    if (pRl) infoLines.push({ lab: 'Role', val: pRl });
+    if (pPhone) infoLines.push({ lab: 'Phone', val: pPhone });
   }
 
-  // ─── Barcode fallback ─────────────────────────────────────
-  let barcodeSvg = '';
+  // Barcode fallback
+  let bcEl = '';
   if (showBarcode && !showQR) {
-    const bcW = Math.round(W * 0.2);
-    const bcH = Math.round(H * 0.06);
-    const bcX = infoLeft;
-    const bcY = Math.round(infoTop + lh * 3 + H * 0.02);
-    const barCount = 40;
-    barcodeSvg = Array.from({ length: barCount }).map((_, i) =>
-      `<rect x="${bcX + i * 2}" y="${bcY + 4}" width="${i % 2 === 0 ? 1.5 : 1}" height="${bcH - 8}" fill="#333" />`
+    const bcX = txtX;
+    const bcY = Math.round(idY + lh * 3 + H * 0.015);
+    bcEl = Array.from({ length: 40 }).map((_, i) =>
+      `<rect x="${px(bcX + i * 2)}" y="${px(bcY + 4)}" width="${i % 2 === 0 ? 1.5 : 1}" height="${px(Math.round(H * 0.04))}" fill="#333"/>`
     ).join('');
   }
 
-  const frontSVG = `
-  <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="hdrG" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stop-color="${colors.primary}" stop-opacity="1" />
-        <stop offset="100%" stop-color="${adjustColor(colors.primary, -25)}" stop-opacity="1" />
-      </linearGradient>
-      <linearGradient id="accG" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stop-color="${adjustColor(colors.primary, 20)}" stop-opacity="0.08" />
-        <stop offset="100%" stop-color="${colors.secondary}" stop-opacity="0" />
-      </linearGradient>
-    </defs>
+  // ── Back card text lines ─────────────────────────────────
+  const backLines = isBack && bText ? bText.split('\n') : [];
 
-    <rect width="100%" height="100%" fill="${colors.secondary}"/>
-    <rect width="100%" height="100%" fill="url(#accG)"/>
+  // ── SVG build ────────────────────────────────────────────
+  const svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="hd" x1="0%" y1="0%" x2="100%" y2="0%">
+    <stop offset="0%" stop-color="${prim}" stop-opacity="1"/>
+    <stop offset="100%" stop-color="${adjustColor(prim, -25)}" stop-opacity="1"/>
+  </linearGradient>
+  <linearGradient id="ac" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="${adjustColor(prim, 20)}" stop-opacity="0.07"/>
+    <stop offset="100%" stop-color="${sec}" stop-opacity="0"/>
+  </linearGradient>
+</defs>
 
-    <!-- Header -->
-    <rect x="0" y="0" width="100%" height="${hdrH}" fill="url(#hdrG)"/>
-    <text x="${Math.round(W * 0.04)}" y="${Math.round(hdrH * 0.62)}" font-family="Arial,sans-serif" font-size="${fsHdrTitle}" font-weight="bold" fill="white">${schoolName.substring(0, isPortrait ? 18 : 26)}</text>
-    <text x="${W - Math.round(W * 0.04)}" y="${Math.round(hdrH * 0.62)}" font-family="Arial,sans-serif" font-size="${fsHdrSub}" fill="rgba(255,255,255,0.85)" text-anchor="end">ID CARD</text>
+<rect width="100%" height="100%" fill="${sec}"/>
+<rect width="100%" height="100%" fill="url(#ac)"/>
 
-    <!-- Photo -->
-    ${photoSection}
+<!-- Header bar -->
+<rect x="0" y="0" width="100%" height="${px(hdrH)}" fill="url(#hd)"/>
+<text x="${px(Math.round(W * 0.04))}" y="${px(Math.round(hdrH * 0.62))}" font-family="sans-serif" font-size="${px(hdrFs)}" font-weight="bold" fill="#fff">${sName}</text>
+<text x="${px(W - Math.round(W * 0.04))}" y="${px(Math.round(hdrH * 0.62))}" font-family="sans-serif" font-size="${px(hdrSubFs)}" fill="rgba(255,255,255,0.8)" text-anchor="end">ID CARD</text>
 
-    <!-- Name -->
-    <text x="${infoLeft}" y="${infoTop + Math.round(phH * 0.28)}" font-family="Arial,sans-serif" font-size="${fsName}" font-weight="bold" fill="${colors.primary}">${person.name || 'Unknown'}</text>
+${isBack ? `
+<!-- Back card content -->
+<text x="50%" y="${px(Math.round(H * 0.28))}" font-family="sans-serif" font-size="${px(Math.round(H * 0.02))}" font-weight="bold" fill="${prim}" text-anchor="middle">BACK SIDE</text>
+${backLines.map((line, i) => {
+  const isEmpty = !line.trim();
+  const isBold = !isEmpty && /^[A-Z\s]+:/.test(line.trim());
+  const fs = isEmpty ? Math.round(H * 0.01) : isBold ? Math.round(H * 0.016) : Math.round(H * 0.014);
+  const y = Math.round(H * 0.33 + i * (isEmpty ? 0.01 : 0.026) * H);
+  const fw = isBold ? 'bold' : 'normal';
+  return isEmpty
+    ? `<rect x="${px(Math.round(W * 0.1))}" y="${px(y)}" width="${px(Math.round(W * 0.8))}" height="${px(Math.round(H * 0.005))}" fill="#eee"/>`
+    : `<text x="50%" y="${px(y)}" font-family="sans-serif" font-size="${px(fs)}" font-weight="${fw}" fill="#444" text-anchor="middle">${esc(line)}</text>`;
+}).join('\n')}
+` : `
+<!-- Photo area -->
+${photoEl}
 
-    <!-- Role badge -->
-    <rect x="${infoLeft}" y="${infoTop + Math.round(phH * 0.38)}" width="${Math.round(W * 0.12)}" height="${Math.round(H * 0.022)}" rx="${Math.round(H * 0.006)}" fill="none" stroke="${colors.primary}" stroke-width="1.2"/>
-    <text x="${infoLeft + Math.round(W * 0.06)}" y="${infoTop + Math.round(phH * 0.38 + H * 0.016)}" font-family="Arial,sans-serif" font-size="${fsBadge}" font-weight="bold" fill="${colors.primary}" text-anchor="middle">${role}</text>
+<!-- Name -->
+<text x="${px(txtX)}" y="${px(nameY)}" font-family="sans-serif" font-size="${px(nameFs)}" font-weight="bold" fill="${prim}">${pName}</text>
 
-    <!-- Display ID -->
-    <text x="${infoLeft}" y="${infoTop + Math.round(phH * 0.55)}" font-family="Arial,sans-serif" font-size="${fsDetail}" fill="#555">
-      ID: <tspan font-weight="bold">${displayId}</tspan>
-    </text>
+<!-- Role badge -->
+${role ? `<rect x="${px(txtX)}" y="${px(badgeY)}" width="${px(Math.round(W * 0.14))}" height="${px(badgeH)}" rx="${px(Math.round(badgeH / 2))}" fill="none" stroke="${prim}" stroke-width="1.2"/>
+<text x="${px(txtX + Math.round(W * 0.07))}" y="${px(badgeY + Math.round(badgeH * 0.72))}" font-family="sans-serif" font-size="${px(badgeFs)}" font-weight="bold" fill="${prim}" text-anchor="middle">${pRl}</text>` : ''}
 
-    ${infoLines.map((line, i) => `
-      <text x="${infoLeft}" y="${infoTop + Math.round(phH * 0.55 + (i + 1) * lh)}" font-family="Arial,sans-serif" font-size="${fsDetail}" fill="#555">${line.label}: <tspan font-weight="bold">${line.value}</tspan></text>
-    `).join('')}
+<!-- ID -->
+<text x="${px(txtX)}" y="${px(idY)}" font-family="sans-serif" font-size="${px(detailFs)}" fill="#444">ID <tspan font-weight="bold">${pId}</tspan></text>
 
-    <!-- QR Code -->
-    ${showQR && qrBase64 ? `
-      <rect x="${qrX}" y="${qrY}" width="${qrSz}" height="${qrSz}" rx="${Math.round(qrSz * 0.07)}" fill="white" stroke="${colors.primary}" stroke-width="2.5"/>
-      <rect x="${qrX + Math.round(qrSz * 0.06)}" y="${qrY + Math.round(qrSz * 0.06)}" width="${Math.round(qrSz * 0.88)}" height="${Math.round(qrSz * 0.88)}" rx="${Math.round(qrSz * 0.04)}" fill="${colors.secondary}"/>
-      <image x="${qrX + Math.round(qrSz * 0.12)}" y="${qrY + Math.round(qrSz * 0.12)}" width="${Math.round(qrSz * 0.76)}" height="${Math.round(qrSz * 0.76)}" href="data:image/png;base64,${qrBase64}"/>
-      <text x="${qrX + qrSz / 2}" y="${qrY + qrSz + Math.round(H * 0.016)}" font-family="Arial,sans-serif" font-size="${Math.round(qrSz * 0.1)}" font-weight="bold" fill="#333" text-anchor="middle">SCAN ME</text>
-    ` : ''}
+${infoLines.map((l, i) =>
+  `<text x="${px(txtX)}" y="${px(Math.round(idY + (i + 1) * lh))}" font-family="sans-serif" font-size="${px(detailFs)}" fill="#444">${esc(l.lab)}: <tspan font-weight="bold">${l.val}</tspan></text>`
+).join('')}
 
-    <!-- Barcode fallback -->
-    ${barcodeSvg}
+<!-- QR code -->
+${showQR && qrBase64 ? `<rect x="${px(qrX)}" y="${px(qrY)}" width="${px(qrSz)}" height="${px(qrSz)}" rx="${px(Math.round(qrSz * 0.07))}" fill="#fff" stroke="${prim}" stroke-width="3"/>
+<rect x="${px(qrX + Math.round(qrSz * 0.06))}" y="${px(qrY + Math.round(qrSz * 0.06))}" width="${px(Math.round(qrSz * 0.88))}" height="${px(Math.round(qrSz * 0.88))}" rx="${px(Math.round(qrSz * 0.04))}" fill="${sec}"/>
+<image x="${px(qrX + Math.round(qrSz * 0.12))}" y="${px(qrY + Math.round(qrSz * 0.12))}" width="${px(Math.round(qrSz * 0.76))}" height="${px(Math.round(qrSz * 0.76))}" href="data:image/png;base64,${qrBase64}"/>
+<text x="${px(qrX + qrSz / 2)}" y="${px(qrY + qrSz + Math.round(H * 0.018))}" font-family="sans-serif" font-size="${px(Math.round(qrSz * 0.1))}" font-weight="bold" fill="#333" text-anchor="middle">SCAN ME</text>` : ''}
 
-    <!-- Footer -->
-    <rect x="0" y="${H - Math.round(H * 0.025)}" width="100%" height="${Math.round(H * 0.025)}" fill="${colors.primary}" opacity="0.07"/>
-    <text x="50%" y="${H - Math.round(H * 0.01)}" font-family="Arial,sans-serif" font-size="${fsWm}" fill="#999" text-anchor="middle">Skoolar - Odebunmi Tawwāb</text>
-  </svg>`;
+<!-- Barcode -->
+${bcEl}
+`}
 
-  return sharp(Buffer.from(frontSVG)).png({ quality: 100 }).toBuffer();
-}
+<!-- Footer -->
+<rect x="0" y="${px(H - Math.round(H * 0.028))}" width="100%" height="${px(Math.round(H * 0.028))}" fill="${prim}" opacity="0.06"/>
+<text x="50%" y="${px(H - Math.round(H * 0.01))}" font-family="sans-serif" font-size="${px(wmFs)}" fill="#999" text-anchor="middle">Skoolar - Odebunmi Tawwāb</text>
+</svg>`;
 
-export function adjustColor(color: string, amount: number): string {
-  const hex = color.replace('#', '');
-  const r = Math.max(0, Math.min(255, parseInt(hex.substr(0, 2), 16) + amount));
-  const g = Math.max(0, Math.min(255, parseInt(hex.substr(2, 2), 16) + amount));
-  const b = Math.max(0, Math.min(255, parseInt(hex.substr(4, 2), 16) + amount));
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  return sharp(Buffer.from(svg)).png({ quality: 100 }).toBuffer();
 }

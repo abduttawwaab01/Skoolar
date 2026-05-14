@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
-import { Plus, Users, Loader2, GraduationCap, AlertCircle } from 'lucide-react';
+import { Plus, Users, Loader2, GraduationCap, AlertCircle, Pencil, Trash2 } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -69,6 +69,21 @@ export function ParentsView() {
   const [selectedStudents, setSelectedStudents] = React.useState<string[]>([]);
   const [availableStudents, setAvailableStudents] = React.useState<StudentOption[]>([]);
   const [loadingStudents, setLoadingStudents] = React.useState(false);
+
+  // Edit state
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [editParent, setEditParent] = React.useState<ParentRecord | null>(null);
+  const [editName, setEditName] = React.useState('');
+  const [editPhone, setEditPhone] = React.useState('');
+  const [editEmail, setEditEmail] = React.useState('');
+  const [editPassword, setEditPassword] = React.useState('');
+  const [editOccupation, setEditOccupation] = React.useState('');
+  const [editing, setEditing] = React.useState(false);
+
+  // Delete state
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [deleteParent, setDeleteParent] = React.useState<ParentRecord | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
 
   React.useEffect(() => {
     if (open && selectedSchoolId && availableStudents.length === 0) {
@@ -188,6 +203,106 @@ export function ParentsView() {
     }
   };
 
+  const handleEditParent = async () => {
+    if (!editParent) return;
+
+    if (!editName || !editEmail) {
+      toast.error('Name and email are required');
+      return;
+    }
+
+    setEditing(true);
+    try {
+      const body: Record<string, unknown> = {
+        name: editName,
+        email: editEmail,
+        phone: editPhone || null,
+        occupation: editOccupation || null,
+      };
+      if (editPassword) body.password = editPassword;
+
+      const res = await fetch(`/api/parents/${editParent.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Failed to update parent');
+
+      toast.success('Parent updated successfully');
+      setEditOpen(false);
+      setEditParent(null);
+      setEditPassword('');
+
+      // Refresh
+      const refreshed = await fetch(`/api/parents?schoolId=${selectedSchoolId}&limit=100`)
+        .then(r => r.json())
+        .then(j => (j.data || j || []).map((p: Record<string, unknown>) => ({
+          id: p.id,
+          name: (p.user as Record<string, unknown>)?.name || '',
+          phone: (p.user as Record<string, unknown>)?.phone || p.phone || null,
+          email: (p.user as Record<string, unknown>)?.email || '',
+          childrenCount: String(p.childrenIds || '').split(',').filter(Boolean).length,
+          status: (p.user as Record<string, unknown>)?.isActive !== false ? 'active' : 'inactive',
+          occupation: p.occupation || null,
+          createdAt: p.createdAt as string || '',
+        })));
+      setParents(refreshed);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update parent');
+    } finally {
+      setEditing(false);
+    }
+  };
+
+  const openEditDialog = (parent: ParentRecord) => {
+    setEditParent(parent);
+    setEditName(parent.name);
+    setEditPhone(parent.phone || '');
+    setEditEmail(parent.email);
+    setEditPassword('');
+    setEditOccupation(parent.occupation || '');
+    setEditOpen(true);
+  };
+
+  const handleDeleteParent = async () => {
+    if (!deleteParent) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/parents/${deleteParent.id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        throw new Error(json.error || 'Failed to delete parent');
+      }
+
+      toast.success('Parent permanently deleted');
+      setDeleteOpen(false);
+      setDeleteParent(null);
+
+      // Refresh
+      const refreshed = await fetch(`/api/parents?schoolId=${selectedSchoolId}&limit=100`)
+        .then(r => r.json())
+        .then(j => (j.data || j || []).map((p: Record<string, unknown>) => ({
+          id: p.id,
+          name: (p.user as Record<string, unknown>)?.name || '',
+          phone: (p.user as Record<string, unknown>)?.phone || p.phone || null,
+          email: (p.user as Record<string, unknown>)?.email || '',
+          childrenCount: String(p.childrenIds || '').split(',').filter(Boolean).length,
+          status: (p.user as Record<string, unknown>)?.isActive !== false ? 'active' : 'inactive',
+          occupation: p.occupation || null,
+          createdAt: p.createdAt as string || '',
+        })));
+      setParents(refreshed);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete parent');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const fetchAvailableStudents = async () => {
     if (!selectedSchoolId) return;
     setLoadingStudents(true);
@@ -245,6 +360,34 @@ export function ParentsView() {
         <StatusBadge variant={row.getValue<string>('status') === 'active' ? 'success' : 'neutral'} size="sm">
           {row.getValue<string>('status')}
         </StatusBadge>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-8"
+            onClick={(e) => { e.stopPropagation(); openEditDialog(row.original); }}
+          >
+            <Pencil className="size-3.5 text-blue-600" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="size-8"
+            onClick={(e) => {
+              e.stopPropagation();
+              setDeleteParent(row.original);
+              setDeleteOpen(true);
+            }}
+          >
+            <Trash2 className="size-3.5 text-red-500" />
+          </Button>
+        </div>
       ),
     },
   ], []);
@@ -388,6 +531,68 @@ export function ParentsView() {
           <p className="text-xs mt-1">Click &quot;Add Parent&quot; to get started</p>
         </div>
       )}
+
+      {/* Edit Parent Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Parent/Guardian</DialogTitle>
+            <DialogDescription>Update parent or guardian information.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label>Full Name</Label>
+              <Input placeholder="Enter full name" value={editName} onChange={e => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone Number</Label>
+              <Input placeholder="+234-XXX-XXX-XXXX" value={editPhone} onChange={e => setEditPhone(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input placeholder="parent@email.com" type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>New Password (leave blank to keep current)</Label>
+              <Input placeholder="Enter new password" type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Occupation</Label>
+              <Input placeholder="e.g. Teacher, Business" value={editOccupation} onChange={e => setEditOccupation(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleEditParent} disabled={editing}>
+              {editing && <Loader2 className="size-4 animate-spin mr-1" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Parent</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to permanently delete {deleteParent?.name || 'this parent'}? This will also delete their user account and all associated data. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50 border border-red-200">
+            <AlertCircle className="size-5 text-red-500 shrink-0" />
+            <p className="text-sm text-red-700">This will permanently remove this parent and their user account from the database.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteParent} disabled={deleting}>
+              {deleting && <Loader2 className="size-4 animate-spin mr-1" />}
+              Delete Permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
