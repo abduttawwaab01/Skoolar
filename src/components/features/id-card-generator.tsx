@@ -46,7 +46,7 @@ interface StaffData {
 }
 
 type CardType = 'student' | 'staff';
-type ExportFormat = 'pdf' | 'png';
+type ExportFormat = 'pdf' | 'png' | 'docx' | 'csv';
 type ExportScope = 'front' | 'back' | 'both';
 type Orientation = 'portrait' | 'landscape';
 
@@ -284,7 +284,8 @@ export function IDCardGenerator() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const filename = `id-cards-${cardType}s-${new Date().toISOString().split('T')[0]}.${exportFormat === 'pdf' ? 'pdf' : 'zip'}`;
+      const extMap: Record<ExportFormat, string> = { pdf: 'pdf', png: 'zip', docx: 'docx', csv: 'csv' };
+      const filename = `id-cards-${cardType}s-${new Date().toISOString().split('T')[0]}.${extMap[exportFormat]}`;
       a.download = filename;
       a.style.display = 'none';
       document.body.appendChild(a);
@@ -711,26 +712,30 @@ export function IDCardGenerator() {
             <div className="space-y-2">
               <Label>Export Format</Label>
               <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant={exportFormat === 'pdf' ? 'default' : 'outline'}
-                  onClick={() => setExportFormat('pdf')}
-                  className="justify-start"
-                >
-                  <FileText className="size-4 mr-2" />
-                  PDF Document
-                </Button>
-                <Button
-                  variant={exportFormat === 'png' ? 'default' : 'outline'}
-                  onClick={() => setExportFormat('png')}
-                  className="justify-start"
-                >
-                  <Image className="size-4 mr-2" />
-                  PNG Images (ZIP)
-                </Button>
+                {([
+                  { value: 'pdf',  label: 'PDF Document',    icon: FileText,  desc: 'Print-ready PDF' },
+                  { value: 'png',  label: 'PNG Images',      icon: Image,     desc: 'ZIP archive' },
+                  { value: 'docx', label: 'Word Document',   icon: FileCheck, desc: 'DOCX with images' },
+                  { value: 'csv',  label: 'CSV Spreadsheet', icon: FileType,  desc: 'Metadata only' },
+                ] as const).map(opt => (
+                  <Button
+                    key={opt.value}
+                    variant={exportFormat === opt.value ? 'default' : 'outline'}
+                    onClick={() => setExportFormat(opt.value)}
+                    className="justify-start flex-col h-auto py-2 px-3 items-start"
+                  >
+                    <div className="flex items-center gap-2">
+                      <opt.icon className="size-4" />
+                      <span className="font-medium">{opt.label}</span>
+                    </div>
+                    <span className="text-[10px] opacity-60 mt-0.5 pl-6">{opt.desc}</span>
+                  </Button>
+                ))}
               </div>
             </div>
             
-            {/* Scope Selection */}
+            {/* Scope — hidden for CSV */}
+            {exportFormat !== 'csv' && (
             <div className="space-y-2">
               <Label>Export Which Side?</Label>
               <div className="grid grid-cols-3 gap-2">
@@ -751,6 +756,7 @@ export function IDCardGenerator() {
                 ))}
               </div>
             </div>
+            )}
             
             {/* Orientation */}
             <div className="space-y-2">
@@ -779,7 +785,7 @@ export function IDCardGenerator() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Format:</span>
-                <span className="font-semibold uppercase">{exportFormat}</span>
+                <span className="font-semibold uppercase">{exportFormat === 'png' ? 'PNG (ZIP)' : exportFormat.toUpperCase()}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Sides:</span>
@@ -805,7 +811,7 @@ export function IDCardGenerator() {
               ) : (
                 <>
                   <Download className="size-4 mr-2" />
-                  Download {exportFormat.toUpperCase()}
+                  Download {exportFormat === 'png' ? 'PNG (ZIP)' : exportFormat.toUpperCase()}
                 </>
               )}
             </Button>
@@ -872,9 +878,9 @@ function IDCardPreview({ person, cardType, colors, showPhoto, showBarcode, showQ
   
   const wMm = orientation === 'portrait' ? CARD_WIDTH_PORTRAIT : CARD_WIDTH_LANDSCAPE;
   const hMm = orientation === 'portrait' ? CARD_HEIGHT_PORTRAIT : CARD_HEIGHT_LANDSCAPE;
-  // Scale so the larger dimension is ~220px on screen for a clear preview
-  const targetPx = 300;
-  const scale = Math.min(targetPx / Math.max(wMm, hMm), 3.5);
+  // Scale so the larger dimension is ~260px on screen for a clear preview
+  const targetPx = 260;
+  const scale = targetPx / Math.max(wMm, hMm);
   
   return (
     <motion.div 

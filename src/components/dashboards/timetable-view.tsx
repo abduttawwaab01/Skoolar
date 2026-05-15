@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { TimetableBuilder } from './timetable-builder';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -95,6 +96,9 @@ export function TimetableView() {
   const [teachers, setTeachers] = useState<TeacherInfo[]>([]);
   const [slots, setSlots] = useState<TimetableSlot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<{ teacherId?: string; studentId?: string; classId?: string } | null>(null);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
+  const [terms, setTerms] = useState<any[]>([]);
 
   const [selectedTimetable, setSelectedTimetable] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState<string>('');
@@ -117,11 +121,17 @@ export function TimetableView() {
       setClasses(json.classes || []);
       setSubjects(json.subjects || []);
       setTeachers(json.teachers || []);
+      setAcademicYears(json.academicYears || []);
+      setTerms(json.terms || []);
       
       if (json.data?.length > 0 && !selectedTimetable) {
         setSelectedTimetable(json.data[0].id);
       }
-      if (json.classes?.length > 0 && !selectedClass) {
+      
+      setUserProfile(json.userProfile || null);
+      if (currentRole === 'STUDENT' && json.userProfile?.classId) {
+        setSelectedClass(json.userProfile.classId);
+      } else if (json.classes?.length > 0 && !selectedClass) {
         setSelectedClass(json.classes[0].id);
       }
     } catch (err) {
@@ -153,7 +163,9 @@ export function TimetableView() {
   const filteredSlots = useMemo(() => {
     let filtered = slots;
     
-    if (selectedClass) {
+    if (currentRole === 'TEACHER' && userProfile?.teacherId) {
+      filtered = filtered.filter(s => s.teacherId === userProfile.teacherId);
+    } else if (selectedClass) {
       filtered = filtered.filter(s => s.classId === selectedClass);
     }
     
@@ -161,7 +173,7 @@ export function TimetableView() {
     filtered.sort((a, b) => a.period - b.period);
     
     return filtered;
-  }, [slots, selectedClass, selectedDay]);
+  }, [slots, selectedClass, selectedDay, currentRole, userProfile]);
 
   const getSubjectName = (subjectId: string) => {
     const subject = subjects.find(s => s.id === subjectId);
@@ -197,6 +209,25 @@ export function TimetableView() {
           ))}
         </div>
       </div>
+    );
+  }
+
+  if (viewMode === 'edit') {
+    return (
+      <TimetableBuilder
+        schoolId={schoolId}
+        timetables={timetables}
+        classes={classes}
+        subjects={subjects}
+        teachers={teachers}
+        academicYears={academicYears}
+        terms={terms}
+        onSaved={() => {
+          setViewMode('view');
+          fetchTimetable();
+        }}
+        onCancel={() => setViewMode('view')}
+      />
     );
   }
 
@@ -237,6 +268,7 @@ export function TimetableView() {
           </CardContent>
         </Card>
 
+        {currentRole !== 'STUDENT' && currentRole !== 'TEACHER' && (
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Class</CardDescription>
@@ -252,6 +284,7 @@ export function TimetableView() {
             </Select>
           </CardContent>
         </Card>
+        )}
 
         <Card>
           <CardHeader className="pb-2">
@@ -374,7 +407,7 @@ export function TimetableView() {
         </CardContent>
       </Card>
 
-      {isAdmin && timetables.length > 0 && (
+      {timetables.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Week Overview</CardTitle>
@@ -383,14 +416,21 @@ export function TimetableView() {
           <CardContent>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {DAYS.filter((_, i) => i >= 1 && i <= 6).map((day, i) => {
-                const daySlots = slots.filter(s => s.classId === selectedClass && s.dayOfWeek === i);
+                const dayIndex = i + 1;
+                let daySlots = slots.filter(s => s.dayOfWeek === dayIndex);
+                if (currentRole === 'TEACHER' && userProfile?.teacherId) {
+                  daySlots = daySlots.filter(s => s.teacherId === userProfile.teacherId);
+                } else if (selectedClass) {
+                  daySlots = daySlots.filter(s => s.classId === selectedClass);
+                }
+                
                 return (
                   <button
-                    key={i}
-                    onClick={() => setSelectedDay(i)}
+                    key={dayIndex}
+                    onClick={() => setSelectedDay(dayIndex)}
                     className={cn(
                       "p-3 rounded-lg text-center transition-all",
-                      selectedDay === i 
+                      selectedDay === dayIndex 
                         ? "bg-primary text-primary-foreground" 
                         : "bg-gray-50 hover:bg-gray-100"
                     )}
@@ -398,13 +438,13 @@ export function TimetableView() {
                     <div className="text-xs font-medium">{day.slice(0, 3)}</div>
                     <div className={cn(
                       "text-lg font-bold mt-1",
-                      selectedDay === i ? "text-primary-foreground" : "text-gray-900"
+                      selectedDay === dayIndex ? "text-primary-foreground" : "text-gray-900"
                     )}>
                       {daySlots.length}
                     </div>
                     <div className={cn(
                       "text-[10px]",
-                      selectedDay === i ? "text-primary-foreground/70" : "text-muted-foreground"
+                      selectedDay === dayIndex ? "text-primary-foreground/70" : "text-muted-foreground"
                     )}>
                       classes
                     </div>

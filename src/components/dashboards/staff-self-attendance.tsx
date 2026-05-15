@@ -58,17 +58,32 @@ export function StaffSelfAttendance() {
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
-      if (videoRef.current) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error('Camera not available. Please ensure you are using HTTPS.');
+        return;
+      }
+
+      let stream: MediaStream | null = null;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+      } catch (err) {
+        console.log('Rear camera not available, trying default camera...');
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+      }
+
+      if (videoRef.current && stream) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         scanningRef.current = true;
         setScanning(true);
         requestAnimationFrame(scanLoop);
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast.error('Camera access denied. Please enable camera permissions.');
     }
   };

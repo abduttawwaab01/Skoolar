@@ -202,6 +202,7 @@ const defaultPlans = [
    const [submittingPayment, setSubmittingPayment] = React.useState(false);
    const [bankDetails, setBankDetails] = React.useState<{ bankName?: string; accountNumber?: string; accountName?: string }>({});
    const [loadingBank, setLoadingBank] = React.useState(true);
+   const [billingCycle, setBillingCycle] = React.useState<'monthly' | 'yearly'>('monthly');
 
   const isSuperAdmin = currentRole === 'SUPER_ADMIN';
 
@@ -340,88 +341,107 @@ setLoading(true);
 
 
 
-  // Handle subscribe - show payment choice
-  const handleSubscribe = (plan: typeof displayPlans[0]) => {
-    if (!schoolId) {
-      toast.error('School information is missing. Please log in again.');
-      return;
-    }
-    
-    // Handle Custom plan - redirect to WhatsApp
-    if (plan.name === 'custom') {
-      const message = encodeURIComponent('Hello, I want to subscribe to the Custom plan for my school. Please advise on features and pricing.');
-      window.open(`https://wa.me/2349152929772?text=${message}`, '_blank');
-      return;
-    }
-    
-    // Handle Free plan - no payment needed
-    if (plan.price === 0) {
-      toast.info('You are on the Free plan. Enjoy using Skoolar!');
-      return;
-    }
-    
-    // Open bank transfer dialog directly as primary flow
-    setSelectedPlan(plan as Plan);
-    setTransferAmount(String(plan.price));
-    setShowBankTransfer(true);
-  };
+   // Handle subscribe - show payment choice
+   const handleSubscribe = (plan: typeof displayPlans[0]) => {
+     if (!schoolId) {
+       toast.error('School information is missing. Please log in again.');
+       return;
+     }
+     
+     // Handle Custom plan - redirect to WhatsApp
+     if (plan.name === 'custom') {
+       const message = encodeURIComponent('Hello, I want to subscribe to the Custom plan for my school. Please advise on features and pricing.');
+       window.open(`https://wa.me/2349152929772?text=${message}`, '_blank');
+       return;
+     }
+     
+     // Handle Free plan - no payment needed
+     if (plan.price === 0) {
+       toast.info('You are on the Free plan. Enjoy using Skoolar!');
+       return;
+     }
+     
+     // Get correct price based on billing cycle
+     const price = billingCycle === 'yearly' && plan.yearlyPrice && plan.yearlyPrice > 0 
+       ? plan.yearlyPrice 
+       : plan.price;
+     
+     // Open bank transfer dialog directly as primary flow
+     setSelectedPlan(plan as Plan);
+     setTransferAmount(String(price));
+     setShowBankTransfer(true);
+   };
 
   // Get payment details - use bank details from platform settings if available
   const paymentDetails = bankDetails?.accountNumber 
     ? bankDetails 
     : { bankName: 'PalmPay', accountNumber: '9033460322', accountName: 'Skoolar' };
 
-  // Handle Paystack online payment
-  const handlePaystackPayment = async () => {
-    const plan = selectedPlan;
-    if (!schoolId || !plan) return;
-    if (!school?.email) {
-      toast.error('School email is required for online payment. Please update your school profile first.');
-      return;
-    }
-    try {
-      setSubscribing(plan.id);
-      setShowBankTransfer(false);
-      const res = await fetch('/api/payments/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolId, planId: plan.id, email: school.email, planCode: (plan as Plan).paystackPlanCode || undefined }),
-      });
-      const json = await res.json();
-      if (res.ok && json.data?.authorization_url) {
-        window.location.href = json.data.authorization_url;
-      } else {
-        toast.error(json.error || 'Online payment unavailable. Please use bank transfer.');
-        setShowBankTransfer(true);
-      }
-    } catch {
-      toast.error('Online payment unavailable. Please try bank transfer.');
-      setShowBankTransfer(true);
-    } finally {
-      setSubscribing(null);
-    }
-  };
+   // Handle Paystack online payment
+   const handlePaystackPayment = async () => {
+     const plan = selectedPlan;
+     if (!schoolId || !plan) return;
+     if (!school?.email) {
+       toast.error('School email is required for online payment. Please update your school profile first.');
+       return;
+     }
+     
+     // Get correct price based on billing cycle
+     const price = billingCycle === 'yearly' && plan.yearlyPrice && plan.yearlyPrice > 0 
+       ? plan.yearlyPrice 
+       : plan.price;
+     
+     try {
+       setSubscribing(plan.id);
+       setShowBankTransfer(false);
+       const res = await fetch('/api/payments/subscribe', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ 
+           schoolId, 
+           planId: plan.id, 
+           email: school.email, 
+           amount: price,
+           duration: billingCycle,
+           planCode: (plan as Plan).paystackPlanCode || undefined 
+         }),
+       });
+       const json = await res.json();
+       if (res.ok && json.data?.authorization_url) {
+         window.location.href = json.data.authorization_url;
+       } else {
+         toast.error(json.error || 'Online payment unavailable. Please use bank transfer.');
+         setShowBankTransfer(true);
+       }
+     } catch {
+       toast.error('Online payment unavailable. Please try bank transfer.');
+       setShowBankTransfer(true);
+     } finally {
+       setSubscribing(null);
+     }
+   };
 
-  // Handle manual bank transfer submission
-  const handleSubmitBankTransfer = async () => {
-    if (!selectedPlan || !schoolId || !transferAmount || !transferDate) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
+   // Handle manual bank transfer submission
+   const handleSubmitBankTransfer = async () => {
+     if (!selectedPlan || !schoolId || !transferAmount || !transferDate) {
+       toast.error('Please fill in all required fields');
+       return;
+     }
 
-    setSubmittingPayment(true);
-    try {
-      const res = await fetch('/api/payments/manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolId,
-          planId: selectedPlan.id,
-          amount: Number(transferAmount),
-          transferDate,
-          notes: transferNote,
-        }),
-      });
+     setSubmittingPayment(true);
+     try {
+       const res = await fetch('/api/payments/manual', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           schoolId,
+           planId: selectedPlan.id,
+           amount: Number(transferAmount),
+           transferDate,
+           notes: transferNote,
+           duration: billingCycle,
+         }),
+       });
 
       if (res.ok) {
         toast.success('Payment submitted! We will verify and activate your plan shortly. Contact us on WhatsApp for confirmation.');
@@ -500,14 +520,29 @@ setLoading(true);
                 <span className="text-gray-500">Account Name:</span>
                 <span className="font-medium">{paymentDetails.accountName}</span>
               </div>
-              {selectedPlan && (
-                <div className="mt-2 pt-2 border-t">
-                  <p className="text-sm">
-                    <span className="text-gray-500">Amount to pay: </span>
-                    <span className="font-bold text-emerald-600">{formatCurrency(selectedPlan.price)}</span>
-                  </p>
-                </div>
-              )}
+               {selectedPlan && (
+                 <div className="mt-2 pt-2 border-t">
+                   <div className="flex items-center justify-between">
+                     <div>
+                       <p className="text-sm">
+                         <span className="text-gray-500">Plan: </span>
+                         <span className="font-medium">{selectedPlan.displayName}</span>
+                       </p>
+                       <p className="text-xs text-muted-foreground mt-0.5">
+                         Billing: {billingCycle === 'yearly' ? 'Yearly (12 months)' : 'Monthly'}
+                       </p>
+                     </div>
+                     <div className="text-right">
+                       <p className="text-lg font-bold text-emerald-600">
+                         {formatCurrency(Number(transferAmount))}
+                       </p>
+                       <p className="text-xs text-muted-foreground">
+                         /{billingCycle === 'yearly' ? 'year' : 'month'}
+                       </p>
+                     </div>
+                   </div>
+                 </div>
+               )}
             </div>
 
             {/* Payment Form */}
@@ -723,10 +758,40 @@ setLoading(true);
         </Card>
       )}
 
-      {/* Plan Comparison Cards */}
-      <div>
-        <h3 className="text-base font-semibold mb-4">Available Plans</h3>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+       {/* Plan Comparison Cards */}
+       <div>
+         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+           <h3 className="text-base font-semibold">Available Plans</h3>
+           
+           {/* Billing Cycle Toggle */}
+           <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-1">
+             <button
+               onClick={() => setBillingCycle('monthly')}
+               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                 billingCycle === 'monthly' 
+                   ? 'bg-white shadow text-foreground' 
+                   : 'text-muted-foreground hover:text-foreground'
+               }`}
+             >
+               Monthly
+             </button>
+             <button
+               onClick={() => setBillingCycle('yearly')}
+               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-1.5 ${
+                 billingCycle === 'yearly' 
+                   ? 'bg-white shadow text-foreground' 
+                   : 'text-muted-foreground hover:text-foreground'
+               }`}
+             >
+               Yearly
+               <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[10px]">
+                 Save up to 20%
+               </Badge>
+             </button>
+           </div>
+         </div>
+         
+         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {displayPlans.map((plan) => {
             const pColor = planColors[plan.name] || planColors.free;
             const PlanIcon = planIcons[plan.name] || Zap;
@@ -760,24 +825,43 @@ setLoading(true);
                     </div>
                   </div>
 
-                  {/* Price */}
-                  <div className="mb-4">
-                    <div className="flex items-baseline gap-1">
-                      {plan.price === 0 ? (
-                        <span className="text-2xl font-bold">Free</span>
-                      ) : (
-                        <>
-                          <span className="text-2xl font-bold">{formatCurrency(plan.price)}</span>
-                          <span className="text-xs text-muted-foreground">/month</span>
-                        </>
-                      )}
-                    </div>
-                    {plan.yearlyPrice && (
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {formatCurrency(plan.yearlyPrice)}/year (save {formatCurrency(plan.price * 12 - plan.yearlyPrice)})
-                      </p>
-                    )}
-                  </div>
+                   {/* Price */}
+                   <div className="mb-4">
+                     <div className="flex items-baseline gap-1">
+                       {plan.price === 0 ? (
+                         <span className="text-2xl font-bold">Free</span>
+                       ) : billingCycle === 'yearly' && plan.yearlyPrice && plan.yearlyPrice > 0 ? (
+                         <>
+                           <span className="text-2xl font-bold">{formatCurrency(plan.yearlyPrice)}</span>
+                           <span className="text-xs text-muted-foreground">/year</span>
+                         </>
+                       ) : (
+                         <>
+                           <span className="text-2xl font-bold">{formatCurrency(plan.price)}</span>
+                           <span className="text-xs text-muted-foreground">/month</span>
+                         </>
+                       )}
+                     </div>
+                     {plan.price > 0 && plan.yearlyPrice && plan.yearlyPrice > 0 && (
+                       <p className="text-[11px] text-muted-foreground mt-0.5">
+                         {billingCycle === 'monthly' ? (
+                           <>
+                             Or {formatCurrency(plan.yearlyPrice)}/year 
+                             <Badge className="text-[10px] ml-1 bg-emerald-50 text-emerald-700">
+                               Save {formatCurrency(plan.price * 12 - plan.yearlyPrice)}
+                             </Badge>
+                           </>
+                         ) : (
+                           <>
+                             <span className="line-through text-muted-foreground/70">{formatCurrency(plan.price * 12)}/year</span>
+                             <span className="ml-1 text-emerald-600">
+                               Save {formatCurrency(plan.price * 12 - plan.yearlyPrice)} ({Math.round(((plan.price * 12 - plan.yearlyPrice) / (plan.price * 12)) * 100)}%)
+                             </span>
+                           </>
+                         )}
+                       </p>
+                     )}
+                   </div>
 
                   {/* Limits */}
                   <div className="space-y-2 mb-4 text-xs">

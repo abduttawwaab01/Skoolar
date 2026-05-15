@@ -274,6 +274,7 @@ export function IdScannerView() {
                  ref={videoRef}
                  className={`w-full h-full object-cover ${cameraActive ? 'opacity-100' : 'opacity-0 absolute pointer-events-none'}`}
                  playsInline
+                 autoPlay
                  muted
                />
               <canvas ref={canvasRef} className="hidden" />

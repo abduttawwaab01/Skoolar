@@ -6,53 +6,58 @@ export async function POST(request: NextRequest) {
   const authResult = await requireAuth(request);
   if (authResult instanceof NextResponse) return authResult;
 
-  try {
-    const body = await request.json();
-    const { schoolId, planId, amount, transferDate, notes } = body;
+   try {
+     const body = await request.json();
+     const { schoolId, planId, amount, transferDate, notes, duration = 'monthly' } = body;
 
-    if (!schoolId || !planId || !amount || !transferDate) {
-      return NextResponse.json(
-        { error: 'schoolId, planId, amount, and transferDate are required' },
-        { status: 400 }
-      );
-    }
+     if (!schoolId || !planId || !amount || !transferDate) {
+       return NextResponse.json(
+         { error: 'schoolId, planId, amount, and transferDate are required' },
+         { status: 400 }
+       );
+     }
 
-    // Verify plan exists
-    const plan = await db.subscriptionPlan.findUnique({ where: { id: planId } });
-    if (!plan) {
-      return NextResponse.json({ error: 'Subscription plan not found' }, { status: 404 });
-    }
+     // Verify plan exists
+     const plan = await db.subscriptionPlan.findUnique({ where: { id: planId } });
+     if (!plan) {
+       return NextResponse.json({ error: 'Subscription plan not found' }, { status: 404 });
+     }
 
-    // Verify school exists
-    const school = await db.school.findUnique({ where: { id: schoolId } });
-    if (!school) {
-      return NextResponse.json({ error: 'School not found' }, { status: 404 });
-    }
+     // Verify school exists
+     const school = await db.school.findUnique({ where: { id: schoolId } });
+     if (!school) {
+       return NextResponse.json({ error: 'School not found' }, { status: 404 });
+     }
 
-    // Verify user has access to this school
-    if (authResult.role !== 'SUPER_ADMIN' && authResult.schoolId !== schoolId) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-    }
+     // Verify user has access to this school
+     if (authResult.role !== 'SUPER_ADMIN' && authResult.schoolId !== schoolId) {
+       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+     }
 
-    // Calculate subscription period
-    const now = new Date();
-    const startDate = now;
-    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+     // Calculate subscription period
+     const now = new Date();
+     const startDate = now;
+     let endDate: Date;
+     if (duration === 'yearly') {
+       endDate = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+     } else {
+       endDate = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+     }
 
-    // Create pending payment record
-    const payment = await db.platformPayment.create({
-      data: {
-        schoolId,
-        planId,
-        reference: `manual-${Date.now()}`,
-        amount: Number(amount),
-        currency: 'NGN',
-        status: 'pending_verification',
-        startDate,
-        endDate,
-        channel: 'bank_transfer',
-      },
-    });
+     // Create pending payment record
+     const payment = await db.platformPayment.create({
+       data: {
+         schoolId,
+         planId,
+         reference: `manual-${Date.now()}`,
+         amount: Number(amount),
+         currency: 'NGN',
+         status: 'pending_verification',
+         startDate,
+         endDate,
+         channel: 'bank_transfer',
+       },
+     });
 
     return NextResponse.json(
       {
@@ -165,26 +170,33 @@ export async function PATCH(request: NextRequest) {
     const startDate = now;
     const endDate = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
 
-    if (action === 'approve') {
-      // Update payment status to success
-      await db.platformPayment.update({
-        where: { id: paymentId },
-        data: {
-          status: 'success',
-          channel: 'bank_transfer_verified',
-        },
-      });
+     if (action === 'approve') {
+       // Update payment status to success
+       await db.platformPayment.update({
+         where: { id: paymentId },
+         data: {
+           status: 'success',
+           channel: 'bank_transfer_verified',
+           verifiedAt: new Date(),
+         },
+       });
 
-      // Update school's plan
-      await db.school.update({
-        where: { id: payment.schoolId },
-        data: { planId: payment.planId },
-      });
+       // Update school's plan
+       await db.school.update({
+         where: { id: payment.schoolId },
+         data: { planId: payment.planId },
+       });
 
-      return NextResponse.json({
-        message: `Payment approved! ${payment.school.name} has been upgraded to ${payment.plan?.displayName || 'the selected plan'}.`,
-        success: true,
-      });
+       // Calculate duration for display message
+       const durationDays = payment.endDate 
+         ? Math.ceil((new Date(payment.endDate).getTime() - new Date(payment.startDate || new Date()).getTime()) / (1000 * 60 * 60 * 24))
+         : 30;
+       const durationText = durationDays > 200 ? 'yearly' : 'monthly';
+
+       return NextResponse.json({
+         message: `Payment approved! ${payment.school.name} has been upgraded to ${payment.plan?.displayName || 'the selected plan'} (${durationText} subscription).`,
+         success: true,
+       });
     } else {
       // Reject payment
       await db.platformPayment.update({

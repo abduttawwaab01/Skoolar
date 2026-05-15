@@ -18,6 +18,7 @@ import {
   Plus, Pencil, Trash2, Eye, EyeOff, Megaphone, Quote,
   FileText, BookOpen, Inbox, Settings, Shield, Loader2, ExternalLink,
   Star, ThumbsUp, ThumbsDown, Image as ImageIcon, Headphones, Film,
+  CreditCard,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { handleSilentError } from '@/lib/error-handler';
@@ -125,6 +126,7 @@ interface PlatformSettingsData {
   contactAddress: string | null; socialLinks: string | null;
   enablePreloader: boolean; enableAdverts: boolean; enableAnnouncements: boolean;
   heroTitle: string | null; heroSubtitle: string | null; heroImageUrl: string | null;
+  paymentBankName: string | null; paymentBankAccount: string | null; paymentBankAccountName: string | null;
   createdAt: string; updatedAt: string;
 }
 
@@ -885,6 +887,7 @@ function SettingsTab() {
     contactEmail: '', contactPhone: '', contactAddress: '',
     socialLinks: '', enablePreloader: true, enableAdverts: true, enableAnnouncements: true,
     heroTitle: '', heroSubtitle: '', heroImageUrl: '',
+    paymentBankName: '', paymentBankAccount: '', paymentBankAccountName: '',
   });
 
   const fetchSettings = useCallback(async () => {
@@ -894,17 +897,19 @@ function SettingsTab() {
       if (json.success && json.data) {
         setSettings(json.data);
         const d = json.data;
-        setForm({
-          siteName: d.siteName || '', siteDescription: d.siteDescription || '',
-          siteLogo: d.siteLogo || '', siteFavicon: d.siteFavicon || '',
-          primaryColor: d.primaryColor || '#059669', secondaryColor: d.secondaryColor || '#10B981',
-          accentColor: d.accentColor || '#F59E0B', contactEmail: d.contactEmail || '',
-          contactPhone: d.contactPhone || '', contactAddress: d.contactAddress || '',
-          socialLinks: d.socialLinks || '',
-          enablePreloader: d.enablePreloader !== false, enableAdverts: d.enableAdverts !== false,
-          enableAnnouncements: d.enableAnnouncements !== false,
-          heroTitle: d.heroTitle || '', heroSubtitle: d.heroSubtitle || '', heroImageUrl: d.heroImageUrl || '',
-        });
+         setForm({
+           siteName: d.siteName || '', siteDescription: d.siteDescription || '',
+           siteLogo: d.siteLogo || '', siteFavicon: d.siteFavicon || '',
+           primaryColor: d.primaryColor || '#059669', secondaryColor: d.secondaryColor || '#10B981',
+           accentColor: d.accentColor || '#F59E0B', contactEmail: d.contactEmail || '',
+           contactPhone: d.contactPhone || '', contactAddress: d.contactAddress || '',
+           socialLinks: d.socialLinks || '',
+           enablePreloader: d.enablePreloader !== false, enableAdverts: d.enableAdverts !== false,
+           enableAnnouncements: d.enableAnnouncements !== false,
+           heroTitle: d.heroTitle || '', heroSubtitle: d.heroSubtitle || '', heroImageUrl: d.heroImageUrl || '',
+           paymentBankName: d.paymentBankName || '', paymentBankAccount: d.paymentBankAccount || '', 
+           paymentBankAccountName: d.paymentBankAccountName || '',
+         });
       }
     } catch (error: unknown) { handleSilentError(error, 'Failed to load data'); } finally { setLoading(false); }
   }, []);
@@ -1035,13 +1040,27 @@ function SettingsTab() {
               placeholder="Upload favicon (PNG, ICO, or SVG)"
               previewAspect="1/1"
             />
-          </div>
-        </div>
+           </div>
+         </div>
 
-        <Separator />
+         <Separator />
 
-        <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-gray-700">Platform Assets</h4>
+         <div className="space-y-4">
+           <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+             <CreditCard className="size-4" /> Bank Transfer Settings
+           </h4>
+           <p className="text-xs text-gray-500">These bank details are shown to schools when they subscribe via bank transfer.</p>
+           <div className="grid grid-cols-3 gap-4">
+             <div><Label>Bank Name</Label><Input value={form.paymentBankName} onChange={(e) => setForm({ ...form, paymentBankName: e.target.value })} placeholder="e.g. PalmPay" /></div>
+             <div><Label>Account Number</Label><Input value={form.paymentBankAccount} onChange={(e) => setForm({ ...form, paymentBankAccount: e.target.value })} placeholder="e.g. 9033460322" /></div>
+             <div><Label>Account Name</Label><Input value={form.paymentBankAccountName} onChange={(e) => setForm({ ...form, paymentBankAccountName: e.target.value })} placeholder="e.g. Skoolar" /></div>
+           </div>
+         </div>
+
+         <Separator />
+
+         <div className="space-y-4">
+           <h4 className="text-sm font-semibold text-gray-700">Platform Assets</h4>
           <p className="text-xs text-gray-500">Download platform assets for use in school documents and branding.</p>
           <div className="grid grid-cols-1 gap-4">
             <div className="flex items-center justify-between p-4 rounded-lg border bg-gray-50">

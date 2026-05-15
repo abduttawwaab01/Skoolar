@@ -62,6 +62,16 @@ export async function GET(request: NextRequest) {
       orderBy: { user: { name: 'asc' } },
     });
 
+    // Resolve user's profile info for role-based filtering
+    let userProfile: { teacherId?: string; studentId?: string; classId?: string | null } | null = null;
+    if (auth.role === 'TEACHER') {
+      const teacher = await db.teacher.findUnique({ where: { userId: auth.userId || auth.id } });
+      if (teacher) userProfile = { teacherId: teacher.id };
+    } else if (auth.role === 'STUDENT') {
+      const student = await db.student.findUnique({ where: { userId: auth.userId || auth.id } });
+      if (student) userProfile = { studentId: student.id, classId: student.classId };
+    }
+
     // Get academic years
     const academicYears = await db.academicYear.findMany({
       where: { schoolId, deletedAt: null },
@@ -94,6 +104,7 @@ export async function GET(request: NextRequest) {
       slots,
       days: DAYS,
       defaultPeriods: DEFAULT_PERIODS,
+      userProfile,
     });
   } catch (error) {
     console.error('Timetable GET error:', error);

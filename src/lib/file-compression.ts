@@ -8,9 +8,16 @@ export interface CompressionOptions {
 }
 
 const DEFAULT_IMAGE_OPTIONS: CompressionOptions = {
-  maxWidth: 1920,
-  maxHeight: 1080,
-  quality: 80,
+  maxWidth: 1024,
+  maxHeight: 1024,
+  quality: 65,
+  format: 'webp',
+};
+
+const AVATAR_IMAGE_OPTIONS: CompressionOptions = {
+  maxWidth: 512,
+  maxHeight: 512,
+  quality: 60,
   format: 'webp',
 };
 
@@ -50,6 +57,8 @@ export function getCompressedFileName(
   const base = originalName.replace(/\.[^/.]+$/, '');
   return `${base}.${format}`;
 }
+
+export { DEFAULT_IMAGE_OPTIONS, AVATAR_IMAGE_OPTIONS };
 
 export function shouldCompress(mimeType: string): boolean {
   const compressibleTypes = [

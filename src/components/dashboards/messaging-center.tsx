@@ -243,19 +243,52 @@ export function MessagingCenter() {
     }
   }, [messages, selectedConv, currentUser.id]);
 
-  // ==================== SEARCH ====================
-  const searchUsers = async (query: string) => {
-    setSearchQuery(query);
-    if (query.length < 2) { setSearchResults([]); return; }
+  // ==================== FETCH USERS ====================
+  const fetchUsers = useCallback(async (query: string = '') => {
     // For Super Admin, require school selection
-    if (currentRole === 'SUPER_ADMIN' && !schoolId) { setSearchResults([]); return; }
+    if (currentRole === 'SUPER_ADMIN' && !schoolId) { 
+      setSearchResults([]); 
+      return; 
+    }
+    // Require schoolId for all non-super-admin users
+    if (!schoolId) {
+      setSearchResults([]);
+      return;
+    }
     setSearching(true);
     try {
-      const res = await fetch(`/api/messaging?action=search-users&schoolId=${schoolId || ''}&query=${query}`);
+      const queryParam = query ? `&query=${encodeURIComponent(query)}` : '';
+      const res = await fetch(`/api/messaging?action=search-users&schoolId=${schoolId}${queryParam}`);
       const json = await res.json();
-      if (json.success) setSearchResults((json.data || []).filter((u: UserResult) => u.id !== currentUser.id));
-    } catch (error: unknown) { handleSilentError(error); } finally { setSearching(false); }
-  };
+      if (json.success) {
+        setSearchResults((json.data || []).filter((u: UserResult) => u.id !== currentUser.id));
+      } else {
+        toast.error(json.message || 'Failed to load users');
+      }
+    } catch (error: unknown) { 
+      handleError(error, 'Failed to load users'); 
+    } finally { 
+      setSearching(false); 
+    }
+  }, [currentRole, schoolId, currentUser.id]);
+
+  // ==================== SEARCH ====================
+  const searchUsers = useCallback(async (query: string) => {
+    setSearchQuery(query);
+    // Allow searching with 0+ characters (empty = load all, 1+ = filter)
+    fetchUsers(query);
+  }, [fetchUsers]);
+
+  // Load users when New Conversation dialog opens
+  useEffect(() => {
+    if (newConvOpen) {
+      fetchUsers('');
+    } else {
+      // Clear when dialog closes
+      setSearchResults([]);
+      setSearchQuery('');
+    }
+  }, [newConvOpen, fetchUsers]);
 
   // ==================== CONVERSATION HELPERS ====================
   const getConversationName = (conv: Conversation): string => {

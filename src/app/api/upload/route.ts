@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { uploadFile, getPresignedUploadUrl, generateStorageKey, validateFile, validateMagicBytes, isStorageConfigured } from '@/lib/r2-storage';
-import { compressImage, shouldCompress } from '@/lib/file-compression';
+import { compressImage, shouldCompress, AVATAR_IMAGE_OPTIONS } from '@/lib/file-compression';
 
 // ============================================
 // POST /api/upload - Upload file to R2
@@ -90,28 +90,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: magicValidation.error }, { status: 400 });
     }
 
-    // Compress images before upload
-    let uploadFileData: File = file;
-    let compressionInfo: { originalSize: number; compressedSize: number; savings: string } | null = null;
-    const compressImageParam = searchParams.get('compress');
-    if (compressImageParam === 'true' && shouldCompress(file.type) && file.type.startsWith('image/')) {
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        const compressed = await compressImage(buffer);
-        // Only use compressed if it's actually smaller
-        if (compressed.size < buffer.length) {
-          compressionInfo = {
-            originalSize: compressed.originalSize,
-            compressedSize: compressed.size,
-            savings: `${Math.round((1 - compressed.size / compressed.originalSize) * 100)}%`,
-          };
-          uploadFileData = new File([Buffer.from(compressed.buffer)], file.name.replace(/\.[^/.]+$/, '.webp'), { type: 'image/webp' });
-        }
-      } catch {
-        uploadFileData = file;
-      }
-    }
+     // Compress images before upload
+     let uploadFileData: File = file;
+     let compressionInfo: { originalSize: number; compressedSize: number; savings: string } | null = null;
+     const compressImageParam = searchParams.get('compress');
+     const isAvatarFolder = safeFolder === 'avatars' || safeFolder.startsWith('avatars/');
+     
+     if (compressImageParam === 'true' && shouldCompress(file.type) && file.type.startsWith('image/')) {
+       try {
+         const arrayBuffer = await file.arrayBuffer();
+         const buffer = Buffer.from(arrayBuffer);
+         
+         const compressionOptions = isAvatarFolder ? AVATAR_IMAGE_OPTIONS : undefined;
+         const compressed = await compressImage(buffer, compressionOptions);
+         
+         // Only use compressed if it's actually smaller
+         if (compressed.size < buffer.length) {
+           compressionInfo = {
+             originalSize: compressed.originalSize,
+             compressedSize: compressed.size,
+             savings: `${Math.round((1 - compressed.size / compressed.originalSize) * 100)}%`,
+           };
+           uploadFileData = new File([Buffer.from(compressed.buffer)], file.name.replace(/\.[^/.]+$/, '.webp'), { type: 'image/webp' });
+         }
+       } catch {
+         uploadFileData = file;
+       }
+     }
 
     const result = await uploadFile(uploadFileData, {
       folder: safeFolder,
