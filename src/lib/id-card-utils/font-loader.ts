@@ -48,6 +48,27 @@ function findFontFile(name: string): string | null {
   return null;
 }
 
+export function getFontBuffers(): Buffer[] {
+  const buffers: Buffer[] = [];
+  const regularPath = findFontFile('Geist-Regular.ttf');
+  if (regularPath) {
+    try {
+      const buf = fs.readFileSync(regularPath);
+      if (isTrueType(buf) || isOpenType(buf)) buffers.push(buf);
+    } catch {}
+  }
+  
+  const boldPath = findFontFile('Geist-Bold.ttf');
+  if (boldPath) {
+    try {
+      const buf = fs.readFileSync(boldPath);
+      if (isTrueType(buf) || isOpenType(buf)) buffers.push(buf);
+    } catch {}
+  }
+  
+  return buffers;
+}
+
 export function getFontFaceCSS(): string {
   const regularPath = findFontFile('Geist-Regular.ttf');
   const boldPath = findFontFile('Geist-Bold.ttf');

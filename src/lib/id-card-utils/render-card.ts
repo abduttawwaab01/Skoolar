@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
-import sharp from 'sharp';
+import { Resvg } from '@resvg/resvg-js';
 import { db } from '@/lib/db';
-import { getFontFaceCSS } from './font-loader';
+import { getFontFaceCSS, getFontBuffers } from './font-loader';
 
 const MM = (mm: number) => Math.round((mm / 25.4) * 300);
 const PW = MM(53.98); const PH = MM(85.6);
@@ -122,7 +122,16 @@ export async function renderIDCard(
     ? buildPortraitModern({W,H,prim,primD,primL,sec,dark,muted,border,hdrTxt,pName,pId,pClass,pGend,pPhone,pRole,schN,schA,sPh,sEm,inits,phB64,phMime,qrB64,showQR,showPhoto,pType,isBack,backText,style,defs})
     : buildLandscapeModern({W,H,prim,primD,primL,sec,dark,muted,border,hdrTxt,pName,pId,pClass,pGend,pPhone,pRole,schN,schA,sPh,sEm,inits,phB64,phMime,qrB64,showQR,showPhoto,pType,isBack,backText,style,defs});
 
-  return sharp(Buffer.from(svg)).png({quality:95,compressionLevel:6}).toBuffer();
+  const fontBuffers = getFontBuffers();
+  const resvg = new Resvg(svg, {
+    fitTo: { mode: 'original' },
+    font: {
+      loadSystemFonts: true,
+      fontBuffers: fontBuffers,
+      defaultFontFamily: fontBuffers.length > 0 ? 'SkoolarCard' : 'Segoe UI',
+    },
+  });
+  return Buffer.from(resvg.render().asPng());
 }
 
 function photoCircleModern(cx:number,cy:number,r:number,prim:string,muted:string,phB64:string,phMime:string,inits:string,id:string):string {
