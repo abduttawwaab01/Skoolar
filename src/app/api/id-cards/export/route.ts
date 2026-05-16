@@ -60,47 +60,75 @@ export async function POST(request: NextRequest) {
     const needFront = scope === 'front' || scope === 'both';
     const needBack  = scope === 'back'  || scope === 'both';
 
-    // ─── PDF ─────────────────────────────────────────────────────────────────
+// ─── PDF ─────────────────────────────────────────────────────────────────
     if (format === 'pdf') {
-      const cardWidthMm   = orientation === 'portrait' ? 53.98 : 85.6;
-      const cardHeightMm  = orientation === 'portrait' ? 85.6  : 53.98;
-      const cardWidthPt   = (cardWidthMm  / 25.4) * 72;
-      const cardHeightPt  = (cardHeightMm / 25.4) * 72;
+      try {
+        const cardWidthMm   = orientation === 'portrait' ? 53.98 : 85.6;
+        const cardHeightMm  = orientation === 'portrait' ? 85.6  : 53.98;
+        const cardWidthPt   = (cardWidthMm  / 25.4) * 72;
+        const cardHeightPt  = (cardHeightMm / 25.4) * 72;
 
-      const doc = new PDFDocument({ size: [cardWidthPt, cardHeightPt], compress: true, autoFirstPage: false, margin: 0 });
+        const doc = new PDFDocument({ 
+          size: [cardWidthPt, cardHeightPt], 
+          compress: true, 
+          autoFirstPage: false, 
+          margin: 0,
+          info: { Title: 'ID Cards Export', Author: 'Skoolar' }
+        });
 
-      for (const cardData of cards) {
-        try {
-          if (needFront) {
-            const buf = await renderCard(cardData, false);
+        for (const cardData of cards) {
+          try {
+            if (needFront) {
+              const buf = await renderCard(cardData, false);
+              if (buf && buf.length > 0) {
+                doc.addPage({ size: [cardWidthPt, cardHeightPt], margin: 0 });
+                doc.image(buf, 0, 0, { width: cardWidthPt, height: cardHeightPt });
+              }
+            }
+            if (needBack) {
+              const buf = await renderCard(cardData, true);
+              if (buf && buf.length > 0) {
+                doc.addPage({ size: [cardWidthPt, cardHeightPt], margin: 0 });
+                doc.image(buf, 0, 0, { width: cardWidthPt, height: cardHeightPt });
+              }
+            }
+          } catch (cardErr) {
+            console.error(`Card render failed for ${cardData.name}:`, cardErr);
             doc.addPage({ size: [cardWidthPt, cardHeightPt], margin: 0 });
-            doc.image(buf, 0, 0, { width: cardWidthPt, height: cardHeightPt });
+            doc.fontSize(8).text(`Failed: ${cardData.name || 'unknown'}`, 5, cardHeightPt / 2 - 4, { align: 'center', width: cardWidthPt - 10 });
           }
-          if (needBack) {
-            const buf = await renderCard(cardData, true);
-            doc.addPage({ size: [cardWidthPt, cardHeightPt], margin: 0 });
-            doc.image(buf, 0, 0, { width: cardWidthPt, height: cardHeightPt });
-          }
-        } catch (err) {
-          console.error(`Card render failed for ${cardData.name}:`, err);
-          doc.addPage({ size: [cardWidthPt, cardHeightPt], margin: 0 });
-          doc.fontSize(8).text(`Failed: ${cardData.name || 'unknown'}`, 5, cardHeightPt / 2 - 4, { align: 'center', width: cardWidthPt - 10 });
         }
+
+        return new Promise<Buffer>((resolve, reject) => {
+          const chunks: Uint8Array[] = [];
+          doc.on('data', (chunk: Uint8Array) => chunks.push(chunk));
+          doc.on('end', () => {
+            const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+            const result = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const chunk of chunks) {
+              result.set(chunk, offset);
+              offset += chunk.length;
+            }
+            resolve(Buffer.from(result));
+          });
+          doc.on('error', reject);
+          doc.end();
+        }).then(async (pdfBuffer) => {
+          await db.exportLog.update({ where: { id: exportLog.id }, data: { fileSize: pdfBuffer.length, status: 'success', filename: `id-cards-${Date.now()}.pdf` } });
+          return new NextResponse(pdfBuffer, {
+            headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="id-cards-${Date.now()}.pdf"` },
+          });
+        }).catch(async (pdfErr) => {
+          console.error('PDF generation error:', pdfErr);
+          await db.exportLog.update({ where: { id: exportLog.id }, data: { status: 'failed' } });
+          return NextResponse.json({ error: `PDF generation failed: ${pdfErr instanceof Error ? pdfErr.message : 'Unknown error'}` }, { status: 500 });
+        });
+      } catch (pdfErr) {
+        console.error('PDF setup error:', pdfErr);
+        await db.exportLog.update({ where: { id: exportLog.id }, data: { status: 'failed' } });
+        return NextResponse.json({ error: `PDF generation failed: ${pdfErr instanceof Error ? pdfErr.message : 'Unknown error'}` }, { status: 500 });
       }
-
-      const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
-        const chunks: Buffer[] = [];
-        doc.on('data', (c: Buffer) => chunks.push(Buffer.from(c)));
-        doc.on('end',  () => resolve(Buffer.concat(chunks)));
-        doc.on('error', reject);
-        doc.end();
-      });
-
-      await db.exportLog.update({ where: { id: exportLog.id }, data: { fileSize: pdfBuffer.length, status: 'success', filename: `id-cards-${Date.now()}.pdf` } });
-
-      return new NextResponse(new Uint8Array(pdfBuffer), {
-        headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="id-cards-${Date.now()}.pdf"` },
-      });
     }
 
     // ─── PNG (ZIP) ────────────────────────────────────────────────────────────
@@ -141,11 +169,11 @@ export async function POST(request: NextRequest) {
             properties: {
               page: {
                 size: {
-                  width:       cardWidthEmu,
-                  height:      cardHeightEmu,
-                  orientation: orientation === 'landscape' ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT,
+                  width: Math.round(210 * 36000),
+                  height: Math.round(297 * 36000),
+                  orientation: PageOrientation.PORTRAIT,
                 },
-                margin: { top: 0, right: 0, bottom: 0, left: 0 },
+                margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
               },
             },
             children: [
@@ -169,11 +197,11 @@ export async function POST(request: NextRequest) {
             properties: {
               page: {
                 size: {
-                  width:       cardWidthEmu,
-                  height:      cardHeightEmu,
-                  orientation: orientation === 'landscape' ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT,
+                  width: Math.round(210 * 36000),
+                  height: Math.round(297 * 36000),
+                  orientation: PageOrientation.PORTRAIT,
                 },
-                margin: { top: 0, right: 0, bottom: 0, left: 0 },
+                margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
               },
             },
             children: [

@@ -78,11 +78,23 @@ export async function renderIDCard(
   if(showPhoto&&photoUrl){
     try{
       const url=photoUrl.startsWith('//')?`https:${photoUrl}`:photoUrl.startsWith('http')?photoUrl:`https://skoolar.org${photoUrl}`;
-      const ctrl=new AbortController(); const tid=setTimeout(()=>ctrl.abort(),10000);
+      const ctrl=new AbortController(); const tid=setTimeout(()=>ctrl.abort(),8000);
       const res=await fetch(url,{signal:ctrl.signal,headers:{'User-Agent':'Skoolar-IDCard/2.0'}});
       clearTimeout(tid);
-      if(res.ok){const ct=res.headers.get('content-type')||'';if(ct.startsWith('image/')){const ab=await res.arrayBuffer();const b=Buffer.from(new Uint8Array(ab));if(b.length<=5*1024*1024){phB64=b.toString('base64');phMime=ct;}}}
-    }catch(_){}
+      if(res.ok){
+        const ct=res.headers.get('content-type')||'';
+        if(ct.startsWith('image/')){
+          const ab=await res.arrayBuffer();
+          const b=Buffer.from(new Uint8Array(ab));
+          if(b.length>0 && b.length<=5*1024*1024){
+            phB64=b.toString('base64');
+            phMime=ct;
+          }
+        }
+      }
+    }catch(phErr){
+      console.warn('Photo fetch failed:', phErr);
+    }
   }
 
   const fontCSS = getFontFaceCSS();
@@ -123,15 +135,20 @@ export async function renderIDCard(
     : buildLandscapeModern({W,H,prim,primD,primL,sec,dark,muted,border,hdrTxt,pName,pId,pClass,pGend,pPhone,pRole,schN,schA,sPh,sEm,inits,phB64,phMime,qrB64,showQR,showPhoto,pType,isBack,backText,style,defs});
 
   const fontPaths = getFontPaths();
-  const resvg = new Resvg(svg, {
-    fitTo: { mode: 'original' },
-    font: {
-      loadSystemFonts: true,
-      fontFiles: fontPaths,
-      defaultFontFamily: fontPaths.length > 0 ? 'SkoolarCard' : 'Segoe UI',
-    },
-  });
-  return Buffer.from(resvg.render().asPng());
+  try {
+    const resvg = new Resvg(svg, {
+      fitTo: { mode: 'original' },
+      font: {
+        loadSystemFonts: true,
+        fontFiles: fontPaths,
+        defaultFontFamily: fontPaths.length > 0 ? 'SkoolarCard' : 'Segoe UI',
+      },
+    });
+    return Buffer.from(resvg.render().asPng());
+  } catch (resvgErr) {
+    console.error('Resvg rendering error:', resvgErr);
+    throw new Error(`Failed to render ID card: ${resvgErr instanceof Error ? resvgErr.message : 'Unknown error'}`);
+  }
 }
 
 function photoCircleModern(cx:number,cy:number,r:number,prim:string,muted:string,phB64:string,phMime:string,inits:string,id:string):string {
@@ -205,36 +222,37 @@ function buildPortraitModern(o:any):string {
     </svg>`;
   }
 
-  const photoR = Math.round(W * 0.175);
-  const photoCX = Math.round(W * 0.27);
-  const photoCY = Math.round(hH + (H * 0.28));
+  const photoR = Math.round(W * 0.21);
+  const photoCX = Math.round(W * 0.50);
+  const photoCY = Math.round(hH + (H * 0.13));
   
   const txtX = Math.round(W * 0.50);
-  const nameY = Math.round(photoCY - photoR * 0.20);
-  const nameFs = Math.round(H * 0.036);
+  const nameY = Math.round(photoCY + photoR + Math.round(H * 0.035));
+  const nameFs = Math.round(H * 0.034);
   
-  const badgeY = Math.round(nameY + nameFs + 12);
-  const badgeW = Math.round(W * 0.40);
-  const badgeH = Math.round(H * 0.032);
+  const badgeY = Math.round(nameY + Math.round(H * 0.018));
+  const badgeW = Math.round(W * 0.38);
+  const badgeH = Math.round(H * 0.030);
+  const badgeX = Math.round((W - badgeW) / 2);
   
    const infoCardX = mg;
-   const infoCardY = Math.round(badgeY + badgeH + 18);
+   const infoCardY = Math.round(badgeY + badgeH + Math.round(H * 0.020));
    const infoCardW = W - mg * 2;
-   const infoCardH = Math.round(H * 0.14);
+   const infoCardH = Math.round(H * 0.12);
    
-   const divY = Math.round(infoCardY + infoCardH + 12);
+   const divY = Math.round(infoCardY + infoCardH + Math.round(H * 0.012));
   
-   const qrSz = Math.round(W * 0.52);
-   const qrPad = 14;
+   const qrSz = Math.round(W * 0.44);
+   const qrPad = 12;
    const qrBW = qrSz + qrPad * 2;
    const qrBX = Math.round((W - qrBW) / 2);
-   const qrBY = Math.round(divY + 10);
+   const qrBY = Math.round(divY + Math.round(H * 0.015));
    const qrIX = qrBX + qrPad;
    const qrIY = qrBY + qrPad;
-   const qrBH = qrSz + qrPad * 2 + 32;
-   const scanY = Math.round(qrIY + qrSz + 20);
+   const qrBH = qrSz + qrPad * 2 + Math.round(H * 0.028);
+   const scanY = Math.round(qrIY + qrSz + Math.round(H * 0.022));
   
-  const ctcY = Math.round(qrBY + qrBH + 20);
+  const ctcY = Math.round(qrBY + qrBH + Math.round(H * 0.018));
 
   const rows:any[]=[];
   if(pType==='student'){
@@ -247,11 +265,11 @@ function buildPortraitModern(o:any):string {
     if(pPhone)rows.push({l:'Phone',v:pPhone});
   }
 
-  const rowStartY = infoCardY + Math.round(H * 0.025);
-  const rowLH = Math.round(H * 0.036);
+  const rowStartY = infoCardY + Math.round(H * 0.028);
+  const rowLH = Math.round(H * 0.032);
   const labelX = infoCardX + Math.round(infoCardW * 0.06);
-  const valueX = infoCardX + Math.round(infoCardW * 0.38);
-  const rowFs = Math.round(H * 0.0185);
+  const valueX = infoCardX + Math.round(infoCardW * 0.40);
+  const rowFs = Math.round(H * 0.017);
   
   const infoRowsHtml = rows.map((row,i)=>`
     <text x="${n(labelX)}" y="${n(rowStartY + i * rowLH)}" font-size="${n(rowFs)}" fill="${muted}">${row.l}</text>
@@ -271,13 +289,14 @@ function buildPortraitModern(o:any):string {
   }
 
   let ctcEl = '';
+  const ctcBaseY = showQR && qrB64 ? ctcY : Math.round(divY + H * 0.045);
   if(schA || sPh){
-    const iconFs = Math.round(H * 0.013);
+    const iconFs = Math.round(H * 0.012);
     if(schA){
-      ctcEl += `<text x="${n(W/2)}" y="${n(ctcY)}" font-size="${n(iconFs)}" fill="${muted}" text-anchor="middle">📍 ${schA}</text>`;
+      ctcEl += `<text x="${n(W/2)}" y="${n(ctcBaseY)}" font-size="${n(iconFs)}" fill="${muted}" text-anchor="middle">📍 ${schA}</text>`;
     }
     if(sPh){
-      const phoneY = schA ? ctcY + Math.round(H * 0.020) : ctcY;
+      const phoneY = schA ? ctcBaseY + Math.round(H * 0.018) : ctcBaseY;
       ctcEl += `<text x="${n(W/2)}" y="${n(phoneY)}" font-size="${n(iconFs)}" fill="${muted}" text-anchor="middle">📞 ${sPh}</text>`;
     }
   }
@@ -301,12 +320,12 @@ function buildPortraitModern(o:any):string {
     
     ${phEl}
     
-    <text x="${n(txtX)}" y="${n(nameY)}" font-size="${n(nameFs)}" font-weight="700" fill="${dark}">${pName}</text>
+    <text x="${n(txtX)}" y="${n(nameY)}" font-size="${n(nameFs)}" font-weight="700" fill="${dark}" text-anchor="middle">${pName}</text>
     
     <g filter="url(#shadow)">
-      <rect x="${n(txtX)}" y="${n(badgeY)}" width="${n(badgeW)}" height="${n(badgeH)}" rx="${n(badgeH/2)}" fill="${prim}" opacity="0.14"/>
+      <rect x="${n(badgeX)}" y="${n(badgeY)}" width="${n(badgeW)}" height="${n(badgeH)}" rx="${n(badgeH/2)}" fill="${prim}" opacity="0.14"/>
     </g>
-    <text x="${n(txtX + badgeW/2)}" y="${n(badgeY + badgeH*0.66)}" font-size="${n(H*.0185)}" font-weight="700" fill="${prim}" text-anchor="middle" letter-spacing="1">${pRole}</text>
+    <text x="${n(badgeX + badgeW/2)}" y="${n(badgeY + badgeH*0.66)}" font-size="${n(H*.0185)}" font-weight="700" fill="${prim}" text-anchor="middle" letter-spacing="1">${pRole}</text>
     
     ${infoCard(infoCardX, infoCardY, infoCardW, infoCardH, sec, border, infoRowsHtml)}
     
@@ -362,31 +381,32 @@ function buildLandscapeModern(o:any):string {
     </svg>`;
   }
 
-  const colQ = Math.round(W * 0.60);
+  const colQ = Math.round(W * 0.58);
   
-  const photoR = Math.round(H * 0.24);
-  const photoCX = Math.round(W * 0.11);
-  const photoCY = Math.round(hH + (H - hH) / 2);
+  const photoR = Math.round(H * 0.22);
+  const photoCX = Math.round(W * 0.095);
+  const availableH = H - hH - Math.round(H * 0.08);
+  const photoCY = Math.round(hH + Math.round(H * 0.04) + availableH / 2);
   
-  const txtX = Math.round(W * 0.24);
+  const txtX = Math.round(W * 0.22);
   
-  const nameY = Math.round(hH + (H - hH) * 0.24);
-  const nameFs = Math.round(H * 0.068);
+  const nameY = Math.round(hH + Math.round(H * 0.04) + Math.round(availableH * 0.18));
+  const nameFs = Math.round(H * 0.062);
   
-  const badgeY = Math.round(nameY + nameFs + 10);
-  const badgeW = Math.round((colQ - txtX) * 0.55);
-  const badgeH = Math.round(H * 0.062);
+  const badgeY = Math.round(nameY + nameFs + Math.round(H * 0.012));
+  const badgeW = Math.round((colQ - txtX - mg) * 0.50);
+  const badgeH = Math.round(H * 0.054);
   
   const infoCardX = txtX;
-  const infoCardY = Math.round(badgeY + badgeH + 18);
+  const infoCardY = Math.round(badgeY + badgeH + Math.round(H * 0.018));
   const infoCardW = colQ - txtX - mg;
-  const infoCardH = Math.round(H * 0.28);
+  const infoCardH = Math.round(H * 0.26);
   
    const qrZW = W - colQ - mg;
-   const qrSz = Math.round(Math.min(qrZW - 10, H - hH - 45));
+   const qrSz = Math.round(Math.min(qrZW - Math.round(H * 0.02), availableH - Math.round(H * 0.06)));
    const qrX = Math.round(colQ + (qrZW - qrSz) / 2);
-   const qrY = Math.round(hH + (H - hH - qrSz - 35) / 2);
-   const scanY = Math.round(qrY + qrSz + 18);
+   const qrY = Math.round(hH + Math.round(H * 0.04) + (availableH - qrSz) / 2);
+   const scanY = Math.round(qrY + qrSz + Math.round(H * 0.016));
 
   const rows:any[]=[];
   if(pType==='student'){
@@ -399,11 +419,11 @@ function buildLandscapeModern(o:any):string {
     if(pPhone)rows.push({l:'Phone:',v:pPhone});
   }
 
-  const rowStartY = infoCardY + Math.round(H * 0.035);
-  const rowLH = Math.round(H * 0.072);
+  const rowStartY = infoCardY + Math.round(H * 0.032);
+  const rowLH = Math.round(H * 0.062);
   const labelX = infoCardX + Math.round(infoCardW * 0.05);
-  const valueX = infoCardX + Math.round(infoCardW * 0.40);
-  const rowFs = Math.round(H * 0.034);
+  const valueX = infoCardX + Math.round(infoCardW * 0.42);
+  const rowFs = Math.round(H * 0.030);
   
   const infoRowsHtml = rows.map((row,i)=>`
     <text x="${n(labelX)}" y="${n(rowStartY + i * rowLH)}" font-size="${n(rowFs)}" fill="${muted}">${row.l}</text>
@@ -414,15 +434,16 @@ function buildLandscapeModern(o:any):string {
   
   let qrEl = '';
   if(showQR && qrB64){
+    const qrPad = Math.round(H * 0.022);
     qrEl = `<g filter="url(#softshadow)">
-      <rect x="${n(qrX - 14)}" y="${n(qrY - 14)}" width="${n(qrSz + 28)}" height="${n(qrSz + 44)}" rx="14" fill="#ffffff" stroke="${border}" stroke-width="1.5"/>
+      <rect x="${n(qrX - qrPad + 2)}" y="${n(qrY - qrPad + 2)}" width="${n(qrSz + qrPad * 2 - 4)}" height="${n(qrSz + qrPad * 2 + Math.round(H * 0.04) - 4)}" rx="12" fill="#ffffff" stroke="${border}" stroke-width="1.5"/>
     </g>
-    <rect x="${n(qrX - 10)}" y="${n(qrY - 10)}" width="${n(qrSz + 20)}" height="${n(qrSz + 36)}" rx="10" fill="#fafafa"/>
+    <rect x="${n(qrX - qrPad + 6)}" y="${n(qrY - qrPad + 6)}" width="${n(qrSz + qrPad * 2 - 12)}" height="${n(qrSz + qrPad * 2 + Math.round(H * 0.04) - 12)}" rx="8" fill="#fafafa"/>
     <image x="${n(qrX)}" y="${n(qrY)}" width="${n(qrSz)}" height="${n(qrSz)}" href="data:image/png;base64,${qrB64}"/>
-    <text x="${n(colQ + qrZW/2)}" y="${n(scanY)}" font-size="${n(H*.035)}" font-weight="700" fill="${prim}" text-anchor="middle" letter-spacing="3">SCAN ME</text>`;
+    <text x="${n(colQ + qrZW/2)}" y="${n(scanY)}" font-size="${n(H*.030)}" font-weight="700" fill="${prim}" text-anchor="middle" letter-spacing="2">SCAN TO VERIFY</text>`;
   }
 
-  const sepEl = `<line x1="${n(colQ - mg/2)}" y1="${n(hH + mg)}" x2="${n(colQ - mg/2)}" y2="${n(H - mg)}" stroke="${border}" stroke-width="1.2" opacity="0.3"/>`;
+  const sepEl = `<line x1="${n(colQ - mg/2)}" y1="${n(hH + Math.round(H * 0.03))}" x2="${n(colQ - mg/2)}" y2="${n(H - Math.round(H * 0.04))}" stroke="${border}" stroke-width="1.2" opacity="0.3"/>`;
 
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
     ${style}${defs}

@@ -116,6 +116,7 @@ export async function POST(request: NextRequest) {
       if (!student) throw new Error('Student not found');
       person = {
         ...student,
+        name: student.user?.name || 'Unknown',
         displayId: student.admissionNo,
         class: student.class?.name || 'N/A',
         gender: student.gender,
