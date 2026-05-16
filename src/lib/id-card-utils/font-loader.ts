@@ -49,19 +49,6 @@ function findFontFile(name: string): string | null {
   return null;
 }
 
-  for (const fp of candidates) {
-    try {
-      if (fs.existsSync(fp)) {
-        return fp;
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  return null;
-}
-
 export function getFontPaths(): string[] {
   const paths: string[] = [];
   const regularPath = findFontFile('Geist-Regular.ttf');

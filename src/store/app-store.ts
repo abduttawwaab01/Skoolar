@@ -35,6 +35,7 @@ export type DashboardView =
   | 'testimonials' | 'trusted-schools'
   | 'profile'
   | 'parent-results-view'
+  | 'parent-report-cards-view'
   | 'school-admin-dashboard-view' | 'teacher-dashboard-view' | 'student-dashboard-view'
   | 'parent-dashboard-view' | 'accountant-dashboard-view' | 'librarian-dashboard-view';
 
@@ -252,7 +253,7 @@ export const navigationByRole: Record<UserRole, NavItem[]> = {
      { id: 'parent-dashboard-view', label: 'Dashboard', icon: 'layout-dashboard' },
      { id: 'parent-portal', label: 'My Children', icon: 'users' },
      { id: 'parent-results-view', label: 'Child Results', icon: 'file-bar-chart' },
-     { id: 'parent-results-view', label: 'Report Cards', icon: 'award' },
+     { id: 'parent-report-cards-view', label: 'Report Cards', icon: 'award' },
      { id: 'attendance', label: 'Attendance', icon: 'calendar-check' },
      { id: 'parent-homework', label: 'Child Homework', icon: 'book-open' },
      { id: 'parent-video-lessons', label: 'Video Lessons', icon: 'video' },

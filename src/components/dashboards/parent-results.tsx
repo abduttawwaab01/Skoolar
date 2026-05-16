@@ -86,7 +86,7 @@ interface ApiReportCard {
   createdAt: string;
 }
 
-export function ParentResults() {
+export function ParentResults({ showReportCardsInitially = false }: { showReportCardsInitially?: boolean }) {
   const { currentUser, selectedSchoolId } = useAppStore();
   const schoolId = currentUser.schoolId || selectedSchoolId || '';
   const [loading, setLoading] = useState(true);
@@ -104,6 +104,14 @@ export function ParentResults() {
   const [rcMeta, setRcMeta] = useState<MetaData | null>(null);
   const [rcTermId, setRcTermId] = useState('');
   const [rcChildId, setRcChildId] = useState('');
+
+  // Scroll to report cards section if requested
+  useEffect(() => {
+    if (showReportCardsInitially && !loading) {
+      const el = document.getElementById('report-card-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [showReportCardsInitially, loading]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -387,7 +395,7 @@ export function ParentResults() {
 
       {/* Published Report Cards */}
       {publishedCards.length > 0 && (
-        <Card>
+        <Card id="report-card-section">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
