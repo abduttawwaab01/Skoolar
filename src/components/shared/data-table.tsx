@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
 import {
   ChevronLeft,
   ChevronRight,
@@ -140,8 +141,8 @@ function DataTable<TData, TValue>({
         {toolbar && <div className="flex items-center gap-2">{toolbar}</div>}
       </div>
 
-       {/* Table */}
-       <div className="rounded-lg border">
+      {/* Desktop Table View */}
+      <div className="hidden md:block rounded-lg border">
         <div className="overflow-x-auto scrollbar-thin relative">
           <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-background/60 to-transparent" />
           <Table>
@@ -171,54 +172,150 @@ function DataTable<TData, TValue>({
                 </TableRow>
               ))}
             </TableHeader>
-          <TableBody>
-            {loading ? (
-              // Loading skeleton
-              Array.from({ length: pageSize }).map((_, i) => (
-                <TableRow key={`skeleton-${i}`}>
-                  {enableRowSelection && (
+            <TableBody>
+              {loading ? (
+                // Loading skeleton
+                Array.from({ length: pageSize }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    {enableRowSelection && (
+                      <TableCell>
+                        <Skeleton className="size-4 rounded" />
+                      </TableCell>
+                    )}
+                    {columns.map((_, j) => (
+                      <TableCell key={j}>
+                        <Skeleton className="h-5 w-full max-w-[120px] rounded" />
+                      </TableCell>
+                    ))}
                     <TableCell>
-                      <Skeleton className="size-4 rounded" />
+                      <Skeleton className="size-8 rounded" />
                     </TableCell>
-                  )}
-                  {columns.map((_, j) => (
-                    <TableCell key={j}>
-                      <Skeleton className="h-5 w-full max-w-[120px] rounded" />
-                    </TableCell>
-                  ))}
-                  <TableCell>
-                    <Skeleton className="size-8 rounded" />
+                  </TableRow>
+                ))
+              ) : table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    className={cn(onRowClick && 'cursor-pointer')}
+                    onClick={() => onRowClick?.(row.original)}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length + (enableRowSelection ? 2 : 1)} className="h-48">
+                    <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                      {emptyIcon || <Inbox className="size-10 opacity-40" />}
+                      <p className="text-sm">{emptyMessage}</p>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  className={cn(onRowClick && 'cursor-pointer')}
-                  onClick={() => onRowClick?.(row.original)}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length + (enableRowSelection ? 2 : 1)} className="h-48">
-                  <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                    {emptyIcon || <Inbox className="size-10 opacity-40" />}
-                    <p className="text-sm">{emptyMessage}</p>
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </TableBody>
+          </Table>
         </div>
+      </div>
+
+      {/* Mobile Card List View */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-5 w-1/3 rounded" />
+                <Skeleton className="size-8 rounded" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Skeleton className="h-3 w-10 rounded" />
+                  <Skeleton className="h-4 w-20 rounded" />
+                </div>
+                <div className="space-y-1">
+                  <Skeleton className="h-3 w-10 rounded" />
+                  <Skeleton className="h-4 w-20 rounded" />
+                </div>
+              </div>
+            </Card>
+          ))
+        ) : table.getRowModel().rows?.length ? (
+          table.getRowModel().rows.map((row) => {
+            const selectCell = row.getVisibleCells().find(c => c.column.id === 'select');
+            const actionCell = row.getVisibleCells().find(c => 
+              c.column.id === 'actions' || 
+              c.column.id.toLowerCase().includes('action')
+            );
+            const visibleCells = row.getVisibleCells().filter(c => 
+              c.column.id !== 'select' && 
+              c.column.id !== 'actions' && 
+              !c.column.id.toLowerCase().includes('action')
+            );
+            const primaryCell = visibleCells[0];
+            const secondaryCells = visibleCells.slice(1);
+
+            return (
+              <Card
+                key={row.id}
+                className={cn(
+                  "p-4 relative transition-all border hover:border-primary/20 hover:shadow-xs bg-card text-card-foreground rounded-xl shadow-xs",
+                  onRowClick && "cursor-pointer active:bg-muted/40"
+                )}
+                onClick={() => onRowClick?.(row.original)}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between gap-3 pb-3 border-b border-dashed border-border/60">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    {selectCell && (
+                      <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                        {flexRender(selectCell.column.columnDef.cell, selectCell.getContext())}
+                      </div>
+                    )}
+                    {primaryCell && (
+                      <div className="text-sm font-semibold truncate text-foreground flex-1">
+                        {flexRender(primaryCell.column.columnDef.cell, primaryCell.getContext())}
+                      </div>
+                    )}
+                  </div>
+                  {actionCell && (
+                    <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                      {flexRender(actionCell.column.columnDef.cell, actionCell.getContext())}
+                    </div>
+                  )}
+                </div>
+
+                {/* Grid details */}
+                {secondaryCells.length > 0 && (
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 pt-3 text-xs">
+                    {secondaryCells.map((cell) => {
+                      const header = cell.column.columnDef.header;
+                      const headerText = typeof header === 'string' ? header : cell.column.id;
+                      return (
+                        <div key={cell.id} className="space-y-1 min-w-0">
+                          <span className="text-[10px] font-semibold text-muted-foreground block uppercase tracking-wider">
+                            {headerText}
+                          </span>
+                          <div className="text-foreground font-medium truncate">
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            );
+          })
+        ) : (
+          <Card className="p-8 text-center text-muted-foreground flex flex-col items-center justify-center gap-2">
+            {emptyIcon || <Inbox className="size-8 opacity-40" />}
+            <p className="text-sm">{emptyMessage}</p>
+          </Card>
+        )}
       </div>
 
       {/* Pagination */}

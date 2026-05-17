@@ -226,37 +226,37 @@ function buildPortraitModern(o:any):string {
     </svg>`;
   }
 
-  const photoR = Math.round(W * 0.23); // Slightly larger photo
+  const photoR = Math.round(W * 0.20); // Scale down photo slightly to save vertical space
   const photoCX = Math.round(W * 0.50);
-  const photoCY = Math.round(hH + (H * 0.14));
+  const photoCY = Math.round(hH + (H * 0.125)); // Move photo up slightly
   
   const txtX = Math.round(W * 0.50);
-  const nameY = Math.round(photoCY + photoR + Math.round(H * 0.04));
-  const nameFs = Math.round(H * 0.036); // Slightly larger name
+  const nameY = Math.round(photoCY + photoR + Math.round(H * 0.038));
+  const nameFs = Math.round(H * 0.036); // Beautiful large name
   
   const badgeY = Math.round(nameY + Math.round(H * 0.02));
   const badgeW = Math.round(W * 0.42);
   const badgeH = Math.round(H * 0.032);
   const badgeX = Math.round((W - badgeW) / 2);
   
-   const infoCardX = mg;
-   const infoCardY = Math.round(badgeY + badgeH + Math.round(H * 0.025));
-   const infoCardW = W - mg * 2;
-   const infoCardH = Math.round(H * 0.13);
-   
-   const divY = Math.round(infoCardY + infoCardH + Math.round(H * 0.015));
+  const infoCardX = mg;
+  const infoCardY = Math.round(badgeY + badgeH + Math.round(H * 0.022));
+  const infoCardW = W - mg * 2;
+  const infoCardH = Math.round(H * 0.125); // Slighly more compact info card
   
-   const qrSz = Math.round(W * 0.46);
-   const qrPad = 12;
-   const qrBW = qrSz + qrPad * 2;
-   const qrBX = Math.round((W - qrBW) / 2);
-   const qrBY = Math.round(divY + Math.round(H * 0.018));
-   const qrIX = qrBX + qrPad;
-   const qrIY = qrBY + qrPad;
-   const qrBH = qrSz + qrPad * 2 + Math.round(H * 0.032);
-   const scanY = Math.round(qrIY + qrSz + Math.round(H * 0.024));
+  const divY = Math.round(infoCardY + infoCardH + Math.round(H * 0.015));
   
-  const ctcY = Math.round(qrBY + qrBH + Math.round(H * 0.02));
+  const qrSz = Math.round(W * 0.40); // Standard readable QR size
+  const qrPad = 8;
+  const qrBW = qrSz + qrPad * 2;
+  const qrBX = Math.round((W - qrBW) / 2);
+  const qrBY = Math.round(divY + Math.round(H * 0.015));
+  const qrIX = qrBX + qrPad;
+  const qrIY = qrBY + qrPad;
+  const qrBH = qrSz + qrPad * 2 + Math.round(H * 0.028);
+  const scanY = Math.round(qrIY + qrSz + Math.round(H * 0.024));
+  
+  const ctcY = Math.round(qrBY + qrBH + Math.round(H * 0.012));
 
   const rows:any[]=[];
   if(pType==='student'){
@@ -387,12 +387,12 @@ function buildLandscapeModern(o:any):string {
 
   const colQ = Math.round(W * 0.60);
   
-  const photoR = Math.round(H * 0.24); // Larger photo
-  const photoCX = Math.round(W * 0.10);
+  const photoR = Math.round(H * 0.22); // Perfectly proportioned photo radius
+  const photoCX = mg + photoR + 5; // Align photo inside the left margin, fully avoiding cut-off
   const availableH = H - hH - Math.round(H * 0.08);
   const photoCY = Math.round(hH + Math.round(H * 0.04) + availableH / 2);
   
-  const txtX = Math.round(W * 0.23);
+  const txtX = photoCX + photoR + Math.round(W * 0.025); // Position text comfortably to the right of the photo, eliminating overlap
   
   const nameY = Math.round(hH + Math.round(H * 0.05) + Math.round(availableH * 0.18));
   const nameFs = Math.round(H * 0.065); // Larger name
@@ -406,11 +406,11 @@ function buildLandscapeModern(o:any):string {
   const infoCardW = colQ - txtX - mg;
   const infoCardH = Math.round(H * 0.28);
   
-   const qrZW = W - colQ - mg;
-   const qrSz = Math.round(Math.min(qrZW - Math.round(H * 0.02), availableH - Math.round(H * 0.06)));
-   const qrX = Math.round(colQ + (qrZW - qrSz) / 2);
-   const qrY = Math.round(hH + Math.round(H * 0.04) + (availableH - qrSz) / 2);
-   const scanY = Math.round(qrY + qrSz + Math.round(H * 0.018));
+  const qrZW = W - colQ - mg;
+  const qrSz = Math.round(Math.min(qrZW - Math.round(H * 0.02), availableH - Math.round(H * 0.06)));
+  const qrX = Math.round(colQ + (qrZW - qrSz) / 2);
+  const qrY = Math.round(hH + Math.round(H * 0.04) + (availableH - qrSz) / 2);
+  const scanY = Math.round(qrY + qrSz + Math.round(H * 0.018));
 
   const rows:any[]=[];
   if(pType==='student'){

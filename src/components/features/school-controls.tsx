@@ -296,173 +296,177 @@ export function SchoolControlsPanel() {
 
       {/* Controls Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Building2 className="size-5" />
+        <DialogContent className="sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col p-0 overflow-hidden gap-0">
+          <DialogHeader className="p-6 border-b shrink-0 bg-background/95 backdrop-blur-xs">
+            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+              <Building2 className="size-5 text-emerald-600 animate-pulse" />
               {selectedSchool?.name} — Feature Controls
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="mt-1 text-xs">
               Enable or disable platform features and user roles for this school.
               Disabled features will be hidden from the school&apos;s dashboard.
             </DialogDescription>
           </DialogHeader>
 
-          {loadingControls ? (
-            <div className="space-y-4 py-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <Skeleton className="h-5 w-48" />
-                  <Skeleton className="h-5 w-10" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-6 py-2">
-              {/* Features Section */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <Settings className="size-4 text-emerald-600" />
-                    Platform Features
-                    {localDisabledFeatures.size > 0 && (
-                      <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-200 bg-amber-50">
-                        {localDisabledFeatures.size} disabled
-                      </Badge>
-                    )}
-                  </h3>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs h-7"
-                      onClick={() => setLocalDisabledFeatures(new Set(PLATFORM_FEATURES.map(f => f.id)))}
-                    >
-                      Disable All
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs h-7"
-                      onClick={() => setLocalDisabledFeatures(new Set())}
-                    >
-                      Enable All
-                    </Button>
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {loadingControls ? (
+              <div className="space-y-4 py-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-5 w-10" />
                   </div>
-                </div>
-                <Card>
-                  <CardContent className="p-0">
-                    <ScrollArea className="max-h-[400px]">
-                      <div className="divide-y">
-                        {PLATFORM_FEATURES.map(feature => {
-                          const isDisabled = localDisabledFeatures.has(feature.id);
-                          const Icon = feature.icon;
-                          return (
-                            <div
-                              key={feature.id}
-                              className={`flex items-center justify-between p-3 hover:bg-muted/50 transition-colors ${isDisabled ? 'opacity-60' : ''}`}
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className={`size-8 rounded-lg flex items-center justify-center ${isDisabled ? 'bg-gray-100 text-gray-400' : 'bg-emerald-100 text-emerald-600'}`}>
-                                  <Icon className="size-4" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Features Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <Settings className="size-4 text-emerald-600" />
+                      Platform Features
+                      {localDisabledFeatures.size > 0 && (
+                        <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-200 bg-amber-50">
+                          {localDisabledFeatures.size} disabled
+                        </Badge>
+                      )}
+                    </h3>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 hover:bg-muted"
+                        onClick={() => setLocalDisabledFeatures(new Set(PLATFORM_FEATURES.map(f => f.id)))}
+                      >
+                        Disable All
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 hover:bg-muted"
+                        onClick={() => setLocalDisabledFeatures(new Set())}
+                      >
+                        Enable All
+                      </Button>
+                    </div>
+                  </div>
+                  <Card className="border border-muted/80 shadow-2xs">
+                    <CardContent className="p-0">
+                      <ScrollArea className="max-h-[350px]">
+                        <div className="divide-y divide-muted/50">
+                          {PLATFORM_FEATURES.map(feature => {
+                            const isDisabled = localDisabledFeatures.has(feature.id);
+                            const Icon = feature.icon;
+                            return (
+                              <div
+                                key={feature.id}
+                                className={`flex items-center justify-between p-3 hover:bg-muted/30 transition-colors ${isDisabled ? 'opacity-50 bg-muted/10' : ''}`}
+                              >
+                                <div className="flex items-center gap-3 min-w-0 mr-4">
+                                  <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isDisabled ? 'bg-muted text-muted-foreground' : 'bg-emerald-100/80 text-emerald-600'}`}>
+                                    <Icon className="size-4" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-foreground/90 leading-none mb-1">{feature.label}</p>
+                                    <p className="text-[11px] text-muted-foreground line-clamp-1">{feature.description}</p>
+                                  </div>
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium">{feature.label}</p>
-                                  <p className="text-[11px] text-muted-foreground truncate">{feature.description}</p>
-                                </div>
+                                <Switch
+                                  checked={!isDisabled}
+                                  onCheckedChange={() => toggleFeature(feature.id)}
+                                  className="data-[state=checked]:bg-emerald-600 shrink-0"
+                                />
                               </div>
-                              <Switch
-                                checked={!isDisabled}
-                                onCheckedChange={() => toggleFeature(feature.id)}
-                              />
+                            );
+                          })}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Separator className="bg-muted/60" />
+
+                {/* User Roles Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold flex items-center gap-2">
+                      <UserCheck className="size-4 text-blue-600" />
+                      User Roles
+                      {localDisabledRoles.size > 0 && (
+                        <Badge variant="outline" className="text-[10px] text-red-600 border-red-200 bg-red-50">
+                          {localDisabledRoles.size} disabled
+                        </Badge>
+                      )}
+                    </h3>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 hover:bg-muted"
+                        onClick={() => setLocalDisabledRoles(new Set(USER_ROLES.map(r => r.id)))}
+                      >
+                        Disable All
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 hover:bg-muted"
+                        onClick={() => setLocalDisabledRoles(new Set())}
+                      >
+                        Enable All
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {USER_ROLES.map(role => {
+                      const isDisabled = localDisabledRoles.has(role.id);
+                      const Icon = role.icon;
+                      return (
+                        <Card key={role.id} className={`border border-muted/80 shadow-2xs transition-all hover:shadow-2xs ${isDisabled ? 'opacity-50 bg-muted/10' : ''}`}>
+                          <CardContent className="p-3.5 flex items-center justify-between">
+                            <div className="flex items-center gap-3 mr-4 min-w-0">
+                              <div className={`size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isDisabled ? 'bg-muted text-muted-foreground' : 'bg-blue-100/80 text-blue-600'}`}>
+                                <Icon className="size-4" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-foreground/90 leading-none mb-1">{role.label}</p>
+                                <p className="text-[11px] text-muted-foreground line-clamp-1">{role.description}</p>
+                              </div>
                             </div>
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Separator />
-
-              {/* User Roles Section */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <UserCheck className="size-4 text-blue-600" />
-                    User Roles
-                    {localDisabledRoles.size > 0 && (
-                      <Badge variant="outline" className="text-[10px] text-red-600 border-red-200 bg-red-50">
-                        {localDisabledRoles.size} disabled
-                      </Badge>
-                    )}
-                  </h3>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs h-7"
-                      onClick={() => setLocalDisabledRoles(new Set(USER_ROLES.map(r => r.id)))}
-                    >
-                      Disable All
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs h-7"
-                      onClick={() => setLocalDisabledRoles(new Set())}
-                    >
-                      Enable All
-                    </Button>
+                            <Switch
+                              checked={!isDisabled}
+                              onCheckedChange={() => toggleRole(role.id)}
+                              className="data-[state=checked]:bg-blue-600 shrink-0"
+                            />
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {USER_ROLES.map(role => {
-                    const isDisabled = localDisabledRoles.has(role.id);
-                    const Icon = role.icon;
-                    return (
-                      <Card key={role.id} className={isDisabled ? 'opacity-60' : ''}>
-                        <CardContent className="p-3 flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`size-8 rounded-lg flex items-center justify-center ${isDisabled ? 'bg-gray-100 text-gray-400' : 'bg-blue-100 text-blue-600'}`}>
-                              <Icon className="size-4" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">{role.label}</p>
-                              <p className="text-[11px] text-muted-foreground">{role.description}</p>
-                            </div>
-                          </div>
-                          <Switch
-                            checked={!isDisabled}
-                            onCheckedChange={() => toggleRole(role.id)}
-                          />
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
 
-              {localDisabledFeatures.size > 0 && localDisabledRoles.size > 0 && (
-                <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                  <AlertTriangle className="size-5 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-amber-800">Warning</p>
-                    <p className="text-xs text-amber-700">
-                      You have disabled {localDisabledFeatures.size} features and {localDisabledRoles.size} user roles.
-                      Disabled features will be hidden from the school&apos;s navigation and UI.
-                      Users with disabled roles will not be able to log in.
-                    </p>
+                {localDisabledFeatures.size > 0 && localDisabledRoles.size > 0 && (
+                  <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-4 shadow-2xs">
+                    <AlertTriangle className="size-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-amber-800">Warning</p>
+                      <p className="text-[11px] text-amber-700 leading-relaxed mt-1">
+                        You have disabled {localDisabledFeatures.size} features and {localDisabledRoles.size} user roles.
+                        Disabled features will be hidden from the school&apos;s navigation and UI.
+                        Users with disabled roles will not be able to log in.
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>
+          <DialogFooter className="p-4 border-t bg-muted/30 shrink-0 flex justify-end gap-3 sticky bottom-0 z-10 flex-row">
+            <Button variant="outline" className="rounded-xl px-5" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-6">
               {saving ? <><Loader2 className="size-4 mr-2 animate-spin" /> Saving...</> : <><Save className="size-4 mr-2" /> Save Controls</>}
             </Button>
           </DialogFooter>

@@ -420,8 +420,7 @@ button[type="submit"]:active {
 
 /* ====== Responsive tables: auto-scroll on small screens ====== */
 @media (max-width: 768px) {
-  .responsive-table,
-  table:not(.no-scroll) {
+  .responsive-table {
     display: block;
     width: 100%;
     overflow-x: auto;

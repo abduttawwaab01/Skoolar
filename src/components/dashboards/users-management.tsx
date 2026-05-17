@@ -745,32 +745,35 @@ export function UsersManagement() {
       {/* Tabs and Controls */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <TabsList>
+          <div className="w-full overflow-x-auto scrollbar-none pb-1">
+            <TabsList className="flex w-max min-w-full sm:w-auto">
             {tabRoles.map(tab => (
               <TabsTrigger key={tab.value} value={tab.value} className="gap-1.5 text-xs">
                 {tab.icon}
                 {tab.label}
               </TabsTrigger>
             ))}
-          </TabsList>
-          <Button className="gap-2" onClick={() => setCreateOpen(true)}>
+            </TabsList>
+          </div>
+          <Button className="gap-2 w-full sm:w-auto shrink-0" onClick={() => setCreateOpen(true)}>
             <UserPlus className="size-4" />
             Create User
           </Button>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 mt-4">
-          <div className="relative max-w-xs flex-1">
+        <div className="grid grid-cols-1 sm:flex sm:flex-wrap items-center gap-3 mt-4">
+          <div className="relative w-full sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
               placeholder="Search by name or email..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 w-full"
             />
           </div>
-          <Select value={roleFilter} onValueChange={v => setRoleFilter(v === '__all__' ? '' : v)}>
+          <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto sm:gap-3">
+            <Select value={roleFilter} onValueChange={v => setRoleFilter(v === '__all__' ? '' : v)}>
             <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="All Roles" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">All Roles</SelectItem>
@@ -788,14 +791,17 @@ export function UsersManagement() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={statusFilter} onValueChange={v => setStatusFilter(v === '__all__' ? '' : v)}>
+        </div>
+          <div className="w-full sm:w-auto">
+            <Select value={statusFilter} onValueChange={v => setStatusFilter(v === '__all__' ? '' : v)}>
             <SelectTrigger className="w-full sm:w-[130px]"><SelectValue placeholder="All Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
-          </Select>
+            </Select>
+          </div>
         </div>
 
         {tabRoles.map(tab => (
