@@ -1,6 +1,7 @@
 import QRCode from 'qrcode';
 import { Resvg } from '@resvg/resvg-js';
 import { db } from '@/lib/db';
+import { GEIST_REGULAR_BASE64, GEIST_FONT_FAMILY } from './geist-font-data';
 
 const MM = (mm: number) => Math.round((mm / 25.4) * 300);
 const PW = MM(53.98); const PH = MM(85.6);
@@ -96,7 +97,7 @@ export async function renderIDCard(
     }
   }
 
-  const FF = "'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
+  const FF = `'${GEIST_FONT_FAMILY}', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif`;
   
   const style = `<style>
     * { font-family: ${FF}; }
@@ -132,14 +133,17 @@ export async function renderIDCard(
     ? buildPortraitModern({W,H,prim,primD,primL,sec,dark,muted,border,hdrTxt,pName,pId,pClass,pGend,pPhone,pRole,schN,schA,sPh,sEm,inits,phB64,phMime,qrB64,showQR,showPhoto,pType,isBack,backText,style,defs})
     : buildLandscapeModern({W,H,prim,primD,primL,sec,dark,muted,border,hdrTxt,pName,pId,pClass,pGend,pPhone,pRole,schN,schA,sPh,sEm,inits,phB64,phMime,qrB64,showQR,showPhoto,pType,isBack,backText,style,defs});
 
+  const geistBuffer = Buffer.from(GEIST_REGULAR_BASE64, 'base64');
+
   try {
     const resvg = new Resvg(svg, {
       background: 'white',
       fitTo: { mode: 'width', value: W },
       font: {
         loadSystemFonts: true,
-        defaultFontFamily: 'Segoe UI',
-      },
+        defaultFontFamily: GEIST_FONT_FAMILY,
+        fontBuffers: [geistBuffer],
+      } as any,
     });
 
     const pngData = resvg.render();
