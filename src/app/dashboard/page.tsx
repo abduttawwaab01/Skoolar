@@ -261,7 +261,7 @@ export default function DashboardPage() {
         id: session.user.id,
         name: session.user.name || '',
         email: session.user.email || '',
-        avatar: session.user.image || null,
+        avatar: session.user.avatar || null,
         schoolId: session.user.schoolId || '',
         schoolName: session.user.schoolName || 'Skoolar Platform',
         planName: session.user.planName || 'free',
