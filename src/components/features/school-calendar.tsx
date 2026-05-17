@@ -82,6 +82,7 @@ export default function SchoolCalendar() {
   const getEventsForDate = (dateStr: string) => filteredEvents.filter(e => e.date === dateStr || (e.endDate && dateStr >= e.date && dateStr <= e.endDate));
 
   const calendarDays = useMemo(() => {
+    if (!currentDate) return [];
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDay = getFirstDayOfMonth(currentDate);
     const days: (number | null)[] = [];
@@ -93,6 +94,7 @@ export default function SchoolCalendar() {
   }, [currentDate]);
 
   const weekDays = useMemo(() => {
+    if (!currentDate) return [];
     const start = new Date(currentDate);
     const dayOfWeek = start.getDay();
     start.setDate(start.getDate() - dayOfWeek);
@@ -109,10 +111,10 @@ export default function SchoolCalendar() {
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   };
 
-  const prevMonth = () => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-  const nextMonth = () => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
-  const prevWeek = () => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 7));
-  const nextWeek = () => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 7));
+  const prevMonth = () => setCurrentDate(prev => { const d = prev ?? new Date(); return new Date(d.getFullYear(), d.getMonth() - 1, 1); });
+  const nextMonth = () => setCurrentDate(prev => { const d = prev ?? new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 1); });
+  const prevWeek = () => setCurrentDate(prev => { const d = prev ?? new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7); });
+  const nextWeek = () => setCurrentDate(prev => { const d = prev ?? new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7); });
   const goToToday = () => { const d = new Date(); setCurrentDate(new Date(d.getFullYear(), d.getMonth(), 1)); };
 
   const upcomingEvents = useMemo(() => {
@@ -157,8 +159,11 @@ export default function SchoolCalendar() {
   };
 
   const isToday = (day: number) => {
+    if (!currentDate) return false;
     const d = new Date(); return day === d.getDate() && currentDate.getMonth() === d.getMonth() && currentDate.getFullYear() === d.getFullYear();
   };
+
+  if (!currentDate) return null;
 
   return (
     <div className="space-y-6">
@@ -311,9 +316,7 @@ export default function SchoolCalendar() {
                             <div className="space-y-1">
                               {dayEvents.map(ev => {
                                 const tc = typeColors[ev.type];
-  if (!currentDate) return null;
-
-  return (
+                                return (
                                   <div
                                     key={ev.id}
                                     className={`text-[10px] p-1.5 rounded ${tc.bg} ${tc.text} cursor-pointer`}
