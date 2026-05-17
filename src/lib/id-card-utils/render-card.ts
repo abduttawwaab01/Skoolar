@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
-import sharp from 'sharp';
+import { Resvg } from '@resvg/resvg-js';
 import { db } from '@/lib/db';
-import { getFontFaceCSS } from './font-loader';
+import { getFontFaceCSS, getFontBuffers } from './font-loader';
 
 const MM = (mm: number) => Math.round((mm / 25.4) * 300);
 const PW = MM(53.98); const PH = MM(85.6);
@@ -99,6 +99,7 @@ export async function renderIDCard(
 
   // Get embedded font CSS to prevent rendering boxes
   const fontCSS = getFontFaceCSS();
+  const fontBuffers = getFontBuffers();
   const FF = fontCSS ? "'SkoolarCard', sans-serif" : "'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
   
   const style = `<style>
@@ -137,11 +138,22 @@ export async function renderIDCard(
     : buildLandscapeModern({W,H,prim,primD,primL,sec,dark,muted,border,hdrTxt,pName,pId,pClass,pGend,pPhone,pRole,schN,schA,sPh,sEm,inits,phB64,phMime,qrB64,showQR,showPhoto,pType,isBack,backText,style,defs});
 
   try {
-    const pngBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
+    const resvg = new Resvg(svg, {
+      background: 'white',
+      fitTo: { mode: 'width', value: W },
+      font: {
+        fontBuffers: fontBuffers,
+        loadSystemFonts: true,
+        defaultFontFamily: 'SkoolarCard',
+      },
+    });
+
+    const pngData = resvg.render();
+    const pngBuffer = pngData.asPng();
     return pngBuffer;
-  } catch (sharpErr) {
-    console.error('Sharp rendering error:', sharpErr);
-    throw new Error(`Failed to render ID card: ${sharpErr instanceof Error ? sharpErr.message : 'Unknown error'}`);
+  } catch (err) {
+    console.error('Resvg rendering error:', err);
+    throw new Error(`Failed to render ID card: ${err instanceof Error ? err.message : 'Unknown error'}`);
   }
 }
 

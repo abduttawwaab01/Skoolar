@@ -49,15 +49,18 @@ function findFontFile(name: string): string | null {
   return null;
 }
 
-export function getFontPaths(): string[] {
-  const paths: string[] = [];
+export function getFontBuffers(): Buffer[] {
+  const buffers: Buffer[] = [];
   const regularPath = findFontFile('Geist-Regular.ttf');
-  if (regularPath) paths.push(regularPath);
-  
   const boldPath = findFontFile('Geist-Bold.ttf');
-  if (boldPath) paths.push(boldPath);
-  
-  return paths;
+
+  if (regularPath) {
+    try { buffers.push(fs.readFileSync(regularPath)); } catch (e) { console.error(e); }
+  }
+  if (boldPath) {
+    try { buffers.push(fs.readFileSync(boldPath)); } catch (e) { console.error(e); }
+  }
+  return buffers;
 }
 
 export function getFontFaceCSS(): string {
