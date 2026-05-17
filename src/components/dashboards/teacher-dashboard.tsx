@@ -157,14 +157,19 @@ export function TeacherDashboard() {
     fetchData();
   }, [currentUser.schoolId, selectedSchoolId]);
 
-  const today = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
-   const classNames = classes.map(c => c.name);
+  const today = mounted
+    ? new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : '';
+
+  const classNames = classes.map(c => c.name);
    const totalStudentsCount = teacherStats ? teacherStats.totalStudents : students.length;
 
    // Use real data from API or show empty state

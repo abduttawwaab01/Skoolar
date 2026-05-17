@@ -1,7 +1,8 @@
 import QRCode from 'qrcode';
-import { Resvg } from '@resvg/resvg-js';
+import { Resvg } from '@resvg/resvg-wasm';
 import { db } from '@/lib/db';
 import { GEIST_REGULAR_BASE64, GEIST_FONT_FAMILY } from './geist-font-data';
+import { ensureResvgInit } from './init-resvg';
 
 const MM = (mm: number) => Math.round((mm / 25.4) * 300);
 const PW = MM(53.98); const PH = MM(85.6);
@@ -34,6 +35,7 @@ export async function renderIDCard(
   showPhoto:boolean, _sb:boolean, showQR:boolean, orientation:string,
   photoUrl:string|null, role:string, isBack=false
 ): Promise<Buffer> {
+  await ensureResvgInit();
   const port = orientation==='portrait';
   const W = port?PW:LW, H = port?PH:LH;
   const pType = person.type||(role==='STUDENT'?'student':'staff');
@@ -140,15 +142,13 @@ export async function renderIDCard(
       background: 'white',
       fitTo: { mode: 'width', value: W },
       font: {
-        loadSystemFonts: true,
+        fontBuffers: [new Uint8Array(geistBuffer)],
         defaultFontFamily: GEIST_FONT_FAMILY,
-        fontBuffers: [geistBuffer],
-      } as any,
+      },
     });
 
     const pngData = resvg.render();
-    const pngBuffer = pngData.asPng();
-    return pngBuffer;
+    return Buffer.from(pngData.asPng());
   } catch (err) {
     console.error('Resvg rendering error:', err);
     throw new Error(`Failed to render ID card: ${err instanceof Error ? err.message : 'Unknown error'}`);

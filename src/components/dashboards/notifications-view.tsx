@@ -51,10 +51,11 @@ const categoryConfig: Record<string, { label: string; emoji: string }> = {
   general: { label: 'General', emoji: '📌' },
 };
 
-function formatTimeAgo(dateStr: string): string {
-  const now = new Date();
+function formatTimeAgo(dateStr: string, now?: Date): string {
+  const d = now || new Date();
   const date = new Date(dateStr);
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const seconds = Math.floor((d.getTime() - date.getTime()) / 1000);
   if (seconds < 60) return 'Just now';
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes} min ago`;
@@ -65,10 +66,10 @@ function formatTimeAgo(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function getDateGroup(dateStr: string): string {
-  const now = new Date();
+function getDateGroup(dateStr: string, now?: Date): string {
+  const d = now || new Date();
   const date = new Date(dateStr);
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const today = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
   const weekStart = new Date(today);
@@ -82,6 +83,7 @@ function getDateGroup(dateStr: string): string {
 
 export function NotificationsView() {
   const { selectedSchoolId, currentUser, currentRole } = useAppStore();
+  const [mounted, setMounted] = useState(false);
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>('All');
   const [loading, setLoading] = useState(true);
@@ -113,6 +115,8 @@ export function NotificationsView() {
     }
   };
 
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
     setPage(1);
     fetchNotifs(1);
@@ -129,15 +133,16 @@ export function NotificationsView() {
     return notifs.filter(n => n.type.toLowerCase() === activeFilter.toLowerCase());
   }, [notifs, activeFilter]);
 
+  const now = mounted ? new Date() : undefined;
   const groupedNotifs = useMemo(() => {
     const groups: Record<string, Notification[]> = {};
     for (const n of filteredNotifs) {
-      const group = getDateGroup(n.createdAt);
+      const group = getDateGroup(n.createdAt, now);
       if (!groups[group]) groups[group] = [];
       groups[group].push(n);
     }
     return groups;
-  }, [filteredNotifs]);
+  }, [filteredNotifs, now]);
 
   const groupOrder = ['Today', 'Yesterday', 'This Week', 'Earlier'];
 
@@ -308,7 +313,7 @@ export function NotificationsView() {
                                 {!notif.isRead && <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />}
                                 <span className="text-[10px] text-muted-foreground whitespace-nowrap flex items-center gap-0.5">
                                   <Clock className="size-3" />
-                                  {formatTimeAgo(notif.createdAt)}
+                                  {formatTimeAgo(notif.createdAt, mounted ? new Date() : undefined)}
                                 </span>
                               </div>
                             </div>

@@ -124,10 +124,10 @@ function parseFeatures(features: string): string[] {
   return [];
 }
 
-function daysUntil(dateStr: string) {
+function daysUntil(dateStr: string, nowOverride?: Date) {
   const target = new Date(dateStr);
-  const now = new Date();
-  const diff = target.getTime() - now.getTime();
+  const d = nowOverride || new Date();
+  const diff = target.getTime() - d.getTime();
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
@@ -186,8 +186,11 @@ const defaultPlans = [
 
 // --- Component ---
  export function SubscriptionView() {
-   const { currentUser, currentRole } = useAppStore();
-   const [school, setSchool] = React.useState<SchoolData | null>(null);
+    const { currentUser, currentRole } = useAppStore();
+    const [mounted, setMounted] = React.useState(false);
+    React.useEffect(() => { setMounted(true); }, []);
+    const now = mounted ? new Date() : undefined;
+    const [school, setSchool] = React.useState<SchoolData | null>(null);
    const [plans, setPlans] = React.useState<Plan[]>([]);
    const [payment, setPayment] = React.useState<PaymentData | null>(null);
    const [loading, setLoading] = React.useState(true);
@@ -467,7 +470,7 @@ setLoading(true);
   };
 
   const isFree = !payment || !payment.plan || payment.plan.name === 'free' || payment.plan.name === 'basic';
-  const daysLeft = payment?.endDate ? daysUntil(payment.endDate) : null;
+  const daysLeft = payment?.endDate ? daysUntil(payment.endDate, now) : null;
   const isExpiringSoon = daysLeft !== null && daysLeft <= 14 && daysLeft > 0;
   const isExpired = daysLeft !== null && daysLeft <= 0;
 

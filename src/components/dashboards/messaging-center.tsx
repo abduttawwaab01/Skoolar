@@ -79,9 +79,9 @@ const ROLE_ICONS: Record<string, string> = {
 };
 
 // ==================== HELPERS ====================
-function formatTime(dateStr: string): string {
+function formatTime(dateStr: string, nowOverride?: Date): string {
   const d = new Date(dateStr);
-  const now = new Date();
+  const now = nowOverride || new Date();
   const diff = now.getTime() - d.getTime();
   if (diff < 60000) return 'Just now';
   if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
@@ -91,9 +91,9 @@ function formatTime(dateStr: string): string {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-function getDateLabel(dateStr: string): string {
+function getDateLabel(dateStr: string, nowOverride?: Date): string {
   const d = new Date(dateStr);
-  const now = new Date();
+  const now = nowOverride || new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 86400000);
   const msgDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -102,10 +102,10 @@ function getDateLabel(dateStr: string): string {
   return d.toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-function isUserOnline(lastLogin: string | null | undefined): boolean {
+function isUserOnline(lastLogin: string | null | undefined, nowOverride?: Date): boolean {
   if (!lastLogin) return false;
   const loginDate = new Date(lastLogin);
-  const diff = Date.now() - loginDate.getTime();
+  const diff = (nowOverride || new Date()).getTime() - loginDate.getTime();
   return diff < 300000; // Online if last login was within 5 minutes
 }
 
@@ -118,10 +118,14 @@ function isSameDay(d1: string, d2: string): boolean {
 // ==================== COMPONENT ====================
 export function MessagingCenter() {
   const { currentUser, currentRole, selectedSchoolId } = useAppStore();
+  const [mounted, setMounted] = useState(false);
   
   // For Super Admin, require explicit school selection - don't fall back to empty schoolId
   const schoolId = currentRole === 'SUPER_ADMIN' ? (selectedSchoolId || '') : (selectedSchoolId || currentUser.schoolId);
   const [currentSchoolName, setCurrentSchoolName] = useState<string>('');
+
+  useEffect(() => { setMounted(true); }, []);
+  const now = mounted ? new Date() : undefined;
 
   // Fetch school name when schoolId changes
   useEffect(() => {
@@ -504,7 +508,7 @@ export function MessagingCenter() {
 
             {/* Timestamp & status */}
             <div className={`flex items-center gap-1.5 mt-0.5 ${isMine ? 'justify-end' : 'justify-start'}`}>
-              <span className="text-[10px] text-gray-400">{formatTime(msg.createdAt)}</span>
+              <span className="text-[10px] text-gray-400">{formatTime(msg.createdAt, now)}</span>
               {isMine && (
                 <span className="text-emerald-400">
                   {msg.isRead ? <CheckCheck className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
@@ -590,7 +594,7 @@ export function MessagingCenter() {
                               }}>
                               <div className="relative flex-shrink-0">
                                 <Avatar className="h-8 w-8"><AvatarFallback className="text-xs">{u.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</AvatarFallback></Avatar>
-                                {isUserOnline(u.lastLogin) && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />}
+                                {isUserOnline(u.lastLogin, now) && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium break-words" style={{ wordBreak: 'break-word' }}>{u.name}</p>
@@ -599,7 +603,7 @@ export function MessagingCenter() {
                               {currentRole === 'SUPER_ADMIN' && u.schoolName && (
                                 <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded max-w-[120px] break-words" style={{ wordBreak: 'break-word' }}>{u.schoolName}</span>
                               )}
-                              {isUserOnline(u.lastLogin) ? (
+                              {isUserOnline(u.lastLogin, now) ? (
                                 <span className="text-[10px] text-emerald-500 font-medium flex-shrink-0">Online</span>
                               ) : (
                                 <div className="h-4 w-8" />
@@ -655,7 +659,7 @@ export function MessagingCenter() {
                   <div key={p.id} className="flex items-center gap-2.5">
                     <div className="relative">
                       <Avatar className="h-8 w-8"><AvatarFallback className="text-[10px]">{p.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</AvatarFallback></Avatar>
-                      {isUserOnline(p.lastLogin) && <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />}
+                      {isUserOnline(p.lastLogin, now) && <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{p.name}</p>
@@ -706,7 +710,7 @@ export function MessagingCenter() {
             </Avatar>
             {!isGroup && (() => {
               const other = selectedConv.participants.find(p => p.id !== currentUser.id);
-              return isUserOnline(other?.lastLogin) ? (
+              return isUserOnline(other?.lastLogin, now) ? (
                 <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white">
                   <span className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-75" />
                 </span>
@@ -727,9 +731,9 @@ export function MessagingCenter() {
                 const other = (selectedConv.participants || []).find(p => p && p.id !== currentUser.id);
                 return other ? (
                   <>
-                    <span className={`w-1.5 h-1.5 rounded-full ${isUserOnline(other.lastLogin) ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+                    <span className={`w-1.5 h-1.5 rounded-full ${isUserOnline(other.lastLogin, now) ? 'bg-emerald-500' : 'bg-gray-300'}`} />
                     <p className="text-xs text-gray-500">
-                      {isUserOnline(other.lastLogin) ? 'Online' : 'Offline'}
+                      {isUserOnline(other.lastLogin, now) ? 'Online' : 'Offline'}
                     </p>
                     {other.role && <Badge className={`text-xs px-1 py-0 border ml-1 ${ROLE_COLORS[other.role] || ''}`}>{ROLE_LABELS[other.role]}</Badge>}
                   </>
@@ -788,10 +792,10 @@ export function MessagingCenter() {
                 let dateLabel = '';
                 if (i === 0) {
                   showDate = true;
-                  dateLabel = getDateLabel(msg.createdAt);
+                  dateLabel = getDateLabel(msg.createdAt, now);
                 } else if (!isSameDay(messages[i - 1].createdAt, msg.createdAt)) {
                   showDate = true;
-                  dateLabel = getDateLabel(msg.createdAt);
+                  dateLabel = getDateLabel(msg.createdAt, now);
                 }
                 return renderMessageBubble(msg, showDate, dateLabel);
               })}
@@ -976,7 +980,7 @@ export function MessagingCenter() {
                                 }}>
                                 <div className="relative flex-shrink-0">
                                   <Avatar className="h-8 w-8"><AvatarFallback className="text-xs">{u.name.split(' ').map(n => n[0]).join('').slice(0, 2)}</AvatarFallback></Avatar>
-                                  {isUserOnline(u.lastLogin) && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />}
+                                  {isUserOnline(u.lastLogin, now) && <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium truncate">{u.name}</p>
@@ -985,7 +989,7 @@ export function MessagingCenter() {
                                 {currentRole === 'SUPER_ADMIN' && u.schoolName && (
                                   <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded flex-shrink-0">{u.schoolName}</span>
                                 )}
-                                {isUserOnline(u.lastLogin) ? (
+                                {isUserOnline(u.lastLogin, now) ? (
                                   <span className="text-[10px] text-emerald-500 font-medium flex-shrink-0">Online</span>
                                 ) : (
                                   <div className="h-4 w-8" />
@@ -1078,7 +1082,7 @@ export function MessagingCenter() {
                           {getConversationAvatar(conv)}
                         </AvatarFallback>
                       </Avatar>
-                      {!isGroup && isUserOnline(other?.lastLogin) && (
+                      {!isGroup && isUserOnline(other?.lastLogin, now) && (
                         <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-white">
                           <span className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-50" />
                         </span>
@@ -1103,7 +1107,7 @@ export function MessagingCenter() {
                         </div>
                         {conv.lastMessageAt && (
                           <span className={`text-[10px] flex-shrink-0 ${isUnread ? 'text-emerald-600 font-semibold' : 'text-gray-400'}`}>
-                            {formatTime(conv.lastMessageAt)}
+                            {formatTime(conv.lastMessageAt, now)}
                           </span>
                         )}
                       </div>

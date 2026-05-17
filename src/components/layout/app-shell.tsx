@@ -448,6 +448,7 @@ const categoryEmoji: Record<string, string> = {
 
 function NotificationsPanel() {
   const { showNotifications, setShowNotifications, currentUser } = useAppStore();
+  const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
@@ -462,6 +463,8 @@ function NotificationsPanel() {
       }
       } catch (error: unknown) { handleSilentError(error, 'Fetch schools'); } finally { setLoading(false); }
   }, [currentUser.id]);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (showNotifications) {
@@ -495,6 +498,7 @@ function NotificationsPanel() {
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   function formatTime(dateStr: string) {
+    if (!mounted) return '';
     const date = new Date(dateStr);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();

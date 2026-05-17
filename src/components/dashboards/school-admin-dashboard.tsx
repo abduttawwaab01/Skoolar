@@ -129,6 +129,7 @@ function DashboardSkeleton() {
 
 export function SchoolAdminDashboard() {
   const { setCurrentView, selectedSchoolId, currentUser } = useAppStore();
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const { data: session, status } = useSession();
   const { isDark, toggleTheme } = useTheme();
@@ -233,6 +234,7 @@ export function SchoolAdminDashboard() {
     }
   }, [selectedSchoolId]);
 
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => { fetchData(); }, [fetchData]);
 
   if (loading) return <DashboardSkeleton />;
@@ -261,12 +263,12 @@ export function SchoolAdminDashboard() {
   // Exams count - use real data from API
   const examCount = exams.length;
 
+  const todayStr = mounted ? new Date().toISOString().split('T')[0] : '';
   // Attendance computation from records
   const attendanceRecs = Array.isArray(attendanceRecords) ? attendanceRecords : [];
-  const todayAttendance = attendanceRecs.filter(r => {
-    const today = new Date().toISOString().split('T')[0];
-    return r.date && new Date(r.date).toISOString().split('T')[0] === today;
-  });
+  const todayAttendance = todayStr ? attendanceRecs.filter(r => {
+    return r.date && new Date(r.date).toISOString().split('T')[0] === todayStr;
+  }) : [];
   const presentToday = todayAttendance.filter(r => r.status === 'present').length;
   const absentToday = todayAttendance.filter(r => r.status === 'absent').length;
   const lateToday = todayAttendance.filter(r => r.status === 'late').length;

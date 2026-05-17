@@ -85,21 +85,22 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function isOverdue(dueDate: string, status: string) {
+function isOverdue(dueDate: string, status: string, nowOverride?: Date) {
   if (status === 'closed' || status === 'completed') return false;
-  return new Date(dueDate) < new Date();
+  const d = nowOverride || new Date();
+  return new Date(dueDate) < d;
 }
 
-function isDueSoon(dueDate: string) {
-  const now = new Date();
+function isDueSoon(dueDate: string, nowOverride?: Date) {
+  const d = nowOverride || new Date();
   const due = new Date(dueDate);
-  const diffMs = due.getTime() - now.getTime();
+  const diffMs = due.getTime() - d.getTime();
   const diffDays = diffMs / (1000 * 60 * 60 * 24);
   return diffDays >= 0 && diffDays <= 2;
 }
 
 function getStatusBadge(status: string, dueDate: string) {
-  const overdue = isOverdue(dueDate, status);
+  const overdue = isOverdue(dueDate, status, now);
   if (overdue) return <Badge variant="destructive" className="text-[10px]">Overdue</Badge>;
   if (status === 'active') return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[10px]">Active</Badge>;
   if (status === 'closed') return <Badge variant="secondary" className="text-[10px]">Closed</Badge>;
@@ -119,7 +120,11 @@ function getGradeFromScore(score: number, totalMarks: number): string {
 // ---- Component ----
 export function TeacherHomework() {
   const { currentUser, selectedSchoolId } = useAppStore();
+  const [mounted, setMounted] = useState(false);
   const schoolId = currentUser.schoolId || selectedSchoolId || '';
+
+  useEffect(() => { setMounted(true); }, []);
+  const now = mounted ? new Date() : undefined;
 
   // Data state
   const [homeworkList, setHomeworkList] = useState<HomeworkItem[]>([]);
@@ -497,8 +502,8 @@ export function TeacherHomework() {
                 </TableHeader>
                 <TableBody>
                   {homeworkList.map((hw) => {
-                    const overdue = isOverdue(hw.dueDate, hw.status);
-                    const dueSoon = isDueSoon(hw.dueDate);
+                    const overdue = isOverdue(hw.dueDate, hw.status, now);
+                    const dueSoon = isDueSoon(hw.dueDate, now);
                     return (
                       <TableRow key={hw.id} className={cn(overdue && 'bg-red-50/50')}>
                         <TableCell>

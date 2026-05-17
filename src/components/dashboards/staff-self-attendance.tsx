@@ -24,6 +24,7 @@ interface StaffAttendanceStatus {
 
 export function StaffSelfAttendance() {
   const { currentUser, selectedSchoolId } = useAppStore();
+  const [mounted, setMounted] = useState(false);
   const [status, setStatus] = useState<StaffAttendanceStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -33,6 +34,8 @@ export function StaffSelfAttendance() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanningRef = useRef(false);
+
+  useEffect(() => { setMounted(true); }, []);
 
   // Fetch attendance status on mount
   useEffect(() => {
@@ -266,7 +269,7 @@ export function StaffSelfAttendance() {
           <div className="text-sm text-muted-foreground space-y-2">
             <div className="flex items-center gap-2">
               <Calendar className="size-4" />
-              <span>Date: {status?.date || new Date().toLocaleDateString()}</span>
+              <span>Date: {status?.date || (mounted ? new Date().toLocaleDateString() : '')}</span>
             </div>
             <div className="flex items-center gap-2">
               <User className="size-4" />

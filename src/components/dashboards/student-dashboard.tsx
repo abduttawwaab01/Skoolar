@@ -96,6 +96,7 @@ interface ApiAnnouncement {
 
 export function StudentDashboard() {
   const { currentUser, setCurrentView, selectedSchoolId } = useAppStore();
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [studentProfile, setStudentProfile] = useState<ApiStudent | null>(null);
   const [examScores, setExamScores] = useState<ApiExamScore[]>([]);
@@ -111,6 +112,7 @@ export function StudentDashboard() {
     window.location.href = '/api/auth/signout?callbackUrl=/login';
   };
 
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
      let isMounted = true;
      const fetchData = async () => {
@@ -223,14 +225,15 @@ export function StudentDashboard() {
   const rank = studentProfile?.rank;
   const behaviorScore = studentProfile?.behaviorScore || 0;
 
+  const now = mounted ? new Date() : undefined;
   const daysToExam = useMemo(() => {
-    if (!studentProfile?.nextExam?.date) return null;
+    if (!studentProfile?.nextExam?.date || !now) return null;
     const examDate = new Date(studentProfile.nextExam.date);
-    const today = new Date();
+    const today = new Date(now);
     today.setHours(0, 0, 0, 0);
     const diffTime = examDate.getTime() - today.getTime();
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }, [studentProfile?.nextExam?.date]);
+  }, [studentProfile?.nextExam?.date, now]);
 
   const displayResults = useMemo(() => {
     return examScores.map(score => {

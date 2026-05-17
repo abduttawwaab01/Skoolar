@@ -64,10 +64,12 @@ interface FeeStructureItem {
 
 export function AccountantDashboard() {
   const { setCurrentView, selectedSchoolId } = useAppStore();
+  const [mounted, setMounted] = useState(false);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [feeStructures, setFeeStructures] = useState<FeeStructureItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => { setMounted(true); }, []);
   useEffect(() => {
     const fetchData = async () => {
       if (!selectedSchoolId) return;
@@ -94,6 +96,7 @@ export function AccountantDashboard() {
     fetchData();
   }, [selectedSchoolId]);
 
+  const now = mounted ? new Date() : undefined;
   const stats = useMemo(() => {
     const totalRevenue = feeStructures.reduce((sum, f) => sum + (f.amount || 0), 0);
     const collected = payments
@@ -104,10 +107,10 @@ export function AccountantDashboard() {
       .reduce((sum, p) => sum + (p.amount || 0), 0);
 
     // Today's collections
-    const today = new Date().toISOString().split('T')[0];
-    const todayCollected = payments
+    const today = now ? now.toISOString().split('T')[0] : '';
+    const todayCollected = today ? payments
       .filter(p => p.status === 'verified' && p.createdAt?.startsWith(today))
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
+      .reduce((sum, p) => sum + (p.amount || 0), 0) : 0;
 
     const collectionRate = totalRevenue > 0 ? Math.round((collected / totalRevenue) * 100) : 0;
 

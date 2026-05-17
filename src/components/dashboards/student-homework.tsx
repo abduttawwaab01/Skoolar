@@ -66,19 +66,20 @@ function formatDateTime(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
-function getDaysRemaining(dueDate: string): number {
-  const now = new Date();
+function getDaysRemaining(dueDate: string, nowOverride?: Date): number {
+  const d = nowOverride || new Date();
   const due = new Date(dueDate);
-  return Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.ceil((due.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function isOverdue(dueDate: string, status: string) {
+function isOverdue(dueDate: string, status: string, nowOverride?: Date) {
   if (status === 'closed' || status === 'completed') return false;
-  return new Date(dueDate) < new Date();
+  const d = nowOverride || new Date();
+  return new Date(dueDate) < d;
 }
 
-function isDueSoon(dueDate: string) {
-  const days = getDaysRemaining(dueDate);
+function isDueSoon(dueDate: string, nowOverride?: Date) {
+  const days = getDaysRemaining(dueDate, nowOverride);
   return days >= 0 && days <= 2;
 }
 
@@ -87,8 +88,12 @@ type FilterTab = 'all' | 'pending' | 'submitted' | 'graded' | 'overdue';
 // ---- Component ----
 export function StudentHomework() {
   const { currentUser, selectedSchoolId } = useAppStore();
+  const [mounted, setMounted] = useState(false);
   const schoolId = currentUser.schoolId || selectedSchoolId || '';
   const studentId = currentUser.id;
+
+  useEffect(() => { setMounted(true); }, []);
+  const now = mounted ? new Date() : undefined;
 
   // Data
   const [homeworkList, setHomeworkList] = useState<HomeworkItem[]>([]);
@@ -144,13 +149,13 @@ export function StudentHomework() {
     const sub = getSubmissionStatus(hw);
     switch (activeTab) {
       case 'pending':
-        return !sub && !isOverdue(hw.dueDate, hw.status);
+        return !sub && !isOverdue(hw.dueDate, hw.status, now);
       case 'submitted':
         return sub && sub.status === 'submitted';
       case 'graded':
         return sub && sub.status === 'graded';
       case 'overdue':
-        return !sub && isOverdue(hw.dueDate, hw.status);
+        return !sub && isOverdue(hw.dueDate, hw.status, now);
       default:
         return true;
     }
@@ -160,7 +165,7 @@ export function StudentHomework() {
   const totalAssigned = homeworkList.length;
   const submittedCount = homeworkList.filter(hw => { const s = getSubmissionStatus(hw); return s && s.status === 'submitted'; }).length;
   const gradedCount = homeworkList.filter(hw => { const s = getSubmissionStatus(hw); return s && s.status === 'graded'; }).length;
-  const pendingCount = homeworkList.filter(hw => !getSubmissionStatus(hw) && !isOverdue(hw.dueDate, hw.status)).length;
+  const pendingCount = homeworkList.filter(hw => !getSubmissionStatus(hw) && !isOverdue(hw.dueDate, hw.status, now)).length;
 
   // ---- Submit homework ----
   const handleSubmit = async () => {
@@ -232,9 +237,9 @@ export function StudentHomework() {
   // ---- Render card ----
   const renderHomeworkCard = (hw: HomeworkItem) => {
     const sub = getSubmissionStatus(hw);
-    const overdue = isOverdue(hw.dueDate, hw.status);
-    const dueSoon = isDueSoon(hw.dueDate);
-    const days = getDaysRemaining(hw.dueDate);
+    const overdue = isOverdue(hw.dueDate, hw.status, now);
+    const dueSoon = isDueSoon(hw.dueDate, now);
+    const days = getDaysRemaining(hw.dueDate, now);
     const canSubmit = !sub && !overdue;
 
     return (
@@ -374,7 +379,7 @@ export function StudentHomework() {
           <TabsTrigger value="pending">Pending ({pendingCount})</TabsTrigger>
           <TabsTrigger value="submitted">Submitted ({submittedCount})</TabsTrigger>
           <TabsTrigger value="graded">Graded ({gradedCount})</TabsTrigger>
-          <TabsTrigger value="overdue">Overdue ({homeworkList.filter(hw => !getSubmissionStatus(hw) && isOverdue(hw.dueDate, hw.status)).length})</TabsTrigger>
+          <TabsTrigger value="overdue">Overdue ({homeworkList.filter(hw => !getSubmissionStatus(hw) && isOverdue(hw.dueDate, hw.status, now)).length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-4">

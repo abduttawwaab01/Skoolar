@@ -220,8 +220,10 @@ function getSocialIcon(platform: string): React.ElementType {
 }
 
 function PublicFooter({ settings }: { settings: PlatformSettings | null }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const siteName = settings?.siteName || 'Skoolar';
-  const year = new Date().getFullYear();
+  const year = mounted ? new Date().getFullYear() : new Date().getFullYear();
   const socialLinks = parseSocialLinks(settings?.socialLinks ?? null);
 
   return (
