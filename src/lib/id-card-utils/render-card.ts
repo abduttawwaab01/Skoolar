@@ -145,7 +145,7 @@ export async function renderIDCard(
         fontBuffers: fontBuffers,
         loadSystemFonts: true,
         defaultFontFamily: 'SkoolarCard',
-      },
+      } as any,
     });
 
     const pngData = resvg.render();

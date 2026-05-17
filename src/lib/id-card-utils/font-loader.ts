@@ -26,9 +26,8 @@ function findFontFile(name: string): string | null {
   const cwd = process.cwd();
 
   const candidates = [
-    path.resolve(cwd, 'public', 'fonts', name),
     path.resolve(cwd, 'src', 'lib', 'id-card-utils', name),
-    path.resolve(cwd, 'src', 'lib', 'id-card-utils', 'fonts', name),
+    path.resolve(cwd, 'public', 'fonts', name),
     path.resolve(__dirname, name),
     path.resolve(__dirname, '..', 'id-card-utils', name),
     path.resolve(__dirname, '..', '..', '..', 'public', 'fonts', name),
