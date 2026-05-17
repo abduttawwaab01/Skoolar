@@ -409,7 +409,7 @@ function RatingBreakdownChart({ reviews }: { reviews: HubReview[] }) {
   );
 }
 
-function CommentItem({ comment, currentUser, onReply, depth = 0 }: { comment: HubComment; currentUser: HubUser | null; onReply: (r: { id: string; name: string } | null) => void; depth?: number }) {
+function CommentItem({ comment, currentUser, onReply, depth = 0, mounted, now }: { comment: HubComment; currentUser: HubUser | null; onReply: (r: { id: string; name: string } | null) => void; depth?: number; mounted: boolean; now: number }) {
   return (
     <div className={`${depth > 0 ? 'ml-6 pl-4 border-l-2 border-gray-100' : ''}`}>
       <div className="group bg-gray-50 hover:bg-gray-100/80 rounded-lg p-3 transition-colors">
@@ -433,7 +433,7 @@ function CommentItem({ comment, currentUser, onReply, depth = 0 }: { comment: Hu
         )}
       </div>
       {comment.children && comment.children.map(child => (
-        <CommentItem key={child.id} comment={child} currentUser={currentUser} onReply={onReply} depth={depth + 1} />
+        <CommentItem key={child.id} comment={child} currentUser={currentUser} onReply={onReply} depth={depth + 1} mounted={mounted} now={now} />
       ))}
     </div>
   );
@@ -478,8 +478,8 @@ function PodiumCard({ entry, position }: { entry: LeaderboardEntry; position: nu
   );
 }
 
-function PostCard({ post, currentUser, onOpen, onLike, isBookmarked, onBookmark, onShare }: {
-  post: HubPost; currentUser: HubUser | null; onOpen: () => void; onLike: () => void; isBookmarked: boolean; onBookmark: () => void; onShare: () => void;
+function PostCard({ post, currentUser, onOpen, onLike, isBookmarked, onBookmark, onShare, mounted, now }: {
+  post: HubPost; currentUser: HubUser | null; onOpen: () => void; onLike: () => void; isBookmarked: boolean; onBookmark: () => void; onShare: () => void; mounted: boolean; now: number;
 }) {
   const [expanded, setExpanded] = useState(false);
   const isLong = post.content.length > 300;
@@ -1794,7 +1794,7 @@ export default function LearningHubPage() {
                     </h3>
                     <div className="space-y-3">
                       {nestedComments.map(comment => (
-                        <CommentItem key={comment.id} comment={comment} currentUser={currentUser} onReply={setReplyTo} />
+                        <CommentItem key={comment.id} comment={comment} currentUser={currentUser} onReply={setReplyTo} mounted={mounted} now={now} />
                       ))}
                       {postComments.length === 0 && (
                         <div className="text-center py-6 text-gray-400">
@@ -2229,6 +2229,7 @@ export default function LearningHubPage() {
                                 isBookmarked={bookmarkedPosts.has(post.id)}
                                 onBookmark={() => toggleBookmark(post.id)}
                                 onShare={() => sharePost(post)}
+                                mounted={mounted} now={now}
                               />
                             ))}
                           </div>
@@ -2240,15 +2241,16 @@ export default function LearningHubPage() {
                       <div className={`grid gap-4 ${['poem', 'story', 'drama'].some(ct => ct === contentTypeFilter || contentTypeFilter === 'all') ? 'md:grid-cols-2' : ''}`}>
                         {posts.map(post => (
                           <PostCard
-                            key={post.id}
-                            post={post}
-                            currentUser={currentUser}
-                            onOpen={() => openPost(post)}
-                            onLike={() => handleLike(post.id)}
-                            isBookmarked={bookmarkedPosts.has(post.id)}
-                            onBookmark={() => toggleBookmark(post.id)}
-                            onShare={() => sharePost(post)}
-                          />
+                                key={post.id}
+                                post={post}
+                                currentUser={currentUser}
+                                onOpen={() => openPost(post)}
+                                onLike={() => handleLike(post.id)}
+                                isBookmarked={bookmarkedPosts.has(post.id)}
+                                onBookmark={() => toggleBookmark(post.id)}
+                                onShare={() => sharePost(post)}
+                                mounted={mounted} now={now}
+                              />
                         ))}
                       </div>
                     </>
@@ -2507,6 +2509,7 @@ export default function LearningHubPage() {
                           isBookmarked={true}
                           onBookmark={() => toggleBookmark(post.id)}
                           onShare={() => sharePost(post)}
+                          mounted={mounted} now={now}
                         />
                       ))}
                     </div>
