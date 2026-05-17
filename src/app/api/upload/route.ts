@@ -2,13 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { uploadFile, validateFile, validateMagicBytes, isStorageConfigured, getStorageStatus } from '@/lib/cloudinary-storage';
 import { compressImage, shouldCompress, AVATAR_IMAGE_OPTIONS } from '@/lib/file-compression';
-import { requireCsrfValidation } from '@/lib/csrf-middleware';
 
 export async function POST(request: NextRequest) {
   try {
-    const csrfCheck = await requireCsrfValidation(request);
-    if (csrfCheck) return csrfCheck;
-
     if (!isStorageConfigured()) {
       return NextResponse.json(
         { success: false, message: 'Cloud storage is not configured. Set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in .env.' },

@@ -38,9 +38,14 @@ interface WeeklyEvaluationForm {
   isShared: boolean;
 }
 
+function getDefaultWeekDate(): string {
+  if (typeof window === 'undefined') return '';
+  return getMonday(new Date()).toISOString().split('T')[0];
+}
+
 const defaultForm: WeeklyEvaluationForm = {
   studentId: '',
-  weekDate: getMonday(new Date()).toISOString().split('T')[0],
+  weekDate: '',
   academicPerformance: 3,
   behavior: 3,
   attendance: 3,
@@ -77,18 +82,27 @@ const categories = [
 ];
 
 export function WeeklyEvaluation() {
+  const [mounted, setMounted] = useState(false);
   const [students, setStudents] = useState<Student[]>([]);
   const [evaluations, setEvaluations] = useState<any[]>([]);
-  const [form, setForm] = useState<WeeklyEvaluationForm>(defaultForm);
+  const [form, setForm] = useState<WeeklyEvaluationForm>({ ...defaultForm, weekDate: '' });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [weekFilter, setWeekFilter] = useState(getMonday(new Date()).toISOString().split('T')[0]);
-  
+  const [weekFilter, setWeekFilter] = useState('');
+
+  useEffect(() => {
+    const monday = getMonday(new Date()).toISOString().split('T')[0];
+    setWeekFilter(monday);
+    setForm(prev => ({ ...prev, weekDate: monday }));
+    setMounted(true);
+  }, []);
+
   // Fetch teacher's students
   useEffect(() => {
+    if (!mounted) return;
     fetchStudents();
     fetchEvaluations();
-  }, []);
+  }, [mounted]);
 
   // Fetch evaluations for selected week
   useEffect(() => {
