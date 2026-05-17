@@ -144,8 +144,8 @@ export default function StudentDiary() {
     }
   };
 
-  const prevMonth = () => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
-  const nextMonth = () => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  const prevMonth = () => setCurrentDate(prev => { const d = prev ?? new Date(); return new Date(d.getFullYear(), d.getMonth() - 1, 1); });
+  const nextMonth = () => setCurrentDate(prev => { const d = prev ?? new Date(); return new Date(d.getFullYear(), d.getMonth() + 1, 1); });
   const goToToday = () => { const d = new Date(); setCurrentDate(new Date(d.getFullYear(), d.getMonth(), 1)); };
 
   const getDaysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
