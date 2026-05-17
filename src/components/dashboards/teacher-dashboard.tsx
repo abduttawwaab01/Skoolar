@@ -208,7 +208,7 @@ export function TeacherDashboard() {
           variants={slideUp}
         >
           <div>
-            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900 dark:text-white break-words">
               Welcome, <span className="text-emerald-600">{currentUser.name.split(' ')[0]}</span> 👋
             </h1>
             <p className="text-muted-foreground font-medium mt-1">{today}</p>
@@ -252,10 +252,10 @@ export function TeacherDashboard() {
       {/* Dashboard Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <motion.div variants={fadeIn}>
-          <TabsList className="bg-gray-100/50 p-1.5 rounded-2xl border backdrop-blur-sm">
-            <TabsTrigger value="schedule" className="rounded-xl px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-sm">Daily Schedule</TabsTrigger>
-            <TabsTrigger value="grading" className="rounded-xl px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-sm">Assessments</TabsTrigger>
-            <TabsTrigger value="students" className="rounded-xl px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-sm">Student Roster</TabsTrigger>
+          <TabsList className="bg-gray-100/50 p-1.5 rounded-2xl border backdrop-blur-sm overflow-x-auto flex-nowrap">
+            <TabsTrigger value="schedule" className="rounded-xl px-3 sm:px-6 lg:px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-xs sm:text-sm whitespace-nowrap">Daily Schedule</TabsTrigger>
+            <TabsTrigger value="grading" className="rounded-xl px-3 sm:px-6 lg:px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-xs sm:text-sm whitespace-nowrap">Assessments</TabsTrigger>
+            <TabsTrigger value="students" className="rounded-xl px-3 sm:px-6 lg:px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-xs sm:text-sm whitespace-nowrap">Student Roster</TabsTrigger>
           </TabsList>
         </motion.div>
 

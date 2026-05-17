@@ -23,15 +23,17 @@ function isWoff(buffer: Buffer): boolean {
 }
 
 function findFontFile(name: string): string | null {
-  const cwd = process.cwd();
+  const cwd = typeof process !== 'undefined' ? process.cwd() : '';
+  let dirname = '';
+  try { dirname = __dirname; } catch { dirname = ''; }
 
   const candidates = [
-    path.resolve(cwd, 'src', 'lib', 'id-card-utils', name),
-    path.resolve(cwd, 'public', 'fonts', name),
-    path.resolve(__dirname, name),
-    path.resolve(__dirname, '..', 'id-card-utils', name),
-    path.resolve(__dirname, '..', '..', '..', 'public', 'fonts', name),
-  ];
+    cwd ? path.resolve(cwd, 'src', 'lib', 'id-card-utils', name) : '',
+    cwd ? path.resolve(cwd, 'public', 'fonts', name) : '',
+    dirname ? path.resolve(dirname, name) : '',
+    dirname ? path.resolve(dirname, '..', 'id-card-utils', name) : '',
+    dirname ? path.resolve(dirname, '..', '..', '..', 'public', 'fonts', name) : '',
+  ].filter(Boolean);
 
   for (const fp of candidates) {
     try {
@@ -48,7 +50,7 @@ function findFontFile(name: string): string | null {
   return null;
 }
 
-export function getFontBuffers(): Buffer[] {
+export function getValidFontBuffers(): Buffer[] {
   const buffers: Buffer[] = [];
   const regularPath = findFontFile('Geist-Regular.ttf');
   const boldPath = findFontFile('Geist-Bold.ttf');
@@ -58,20 +60,28 @@ export function getFontBuffers(): Buffer[] {
   if (regularPath) {
     try {
       const buf = fs.readFileSync(regularPath);
-      buffers.push(buf);
-      console.log(`[IDCard] Loaded Geist-Regular: ${buf.length} bytes`);
+      if (isTrueType(buf) || isOpenType(buf)) {
+        buffers.push(buf);
+        console.log(`[IDCard] Loaded Geist-Regular: ${buf.length} bytes (TrueType/OpenType)`);
+      } else {
+        console.warn(`[IDCard] Skipping Geist-Regular: not TrueType/OpenType (magic: ${buf.slice(0,4).toString('hex')})`);
+      }
     } catch (e) {
       console.error(`[IDCard] Failed to read Geist-Regular:`, e);
     }
   } else {
-    console.warn(`[IDCard] Geist-Regular not found! Text might not render correctly.`);
+    console.warn(`[IDCard] Geist-Regular not found! Text will use system fonts.`);
   }
 
   if (boldPath) {
     try {
       const buf = fs.readFileSync(boldPath);
-      buffers.push(buf);
-      console.log(`[IDCard] Loaded Geist-Bold: ${buf.length} bytes`);
+      if (isTrueType(buf) || isOpenType(buf)) {
+        buffers.push(buf);
+        console.log(`[IDCard] Loaded Geist-Bold: ${buf.length} bytes (TrueType/OpenType)`);
+      } else {
+        console.warn(`[IDCard] Skipping Geist-Bold: not TrueType/OpenType (magic: ${buf.slice(0,4).toString('hex')})`);
+      }
     } catch (e) {
       console.error(`[IDCard] Failed to read Geist-Bold:`, e);
     }
@@ -79,6 +89,9 @@ export function getFontBuffers(): Buffer[] {
 
   return buffers;
 }
+
+// The actual font family name stored inside the Geist TTF files
+export const GEIST_FONT_FAMILY = 'Geist';
 
 export function getFontFaceCSS(): string {
   const regularPath = findFontFile('Geist-Regular.ttf');

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { School, Menu, X, BookOpen, GraduationCap, CreditCard, PenLine, Shield, Cookie, Mail, Phone, MapPin, MessageCircle, Facebook, Twitter, Instagram, Linkedin, Youtube, Sparkles } from 'lucide-react';
+import { School, Menu, X, BookOpen, GraduationCap, CreditCard, PenLine, Shield, Cookie, Mail, Phone, MapPin, MessageCircle, Facebook, Twitter, Instagram, Linkedin, Youtube, Sparkles, Briefcase } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ interface PublicLayoutProps {
 const navLinks = [
   { href: '/blog', label: 'Blog', icon: BookOpen },
   { href: '/stories', label: 'Stories', icon: GraduationCap },
+  { href: '/careers', label: 'Careers', icon: Briefcase },
   { href: '/learning-hub', label: 'Learning Hub', icon: MessageCircle },
   { href: '/pricing', label: 'Pricing', icon: CreditCard },
   { href: '/submit-story', label: 'Submit Story', icon: PenLine },
@@ -42,6 +43,7 @@ const navLinks = [
 const footerLinks = [
   { href: '/blog', label: 'Blog' },
   { href: '/stories', label: 'Stories' },
+  { href: '/careers', label: 'Careers' },
   { href: '/learning-hub', label: 'Learning Hub' },
   { href: '/pricing', label: 'Pricing' },
   { href: '/submit-story', label: 'Submit Story' },

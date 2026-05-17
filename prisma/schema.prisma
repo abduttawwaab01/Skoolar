@@ -2338,11 +2338,30 @@ model JobApplication {
   hiredAt          DateTime?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
-  jobPosting        JobPosting   @relation("JobPostingApplications", fields: [jobPostingId], references: [id])
+  jobPosting        JobPosting        @relation("JobPostingApplications", fields: [jobPostingId], references: [id])
+  interviewMessages InterviewMessage[]
 
   @@index([jobPostingId])
   @@index([status])
   @@index([applicantEmail])
+}
+
+// ============================================
+// INTERVIEW MESSAGES (Admin ↔ Applicant Chat)
+// ============================================
+
+model InterviewMessage {
+  id            String         @id @default(cuid())
+  applicationId String
+  senderId      String?        // platform user ID if admin, null for applicant
+  senderName    String         // display name
+  content       String
+  isFromAdmin   Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([createdAt])
 }
 
 // ============================================

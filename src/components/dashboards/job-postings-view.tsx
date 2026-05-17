@@ -24,7 +24,8 @@ import {
   Plus, AlertCircle, Loader2, Copy, Eye, Trash2, ClipboardCheck,
   CheckCircle2, Users, FileQuestion, Shield, Link2, Briefcase,
   Timer, ToggleLeft, ArrowUpDown, RefreshCw, Pencil, MapPin,
-  Building2, DollarSign, Globe, UserCheck, X, FileText
+  Building2, DollarSign, Globe, UserCheck, X, FileText,
+  MessageSquare, Send
 } from 'lucide-react';
 import { useAppStore } from '@/store/app-store';
 import { toast } from 'sonner';
@@ -470,10 +471,137 @@ function JobFormDialog({
   );
 }
 
+interface InterviewMessageRecord {
+  id: string;
+  senderName: string;
+  content: string;
+  isFromAdmin: boolean;
+  createdAt: string;
+}
+
+function InterviewChatPanel({
+  jobId,
+  applicationId,
+}: {
+  jobId: string;
+  applicationId: string;
+}) {
+  const [messages, setMessages] = React.useState<InterviewMessageRecord[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [sending, setSending] = React.useState(false);
+  const [input, setInput] = React.useState('');
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  const fetchMessages = React.useCallback(async () => {
+    try {
+      const res = await fetch(`/api/job-postings/${jobId}/applications/${applicationId}/messages`);
+      if (!res.ok) throw new Error('Failed to fetch');
+      const json = await res.json();
+      setMessages(json.data || []);
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, [jobId, applicationId]);
+
+  React.useEffect(() => {
+    fetchMessages();
+  }, [fetchMessages]);
+
+  React.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  React.useEffect(() => {
+    const interval = setInterval(fetchMessages, 10000);
+    return () => clearInterval(interval);
+  }, [fetchMessages]);
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    setSending(true);
+    try {
+      const res = await fetch(`/api/job-postings/${jobId}/applications/${applicationId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: input.trim() }),
+      });
+      if (!res.ok) throw new Error('Failed to send');
+      setInput('');
+      fetchMessages();
+    } catch {
+      toast.error('Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-[400px]">
+      <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+        {messages.length === 0 && (
+          <div className="text-center py-16">
+            <MessageSquare className="h-10 w-10 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">No messages yet. Start the conversation.</p>
+          </div>
+        )}
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex ${msg.isFromAdmin ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
+              msg.isFromAdmin
+                ? 'bg-purple-600 text-white rounded-tr-sm'
+                : 'bg-gray-100 text-gray-900 rounded-tl-sm'
+            }`}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <span className={`text-xs font-medium ${msg.isFromAdmin ? 'text-purple-200' : 'text-purple-600'}`}>
+                  {msg.isFromAdmin ? 'You' : msg.senderName}
+                </span>
+              </div>
+              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              <p className={`text-[10px] mt-0.5 ${msg.isFromAdmin ? 'text-purple-200' : 'text-gray-400'}`}>
+                {formatTime(msg.createdAt)}
+              </p>
+            </div>
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
+      <form onSubmit={handleSend} className="flex gap-2 mt-3 pt-3 border-t">
+        <Input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="Type your message..."
+          className="flex-1 h-10"
+          disabled={sending}
+        />
+        <Button type="submit" size="icon" className="h-10 w-10 shrink-0" disabled={sending || !input.trim()}>
+          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 function ApplicationReviewDialog({
   open,
   onOpenChange,
   application,
+  jobId,
   onUpdate,
   isSubmitting,
   onOpenInterview,
@@ -481,6 +609,7 @@ function ApplicationReviewDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   application: JobApplicationRecord | null;
+  jobId?: string;
   onUpdate: (data: { status: string; interviewScore?: number; finalScore?: number; notes?: string; interviewDate?: string; interviewNotes?: string; offeredSalary?: number }) => void;
   isSubmitting: boolean;
   onOpenInterview?: (application: JobApplicationRecord) => void;
@@ -492,6 +621,7 @@ function ApplicationReviewDialog({
   const [interviewDate, setInterviewDate] = React.useState('');
   const [interviewNotes, setInterviewNotes] = React.useState('');
   const [offeredSalary, setOfferedSalary] = React.useState('');
+  const [activeTab, setActiveTab] = React.useState('details');
 
   React.useEffect(() => {
     if (application) {
@@ -502,6 +632,7 @@ function ApplicationReviewDialog({
       setInterviewDate(application.interviewDate ? application.interviewDate.split('T')[0] : '');
       setInterviewNotes(application.interviewNotes || '');
       setOfferedSalary(application.offeredSalary?.toString() || '');
+      setActiveTab('details');
     }
   }, [application]);
 
@@ -530,162 +661,188 @@ function ApplicationReviewDialog({
             Application Review
           </DialogTitle>
         </DialogHeader>
-        <ScrollArea className="max-h-[50vh] pr-2">
-          <div className="grid gap-4 py-4">
-            <div className="rounded-lg border p-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Applicant Name</Label>
-                  <p className="font-medium">{application.applicantName}</p>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="chat" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Interview Chat
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="details">
+            <ScrollArea className="max-h-[50vh] pr-2">
+              <div className="grid gap-4 py-4">
+                <div className="rounded-lg border p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground">Applicant Name</Label>
+                      <p className="font-medium">{application.applicantName}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Email</Label>
+                      <p className="font-medium">{application.applicantEmail}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Phone</Label>
+                      <p className="font-medium">{application.applicantPhone || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">Years Experience</Label>
+                      <p className="font-medium">{application.yearsExperience || 'N/A'}</p>
+                    </div>
+                  </div>
+                  {application.resumeUrl && (
+                    <div className="mt-4">
+                      <Label className="text-muted-foreground">Resume</Label>
+                      <a
+                        href={application.resumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline block"
+                      >
+                        View Resume
+                      </a>
+                    </div>
+                  )}
+                  {application.coverLetter && (
+                    <div className="mt-4">
+                      <Label className="text-muted-foreground">Cover Letter</Label>
+                      <p className="text-sm mt-1">{application.coverLetter}</p>
+                    </div>
+                  )}
+                  {application.linkedinUrl && (
+                    <div className="mt-4">
+                      <Label className="text-muted-foreground">LinkedIn</Label>
+                      <a
+                        href={application.linkedinUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline block"
+                      >
+                        View Profile
+                      </a>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <Label className="text-muted-foreground">Email</Label>
-                  <p className="font-medium">{application.applicantEmail}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Phone</Label>
-                  <p className="font-medium">{application.applicantPhone || 'N/A'}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Years Experience</Label>
-                  <p className="font-medium">{application.yearsExperience || 'N/A'}</p>
-                </div>
-              </div>
-              {application.resumeUrl && (
-                <div className="mt-4">
-                  <Label className="text-muted-foreground">Resume</Label>
-                  <a
-                    href={application.resumeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline block"
-                  >
-                    View Resume
-                  </a>
-                </div>
-              )}
-              {application.coverLetter && (
-                <div className="mt-4">
-                  <Label className="text-muted-foreground">Cover Letter</Label>
-                  <p className="text-sm mt-1">{application.coverLetter}</p>
-                </div>
-              )}
-              {application.linkedinUrl && (
-                <div className="mt-4">
-                  <Label className="text-muted-foreground">LinkedIn</Label>
-                  <a
-                    href={application.linkedinUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline block"
-                  >
-                    View Profile
-                  </a>
-                </div>
-              )}
-            </div>
 
-            <div className="grid gap-2">
-              <Label>Status</Label>
-              <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(statusConfig).map(([value, cfg]) => (
-                    <SelectItem key={value} value={value}>
-                      <span className="flex items-center gap-2">
-                        <span
-                          className="h-2 w-2 rounded-full"
-                          style={{ backgroundColor: cfg.color }}
-                        />
-                        {cfg.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="grid gap-2">
+                  <Label>Status</Label>
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(statusConfig).map(([value, cfg]) => (
+                        <SelectItem key={value} value={value}>
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="h-2 w-2 rounded-full"
+                              style={{ backgroundColor: cfg.color }}
+                            />
+                            {cfg.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Interview Score (0-100)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={interviewScore}
-                  onChange={e => setInterviewScore(e.target.value)}
-                  placeholder="e.g., 85"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Final Score (0-100)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={finalScore}
-                  onChange={e => setFinalScore(e.target.value)}
-                  placeholder="e.g., 90"
-                />
-              </div>
-            </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Interview Score (0-100)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={interviewScore}
+                      onChange={e => setInterviewScore(e.target.value)}
+                      placeholder="e.g., 85"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Final Score (0-100)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={finalScore}
+                      onChange={e => setFinalScore(e.target.value)}
+                      placeholder="e.g., 90"
+                    />
+                  </div>
+                </div>
 
-            {['offered', 'hired'].includes(status) && (
-              <div className="grid gap-2">
-                <Label>Offered Salary</Label>
-                <Input
-                  type="number"
-                  value={offeredSalary}
-                  onChange={e => setOfferedSalary(e.target.value)}
-                  placeholder="e.g., 45000"
-                />
-              </div>
-            )}
+                {['offered', 'hired'].includes(status) && (
+                  <div className="grid gap-2">
+                    <Label>Offered Salary</Label>
+                    <Input
+                      type="number"
+                      value={offeredSalary}
+                      onChange={e => setOfferedSalary(e.target.value)}
+                      placeholder="e.g., 45000"
+                    />
+                  </div>
+                )}
 
-            <div className="grid gap-2">
-              <Label>Interview Date</Label>
-              <Input
-                type="date"
-                value={interviewDate}
-                onChange={e => setInterviewDate(e.target.value)}
+                <div className="grid gap-2">
+                  <Label>Interview Date</Label>
+                  <Input
+                    type="date"
+                    value={interviewDate}
+                    onChange={e => setInterviewDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Interview Notes</Label>
+                  <Textarea
+                    value={interviewNotes}
+                    onChange={e => setInterviewNotes(e.target.value)}
+                    placeholder="Record post-interview feedback..."
+                    className="min-h-[80px]"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>General Notes</Label>
+                  <Textarea
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    placeholder="Add evaluation notes..."
+                    className="min-h-[80px]"
+                  />
+                </div>
+
+                {application.aiSuggestion && (
+                  <div className="rounded-lg bg-muted p-4">
+                    <Label className="text-muted-foreground">AI Recommendation</Label>
+                    <p className="text-sm mt-1">{application.aiSuggestion}</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+            <DialogFooter className="gap-2 mt-4 pt-4 border-t">
+              <div className="flex-1 flex gap-2">
+                {onOpenInterview && application && (
+                  <Button variant="outline" className="gap-2" onClick={() => onOpenInterview(application)}>
+                    <MessageSquare className="h-4 w-4" /> Open in New Tab
+                  </Button>
+                )}
+              </div>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Update Application
+              </Button>
+            </DialogFooter>
+          </TabsContent>
+          <TabsContent value="chat">
+            <div className="py-4">
+              <InterviewChatPanel
+                jobId={jobId!}
+                applicationId={application.id}
               />
             </div>
-
-            <div className="grid gap-2">
-              <Label>Interview Notes</Label>
-              <Textarea
-                value={interviewNotes}
-                onChange={e => setInterviewNotes(e.target.value)}
-                placeholder="Record post-interview feedback..."
-                className="min-h-[80px]"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label>General Notes</Label>
-              <Textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="Add evaluation notes..."
-                className="min-h-[80px]"
-              />
-            </div>
-
-            {application.aiSuggestion && (
-              <div className="rounded-lg bg-muted p-4">
-                <Label className="text-muted-foreground">AI Recommendation</Label>
-                <p className="text-sm mt-1">{application.aiSuggestion}</p>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Update Application
-          </Button>
-        </DialogFooter>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
@@ -1029,6 +1186,7 @@ export function JobPostingsManagement() {
           open={!!reviewApplication}
           onOpenChange={open => { if (!open) setReviewApplication(null); }}
           application={reviewApplication}
+          jobId={selectedJob?.id}
           onUpdate={handleUpdateApplication}
           isSubmitting={submitting}
           onOpenInterview={handleOpenInterview}

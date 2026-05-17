@@ -207,9 +207,9 @@ export function ParentDashboard() {
        {/* Welcome Header */}
        <motion.div variants={slideUp} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
          <div>
-           <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
-             Welcome, <span className="text-indigo-600">{currentUser.name.split(' ').slice(-1)[0]}</span> 👋
-           </h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900 dark:text-white break-words">
+              Welcome, <span className="text-indigo-600">{currentUser.name.split(' ').slice(-1)[0]}</span> 👋
+            </h1>
            <div className="flex items-center gap-3 mt-1.5 overflow-x-auto pb-1 no-scrollbar">
              {children.length > 0 ? (
                <>

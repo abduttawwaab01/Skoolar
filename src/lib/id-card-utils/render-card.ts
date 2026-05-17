@@ -1,7 +1,6 @@
 import QRCode from 'qrcode';
 import { Resvg } from '@resvg/resvg-js';
 import { db } from '@/lib/db';
-import { getFontFaceCSS, getFontBuffers } from './font-loader';
 
 const MM = (mm: number) => Math.round((mm / 25.4) * 300);
 const PW = MM(53.98); const PH = MM(85.6);
@@ -97,22 +96,18 @@ export async function renderIDCard(
     }
   }
 
-  // Get embedded font CSS to prevent rendering boxes
-  const fontCSS = getFontFaceCSS();
-  const fontBuffers = getFontBuffers();
-  const FF = fontCSS ? "'SkoolarCard', sans-serif" : "'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
+  const FF = "'Segoe UI', 'Helvetica Neue', Arial, sans-serif";
   
   const style = `<style>
-    ${fontCSS}
     * { font-family: ${FF}; }
     text { font-family: ${FF}; }
     .text-light { fill: ${hdrTxt}; }
     .text-dark { fill: ${dark}; }
     .text-muted { fill: ${muted}; }
     .text-primary { fill: ${prim}; }
-    .name-text { font-weight: 700; font-family: ${FF}; }
-    .label-text { font-weight: 400; font-family: ${FF}; }
-    .value-text { font-weight: 600; font-family: ${FF}; }
+    .name-text { font-weight: 700; }
+    .label-text { font-weight: 400; }
+    .value-text { font-weight: 600; }
   </style>`;
   
   const defs  = `<defs>
@@ -142,10 +137,9 @@ export async function renderIDCard(
       background: 'white',
       fitTo: { mode: 'width', value: W },
       font: {
-        fontBuffers: fontBuffers,
         loadSystemFonts: true,
-        defaultFontFamily: 'SkoolarCard',
-      } as any,
+        defaultFontFamily: 'Segoe UI',
+      },
     });
 
     const pngData = resvg.render();

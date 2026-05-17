@@ -150,7 +150,7 @@ export function OverviewView() {
           <motion.h1 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white"
+            className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900 dark:text-white"
           >
             {isTeacher ? 'Teaching' : isStudent ? 'Learning' : isParent ? 'Parent' : 'Insights'} <span className="text-emerald-500">&</span> Overview
           </motion.h1>

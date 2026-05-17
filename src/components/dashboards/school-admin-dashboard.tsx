@@ -353,45 +353,45 @@ export function SchoolAdminDashboard() {
     >
        {/* Page Header */}
        <motion.div 
-         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
+         className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
          variants={slideUp}
        >
-         <div>
-           <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+         <div className="min-w-0 flex-1">
+           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-gray-900 dark:text-white break-words">
              Administrative <span className="text-blue-600">Command</span>
            </h1>
-           <p className="text-muted-foreground font-medium mt-1">
+           <p className="text-muted-foreground font-medium mt-1 text-sm sm:text-base truncate">
              {currentUser.schoolName} — Dashboard Overview
            </p>
          </div>
-         <div className="flex items-center gap-3">
-           <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 py-1.5 px-4 rounded-xl font-bold text-xs shadow-sm uppercase tracking-widest animate-pulse-glow">
-             <GraduationCap className="size-4 mr-2" /> Academic Year Active
+         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 flex-wrap">
+           <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100 py-1 px-2 sm:py-1.5 sm:px-4 rounded-xl font-bold text-[10px] sm:text-xs shadow-sm uppercase tracking-widest animate-pulse-glow whitespace-nowrap">
+             <GraduationCap className="size-3 sm:size-4 mr-1 sm:mr-2" /> Academic Year Active
            </Badge>
-         </div>
-         <div className="flex items-center gap-2">
            <Button 
              variant="outline" 
              size="icon"
              onClick={toggleTheme}
              title="Toggle Theme"
+             className="size-8 sm:size-9"
            >
-             {isDark ? <Moon className="size-4" /> : <Sun className="size-4" />}
+             {isDark ? <Moon className="size-3.5 sm:size-4" /> : <Sun className="size-3.5 sm:size-4" />}
            </Button>
            <Button 
              variant="outline" 
              size="icon"
              onClick={handleSignOut}
              title="Sign Out"
+             className="size-8 sm:size-9"
            >
-             <LogOut className="size-4" />
+             <LogOut className="size-3.5 sm:size-4" />
            </Button>
          </div>
        </motion.div>
 
       {/* KPI Row */}
       <motion.div 
-        className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6"
+        className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
         variants={staggerContainer}
       >
         <motion.div variants={scaleIn}><KpiCard title="Students" value={totalStudents.toLocaleString()} icon={GraduationCap} iconBgColor="bg-emerald-50" iconColor="text-emerald-600" change={studentChange} changeLabel="vs last term" /></motion.div>
@@ -437,10 +437,10 @@ export function SchoolAdminDashboard() {
       {/* Dashboard Content Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <motion.div variants={fadeIn}>
-          <TabsList className="bg-gray-100/50 p-1.5 rounded-2xl border backdrop-blur-sm">
-            <TabsTrigger value="overview" className="rounded-xl px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-sm">Insights</TabsTrigger>
-            <TabsTrigger value="academics" className="rounded-xl px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-sm">Academic Life</TabsTrigger>
-            <TabsTrigger value="finance" className="rounded-xl px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-sm">Financials</TabsTrigger>
+          <TabsList className="bg-gray-100/50 p-1.5 rounded-2xl border backdrop-blur-sm overflow-x-auto flex-nowrap">
+            <TabsTrigger value="overview" className="rounded-xl px-3 sm:px-6 lg:px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-xs sm:text-sm whitespace-nowrap">Insights</TabsTrigger>
+            <TabsTrigger value="academics" className="rounded-xl px-3 sm:px-6 lg:px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-xs sm:text-sm whitespace-nowrap">Academic Life</TabsTrigger>
+            <TabsTrigger value="finance" className="rounded-xl px-3 sm:px-6 lg:px-8 data-[state=active]:bg-white data-[state=active]:shadow-lg font-bold text-xs sm:text-sm whitespace-nowrap">Financials</TabsTrigger>
           </TabsList>
         </motion.div>
 
