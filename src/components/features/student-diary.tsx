@@ -158,6 +158,7 @@ export default function StudentDiary() {
   const getEntryForDate = (dateStr: string) => entries.find(e => e.date === dateStr);
 
   const calendarDays = useMemo(() => {
+    if (!currentDate) return [];
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDay = getFirstDayOfMonth(currentDate);
     const days: (number | null)[] = [];
@@ -178,6 +179,7 @@ export default function StudentDiary() {
   }, [entries, searchQuery]);
 
   const isToday = (day: number) => {
+    if (!currentDate) return false;
     const d = new Date(); return day === d.getDate() && currentDate.getMonth() === d.getMonth() && currentDate.getFullYear() === d.getFullYear();
   };
 
