@@ -113,7 +113,6 @@ const viewComponents: Record<DashboardView, () => Promise<any>> = {
   'year-results': () => import('@/components/dashboards/year-results-view').then(m => m.YearResultsView),
   'parent-results-view': () => import('@/components/dashboards/parent-results').then(m => m.ParentResults),
   'parent-report-cards-view': () => import('@/components/dashboards/parent-report-cards').then(m => m.ParentReportCards),
-  'parent-dashboard-view': () => import('@/components/dashboards/parent-dashboard').then(m => m.ParentDashboard),
   'job-postings': () => import('@/components/dashboards/job-postings-view').then(m => m.JobPostingsManagement),
 };
 
