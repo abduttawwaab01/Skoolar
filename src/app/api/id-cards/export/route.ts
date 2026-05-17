@@ -61,73 +61,54 @@ export async function POST(request: NextRequest) {
 // ─── PDF ─────────────────────────────────────────────────────────────────
     if (format === 'pdf') {
       try {
-        const PDFDocument = (await import('pdfkit')).default;
+        const { PDFDocument } = await import('pdf-lib');
 
-        // Card dimensions in points (72 points per inch)
-        // CRITICAL: Precise dimensions for printing.
-        // Landscape: 85.6mm x 53.98mm, Portrait: 53.98mm x 85.6mm
         const cardWidthMm   = orientation === 'portrait' ? 53.98 : 85.6;
         const cardHeightMm  = orientation === 'portrait' ? 85.6  : 53.98;
-        const cardWidthPt   = (cardWidthMm  / 25.4) * 72;
-        const cardHeightPt  = (cardHeightMm / 25.4) * 72;
+        // 1 mm = 72/25.4 ≈ 2.835 points
+        const cardW = Math.round(cardWidthMm * 72 / 25.4);
+        const cardH = Math.round(cardHeightMm * 72 / 25.4);
 
-        const doc = new PDFDocument({ 
-          size: [cardWidthPt, cardHeightPt], 
-          compress: true, 
-          autoFirstPage: false, 
-          margin: 0,
-          info: { Title: 'Skoolar ID Cards Export', Author: 'Skoolar' }
-        });
+        const pdfDoc = await PDFDocument.create();
 
         for (const cardData of cards) {
           try {
             if (needFront) {
               const buf = await renderCard(cardData, false);
               if (buf && buf.length > 0) {
-                doc.addPage({ size: [cardWidthPt, cardHeightPt], margin: 0 });
-                // Sharp PNGs are at 300 DPI, we fit them exactly to the point-based page size
-                doc.image(buf, 0, 0, {
-                  fit: [cardWidthPt, cardHeightPt],
-                  align: 'center',
-                  valign: 'center'
+                const pngImg = await pdfDoc.embedPng(buf);
+                const page = pdfDoc.addPage([cardW, cardH]);
+                page.drawImage(pngImg, {
+                  x: 0, y: 0,
+                  width: cardW, height: cardH,
                 });
               }
             }
             if (needBack) {
               const buf = await renderCard(cardData, true);
               if (buf && buf.length > 0) {
-                doc.addPage({ size: [cardWidthPt, cardHeightPt], margin: 0 });
-                doc.image(buf, 0, 0, {
-                  fit: [cardWidthPt, cardHeightPt],
-                  align: 'center',
-                  valign: 'center'
+                const pngImg = await pdfDoc.embedPng(buf);
+                const page = pdfDoc.addPage([cardW, cardH]);
+                page.drawImage(pngImg, {
+                  x: 0, y: 0,
+                  width: cardW, height: cardH,
                 });
               }
             }
           } catch (cardErr) {
             console.error(`Card render failed for ${cardData.name}:`, cardErr);
-            doc.addPage({ size: [cardWidthPt, cardHeightPt], margin: 0 });
-            doc.fontSize(8).text(`Failed to render card for: ${cardData.name || 'unknown student'}`, 5, cardHeightPt / 2 - 4, { align: 'center', width: cardWidthPt - 10 });
           }
         }
 
-        const chunks: Buffer[] = [];
-        const pdfBuffer = await new Promise<Buffer>((resolve, reject) => {
-          doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-          doc.on('end', () => resolve(Buffer.concat(chunks)));
-          doc.on('error', (err) => reject(err));
-          doc.end();
-        });
+        const pdfBytes = await pdfDoc.save();
+        const pdfBuffer = Buffer.from(pdfBytes);
 
         await db.exportLog.update({
           where: { id: exportLog.id },
           data: { fileSize: pdfBuffer.length, status: 'success', filename: `id-cards-${Date.now()}.pdf` }
         });
 
-        // Convert Buffer to Uint8Array for NextResponse compatibility
-        const responseBody = new Uint8Array(pdfBuffer);
-
-        return new NextResponse(responseBody, {
+        return new NextResponse(new Uint8Array(pdfBuffer), {
           headers: {
             'Content-Type': 'application/pdf',
             'Content-Disposition': `attachment; filename="id-cards-${Date.now()}.pdf"`,
