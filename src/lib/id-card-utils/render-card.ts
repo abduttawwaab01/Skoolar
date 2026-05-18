@@ -398,39 +398,31 @@ function buildLandscape(o:any):string {
     </svg>`;
   }
 
-  // Front - Landscape — name centered above photo, 3-columns below
-  const colSep = Math.round(W * 0.58);    // vertical separator between info + QR columns
+  // Front - Landscape — 2 columns: photo+details (L), QR code (R)
+  const colSep = Math.round(W * 0.62);    // left column ~62%, right ~38%
 
-  // Name row: centered between header and content, full width
-  const nameY = hH + 28;
-  const nameFs = 36;
+  const contentPadT = hH + 16;           // top of content below header
+  const contentH = H - contentPadT - footerH - 18;
 
-  const badgeY = nameY + 20;
-  const badgeH = 30;
-  const badgeW = Math.round(H * 0.35);
+  // ═══ Left column: photo + name + details ═══
+  const photoR = 94;
+  const photoCX = mg + photoR + 2;
+  const photoCY = contentPadT + Math.round(contentH / 2);
 
-  // Main content area below name + badge
-  const contentTop = badgeY + badgeH + 18;
-  const contentAvailH = H - contentTop - footerH - 10;
+  // Text block positioned to the right of photo
+  const textX = photoCX + photoR + 16;
 
-  // Left column: Photo (vertically centered)
-  const photoR = 104;
-  const photoCX = mg + photoR;
-  const photoCY = contentTop + Math.round(contentAvailH / 2);
+  const nameY = photoCY - 62;             // above photo center
+  const nameFs = 30;
 
-  // Middle column: Info card
-  const infoX = photoCX + photoR + 22;
-  const infoY = contentTop + 6;
-  const infoW = colSep - infoX - 8;
-  const infoH = contentAvailH - 12;
+  const badgeY = nameY + nameFs + 4;
+  const badgeH = 26;
+  const badgeW = Math.min(220, colSep - textX - mg);
 
-  // Right column: QR code (vertically centered)
-  const qrZW = W - colSep - mg;
-  const qrSz = Math.min(qrZW - 24, contentAvailH - 40);
-  const qrX = colSep + Math.round((qrZW - qrSz) / 2);
-  const qrY = contentTop + Math.round((contentAvailH - qrSz) / 2);
-  const qrPadL = Math.round(H * 0.02);
-  const scanY = qrY + qrSz + qrPadL + 18;
+  // Info rows below badge
+  const infoY = badgeY + badgeH + 12;
+  const rowLH = 34;
+  const rowFs = 17;
 
   const rows:any[]=[];
   if(pType==='student'){
@@ -443,30 +435,33 @@ function buildLandscape(o:any):string {
     if(pPhone)rows.push({l:'Phone:',v:pPhone});
   }
 
-  const rowStartY = infoY + 28;
-  const rowLH = 40;
-  const labelX = infoX + Math.round(infoW * 0.08);
-  const valueX = infoX + Math.round(infoW * 0.48);
-  const rowFs = 18;
-
   const infoRowsHtml = rows.map((row,i)=>`
-    <text x="${n(labelX)}" y="${n(rowStartY + i * rowLH)}" font-size="${n(rowFs)}" fill="${muted}">${row.l}</text>
-    <text x="${n(valueX)}" y="${n(rowStartY + i * rowLH)}" font-size="${n(rowFs)}" font-weight="600" fill="${dark}">${row.v}</text>
+    <text x="${n(textX)}" y="${n(infoY + i * rowLH)}" font-size="${n(rowFs)}" fill="${muted}">${row.l}</text>
+    <text x="${n(textX + Math.round(colSep * 0.18))}" y="${n(infoY + i * rowLH)}" font-size="${n(rowFs)}" font-weight="600" fill="${dark}">${row.v}</text>
   `).join('');
 
   const phEl = showPhoto ? photoCircle(photoCX, photoCY, photoR, prim, muted, phB64, phMime, inits, 'pc2') : '';
 
+  // ═══ Right column: QR code ═══
+  const qrZW = W - colSep - mg;
+  const qrSz = Math.min(qrZW - 28, contentH - 60);
+  const qrX = colSep + Math.round((qrZW - qrSz) / 2);
+  const qrY = contentPadT + Math.round((contentH - qrSz) / 2) - 8;
+  const scanY = qrY + qrSz + 22;
+
   let qrEl = '';
   if(showQR && qrB64){
+    const qrPadL = 12;
     qrEl = `<g filter="url(#softshadow)">
-      <rect x="${n(qrX - qrPadL + 2)}" y="${n(qrY - qrPadL + 2)}" width="${n(qrSz + qrPadL * 2 - 4)}" height="${n(qrSz + qrPadL * 2 + Math.round(H * 0.04) - 4)}" rx="14" fill="#ffffff" stroke="${border}" stroke-width="1.5"/>
+      <rect x="${n(qrX - qrPadL + 2)}" y="${n(qrY - qrPadL + 2)}" width="${n(qrSz + qrPadL * 2 - 4)}" height="${n(qrSz + qrPadL * 2 + 32 - 4)}" rx="16" fill="#ffffff" stroke="${border}" stroke-width="1.5"/>
     </g>
-    <rect x="${n(qrX - qrPadL + 6)}" y="${n(qrY - qrPadL + 6)}" width="${n(qrSz + qrPadL * 2 - 12)}" height="${n(qrSz + qrPadL * 2 + Math.round(H * 0.04) - 12)}" rx="10" fill="#fafafa"/>
+    <rect x="${n(qrX - qrPadL + 6)}" y="${n(qrY - qrPadL + 6)}" width="${n(qrSz + qrPadL * 2 - 12)}" height="${n(qrSz + qrPadL * 2 + 32 - 12)}" rx="12" fill="#fafafa"/>
     <image x="${n(qrX)}" y="${n(qrY)}" width="${n(qrSz)}" height="${n(qrSz)}" href="data:image/png;base64,${qrB64}"/>
-    <text x="${n(colSep + qrZW/2)}" y="${n(scanY)}" font-size="${n(18)}" font-weight="700" fill="${prim}" text-anchor="middle" letter-spacing="1">SCAN TO VERIFY</text>`;
+    <text x="${n(colSep + Math.round(qrZW/2))}" y="${n(scanY)}" font-size="${n(18)}" font-weight="700" fill="${prim}" text-anchor="middle" letter-spacing="1">SCAN TO VERIFY</text>`;
   }
 
-  const sepEl = `<line x1="${n(colSep - 10)}" y1="${n(contentTop + 4)}" x2="${n(colSep - 10)}" y2="${n(H - footerH - 10)}" stroke="${border}" stroke-width="1.2" opacity="0.25"/>`;
+  // Vertical divider between columns
+  const sepEl = `<line x1="${n(colSep)}" y1="${n(contentPadT + 4)}" x2="${n(colSep)}" y2="${n(H - footerH - 6)}" stroke="${border}" stroke-width="1.2" opacity="0.25"/>`;
 
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
     ${style}${defs}
@@ -484,20 +479,21 @@ function buildLandscape(o:any):string {
     <text x="${n(mg)}" y="${n(hH*0.54)}" font-size="${n(H*.060)}" font-weight="700" fill="${hdrTxt}">${schN}</text>
     <text x="${n(W-mg)}" y="${n(hH*0.54)}" font-size="${n(H*.040)}" font-weight="600" fill="${hdrTxt}" text-anchor="end" opacity="0.9" letter-spacing="2">ID CARD</text>
     
-    <!-- Name centered above content -->
-    <text x="${n(W/2)}" y="${n(nameY)}" font-size="${n(nameFs)}" font-weight="700" fill="${dark}" text-anchor="middle">${pName}</text>
-    
-    <!-- Role badge below name, centered -->
-    <g filter="url(#shadow)">
-      <rect x="${n(Math.round((W - badgeW) / 2))}" y="${n(badgeY)}" width="${n(badgeW)}" height="${n(badgeH)}" rx="${n(badgeH/2)}" fill="${prim}" opacity="0.12"/>
-    </g>
-    <text x="${n(W/2)}" y="${n(badgeY + badgeH*0.66)}" font-size="${n(18)}" font-weight="700" fill="${prim}" text-anchor="middle" letter-spacing="1">${pRole}</text>
+    ${sepEl}
     
     ${phEl}
     
-    ${sepEl}
+    <!-- Name -->
+    <text x="${n(textX)}" y="${n(nameY)}" font-size="${n(nameFs)}" font-weight="700" fill="${dark}">${pName}</text>
     
-    ${dataCard(infoX, infoY, infoW, infoH, sec, border, infoRowsHtml)}
+    <!-- Role badge -->
+    <g filter="url(#shadow)">
+      <rect x="${n(textX)}" y="${n(badgeY)}" width="${n(badgeW)}" height="${n(badgeH)}" rx="${n(badgeH/2)}" fill="${prim}" opacity="0.12"/>
+    </g>
+    <text x="${n(textX + badgeW/2)}" y="${n(badgeY + badgeH*0.66)}" font-size="${n(16)}" font-weight="700" fill="${prim}" text-anchor="middle" letter-spacing="1">${pRole}</text>
+    
+    <!-- Info rows -->
+    ${infoRowsHtml}
     
     ${qrEl}
     
