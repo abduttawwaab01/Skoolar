@@ -82,7 +82,7 @@ export async function renderIDCard(
     try{
       const url=photoUrl.startsWith('//')?`https:${photoUrl}`:photoUrl.startsWith('http')?photoUrl:`${baseUrl}${photoUrl}`;
       const ctrl=new AbortController(); const tid=setTimeout(()=>ctrl.abort(),8000);
-      const res=await fetch(url,{signal:ctrl.signal,headers:{'User-Agent':'Skoolar-IDCard/2.0'}});
+      const res=await fetch(url,{signal:ctrl.signal,headers:{'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'}});
       clearTimeout(tid);
       if(res.ok){
         const ct=res.headers.get('content-type')||'';

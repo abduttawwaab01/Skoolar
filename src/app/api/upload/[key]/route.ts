@@ -3,8 +3,7 @@ import { getToken } from 'next-auth/jwt';
 import { deleteFile, isStorageConfigured } from '@/lib/cloudinary-storage';
 import { db } from '@/lib/db';
 
-// DELETE /api/upload/[key] — Delete a file from R2
-// Uses native R2 binding on Cloudflare. Falls back to S3 API locally.
+// DELETE /api/upload/[key] — Delete a file from Cloudinary
 
 export async function DELETE(
   request: NextRequest,

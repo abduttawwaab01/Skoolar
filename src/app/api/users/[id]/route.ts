@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { requireAuth } from '@/lib/auth-middleware';
+import { deleteFile } from '@/lib/cloudinary-storage';
 
 // GET /api/users/[id] - Get single user with role profile
 export async function GET(
@@ -225,6 +226,24 @@ export async function PUT(
          return NextResponse.json({ error: 'Password changes must be done through the password change endpoint' }, { status: 403 });
        }
        updateData.password = await bcrypt.hash(password, 10);
+     }
+
+     // Delete old avatar from Cloudinary if replacing with a new one
+     if (avatar !== undefined && existing.avatar && avatar !== existing.avatar && typeof existing.avatar === 'string') {
+       try {
+         const oldUrl: string = existing.avatar;
+         if (oldUrl.includes('cloudinary.com')) {
+           const parsed = new URL(oldUrl);
+           const pathParts = parsed.pathname.split('/');
+           const uploadIdx = pathParts.indexOf('upload');
+           if (uploadIdx !== -1 && pathParts[uploadIdx + 1]?.startsWith('v')) {
+             const pubId = pathParts.slice(uploadIdx + 2).join('/').replace(/\.[^.]+$/, '');
+             if (pubId) await deleteFile(pubId);
+           }
+         }
+       } catch {
+         // Non-critical; proceed with update
+       }
      }
 
      const user = await db.user.update({
