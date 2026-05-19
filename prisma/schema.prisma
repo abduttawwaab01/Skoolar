@@ -92,6 +92,9 @@ model School {
   expenses               Expense[]
   schemeOfWorks          SchemeOfWork[]
   lessonPlans            LessonPlan[]
+  bankName               String?
+  bankAccountName        String?
+  bankAccountNumber      String?
 
   @@index([slug])
   @@index([region])
@@ -918,6 +921,7 @@ model FeeStructure {
   deletedAt     DateTime?
   school        School                 @relation(fields: [schoolId], references: [id])
   feeStructureClasses FeeStructureClass[]
+  payments            Payment[]
 
   @@index([schoolId])
 }
@@ -938,24 +942,28 @@ model FeeStructureClass {
 }
 
 model Payment {
-  id             String    @id @default(cuid())
-  schoolId       String
-  studentId      String
-  feeStructureId String?
-  amount         Float
-  method         String    @default("cash")
-  reference      String?
-  status         String    @default("pending")
-  termId         String?
-  receiptNo      String?
-  paidBy         String?
-  paidById       String?
-  verifiedBy     String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
-  school         School    @relation(fields: [schoolId], references: [id])
-  student        Student   @relation(fields: [studentId], references: [id])
+  id                String       @id @default(cuid())
+  schoolId          String
+  studentId         String
+  feeStructureId    String?
+  amount            Float
+  method            String       @default("cash")
+  reference         String?
+  status            String       @default("pending")
+  termId            String?
+  receiptNo         String?
+  paidBy            String?
+  paidById          String?
+  verifiedBy        String?
+  dueDate           DateTime?
+  parentNote        String?
+  parentNotifiedAt  DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  deletedAt         DateTime?
+  school            School        @relation(fields: [schoolId], references: [id])
+  student           Student       @relation(fields: [studentId], references: [id])
+  feeStructure      FeeStructure? @relation(fields: [feeStructureId], references: [id])
 
   @@index([schoolId])
   @@index([studentId])

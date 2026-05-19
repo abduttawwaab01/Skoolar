@@ -105,7 +105,8 @@ export async function GET(request: NextRequest) {
               class: { select: { name: true, section: true } },
             },
           },
-          // feeStructure is not a relation on Payment (only feeStructureId scalar), omitted
+          dueDate: true, parentNote: true, parentNotifiedAt: true,
+          feeStructure: { select: { id: true, name: true, amount: true, dueDate: true } },
         },
       }),
       db.payment.count({ where }),
