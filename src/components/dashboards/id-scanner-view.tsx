@@ -52,10 +52,18 @@ export function IdScannerView() {
   const scanningRef = React.useRef(false);
   const activeScanTypeRef = React.useRef<ScanType>(activeScanType);
   const schoolIdRef = React.useRef(schoolId);
+  const feedbackTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep refs in sync with state
   React.useEffect(() => { activeScanTypeRef.current = activeScanType; }, [activeScanType]);
   React.useEffect(() => { schoolIdRef.current = schoolId; }, [schoolId]);
+
+  // Helper to set feedback and auto-clear after delay
+  const showFeedback = React.useCallback((fb: 'success' | 'error', delay = 1500) => {
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    setScanFeedback(fb);
+    feedbackTimerRef.current = setTimeout(() => setScanFeedback('idle'), delay);
+  }, []);
 
   // Store scan handler in ref to avoid stale closures
   const handleQRScanRef = React.useRef(async (qrDataString: string) => {
@@ -65,8 +73,7 @@ export function IdScannerView() {
         qrData = JSON.parse(qrDataString);
       } catch {
         toast.error('Invalid QR code format');
-        setScanFeedback('error');
-        setTimeout(() => setScanFeedback('idle'), 1500);
+        showFeedback('error');
         return;
       }
       const response = await fetch('/api/attendance/scan', {
@@ -75,14 +82,12 @@ export function IdScannerView() {
         body: JSON.stringify({
           qrData,
           scanType: activeScanTypeRef.current,
-          schoolId: schoolIdRef.current,
         }),
       });
       const result = await response.json();
       if (!response.ok) {
         toast.error(result.error || 'Failed to record scan');
-        setScanFeedback('error');
-        setTimeout(() => setScanFeedback('idle'), 1500);
+        showFeedback('error');
         return;
       }
       const { person } = result.data;
@@ -90,12 +95,13 @@ export function IdScannerView() {
                         activeScanTypeRef.current === 'staff_attendance' ? 'Staff Attendance' :
                         activeScanTypeRef.current === 'library' ? 'Library Check-in' : 'ID Verified';
       const isDuplicate = result.duplicate === true;
+      const isLate = result.late === true;
       const scanRecord: ScanRecord = {
         id: result.data.scanLog.id,
         student: person.name,
         action: actionText,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        status: isDuplicate ? 'skipped' : 'success',
+        status: isDuplicate ? 'skipped' : isLate ? 'late' : 'success',
         method: 'qr_scan',
       };
       setLastScan(scanRecord);
@@ -103,15 +109,16 @@ export function IdScannerView() {
       if (isDuplicate) {
         setScanFeedback('idle');
         toast.info(`${person.name} - Already marked present today`);
+      } else if (isLate) {
+        showFeedback('success');
+        toast.warning(`${person.name} - Marked as late`);
       } else {
-        setScanFeedback('success');
-        setTimeout(() => setScanFeedback('idle'), 1500);
+        showFeedback('success');
         toast.success(`${person.name} - ${actionText} recorded`);
       }
     } catch (error) {
       console.error('QR scan error:', error);
-      setScanFeedback('error');
-      setTimeout(() => setScanFeedback('idle'), 1500);
+      showFeedback('error');
       toast.error('Scan failed');
     }
   });
@@ -120,7 +127,6 @@ export function IdScannerView() {
   const scanLoopRef = React.useRef<(() => void) | null>(null);
   scanLoopRef.current = () => {
     if (!scanningRef.current || !videoRef.current || !canvasRef.current) {
-      // Still schedule next frame even if not ready
       animationFrameRef.current = requestAnimationFrame(scanLoopRef.current!);
       return;
     }
@@ -137,8 +143,8 @@ export function IdScannerView() {
       });
       if (code && Date.now() - lastScanTimeRef.current > 3000) {
         lastScanTimeRef.current = Date.now();
+        if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
         setScanFeedback('detecting');
-        setTimeout(() => setScanFeedback('idle'), 1500);
         handleQRScanRef.current(code.data);
       }
     }
@@ -350,24 +356,46 @@ export function IdScannerView() {
           <CardContent>
             {lastScan ? (
               <div className="space-y-4">
-                <Alert className="bg-emerald-50 border-emerald-200">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  <AlertDescription className="text-emerald-800">
-                    Successfully scanned {lastScan.student}
+                <Alert className={
+                  lastScan.status === 'late' ? 'bg-amber-50 border-amber-200' :
+                  lastScan.status === 'success' ? 'bg-emerald-50 border-emerald-200' :
+                  'bg-red-50 border-red-200'
+                }>
+                  <Check className={`h-4 w-4 ${
+                    lastScan.status === 'late' ? 'text-amber-600' :
+                    lastScan.status === 'success' ? 'text-emerald-600' : 'text-red-600'
+                  }`} />
+                  <AlertDescription className={
+                    lastScan.status === 'late' ? 'text-amber-800' :
+                    lastScan.status === 'success' ? 'text-emerald-800' : 'text-red-800'
+                  }>
+                    {lastScan.status === 'late' ? `Scanned ${lastScan.student} (Late)` :
+                     lastScan.status === 'success' ? `Successfully scanned ${lastScan.student}` :
+                     `Failed to scan ${lastScan.student}`}
                   </AlertDescription>
                 </Alert>
                 
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
-                    <User className="size-6 text-emerald-600" />
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    lastScan.status === 'late' ? 'bg-amber-100' :
+                    lastScan.status === 'success' ? 'bg-emerald-100' : 'bg-red-100'
+                  }`}>
+                    <User className={`size-6 ${
+                      lastScan.status === 'late' ? 'text-amber-600' :
+                      lastScan.status === 'success' ? 'text-emerald-600' : 'text-red-600'
+                    }`} />
                   </div>
                   <div>
                     <p className="font-medium">{lastScan.student}</p>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">{lastScan.method.replace('_', ' ')}</Badge>
-                      <Badge variant="default" className="bg-emerald-600">
+                      <Badge variant={lastScan.status === 'success' ? 'default' : 'secondary'} className={
+                        lastScan.status === 'late' ? 'bg-amber-100 text-amber-800 hover:bg-amber-200' :
+                        lastScan.status === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                        ''
+                      }>
                         <Check className="size-3 mr-1" />
-                        Success
+                        {lastScan.status === 'late' ? 'Late' : 'Success'}
                       </Badge>
                     </div>
                   </div>
@@ -467,16 +495,25 @@ export function IdScannerView() {
               {scans.map(scan => (
                 <div key={scan.id} className="flex items-center justify-between rounded-lg border p-3">
                   <div className="flex items-center gap-3">
-                    <div className={`flex size-8 items-center justify-center rounded-full ${scan.status === 'success' ? 'bg-emerald-100' : 'bg-red-100'}`}>
-                      <Check className={`size-4 ${scan.status === 'success' ? 'text-emerald-600' : 'text-red-600'}`} />
+                    <div className={`flex size-8 items-center justify-center rounded-full ${
+                      scan.status === 'success' ? 'bg-emerald-100' :
+                      scan.status === 'late' ? 'bg-amber-100' : 'bg-red-100'
+                    }`}>
+                      <Check className={`size-4 ${
+                        scan.status === 'success' ? 'text-emerald-600' :
+                        scan.status === 'late' ? 'text-amber-600' : 'text-red-600'
+                      }`} />
                     </div>
                     <div>
                       <p className="text-sm font-medium">{scan.student}</p>
                       <p className="text-xs text-gray-500">{scan.action} · {scan.time}</p>
                     </div>
                   </div>
-                  <Badge variant={scan.status === 'success' ? 'default' : 'destructive'}>
-                    {scan.status}
+                  <Badge variant={
+                    scan.status === 'success' ? 'default' :
+                    scan.status === 'late' ? 'secondary' : 'destructive'
+                  }>
+                    {scan.status === 'late' ? 'Late' : scan.status}
                   </Badge>
                 </div>
               ))}

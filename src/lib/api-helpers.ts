@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, requireRole, type AuthResult } from '@/lib/auth-middleware';
-import { requireCsrfValidation } from '@/lib/csrf-middleware';
 import { getValidationErrors } from '@/lib/validators';
 import { z } from 'zod';
 import { db } from '@/lib/db';
@@ -58,12 +57,6 @@ export async function requireAuthAndRole(
   request: NextRequest,
   allowedRoles: string[]
 ): Promise<{ valid: true; auth: AuthResult & { authenticated: true } } | { valid: false; error: NextResponse }> {
-  // CSRF protection for mutating requests
-  const csrfError = await requireCsrfValidation(request);
-  if (csrfError) {
-    return { valid: false, error: csrfError };
-  }
-
   const auth = await requireAuth(request);
   if (auth instanceof NextResponse) {
     return { valid: false, error: auth };
@@ -243,10 +236,6 @@ export async function apiHandler<T>(
   requiredRoles?: string[]
 ): Promise<NextResponse> {
   try {
-    // CSRF protection for mutating requests
-    const csrfError = await requireCsrfValidation(request);
-    if (csrfError) return csrfError;
-
     const contextResult = await buildApiContext(request, requiredRoles);
 
     if (!contextResult.valid) {

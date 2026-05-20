@@ -2,7 +2,19 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
 
-// GET /api/attendance/staff-checkin - Get current staff member's check-in status
+function getCurrentTimeHHMM(): string {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
+function isLate(currentHHMM: string, threshold: string): boolean {
+  if (!threshold) return false;
+  const [ch, cm] = currentHHMM.split(':').map(Number);
+  const [th, tm] = threshold.split(':').map(Number);
+  if (isNaN(ch) || isNaN(cm) || isNaN(th) || isNaN(tm)) return false;
+  return ch > th || (ch === th && cm >= tm);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request);
@@ -36,7 +48,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/attendance/staff-checkin - Mark own attendance via QR scan
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth(request);
@@ -52,54 +63,65 @@ export async function POST(request: NextRequest) {
     let parsedData: any;
     try {
       parsedData = typeof qrData === 'string' ? JSON.parse(qrData) : qrData;
-    } catch (e) {
+    } catch {
       return NextResponse.json({ error: 'Invalid QR code data' }, { status: 400 });
     }
 
-    // Support both school entrance QR and personal staff QR (for self-scanning if ever needed)
     if (parsedData.type !== 'school_attendance' && parsedData.type !== 'staff') {
        return NextResponse.json({ error: 'Invalid QR code type' }, { status: 400 });
     }
 
-    // Verify school
-    if (parsedData.schoolId !== auth.schoolId) {
+    const schoolId = auth.schoolId || parsedData.schoolId || '';
+    if (!schoolId) {
+      return NextResponse.json({ error: 'Could not determine school' }, { status: 400 });
+    }
+
+    if (auth.role !== 'SUPER_ADMIN' && parsedData.schoolId && parsedData.schoolId !== schoolId) {
       return NextResponse.json({ error: 'QR code does not belong to your school' }, { status: 403 });
     }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    const currentHHMM = getCurrentTimeHHMM();
 
-    // Record in StaffAttendance
+    // Fetch late threshold from school settings
+    let lateThreshold = '08:00';
+    try {
+      const settings = await db.schoolSettings.findUnique({ where: { schoolId } });
+      if (settings?.attendanceLateThreshold) lateThreshold = settings.attendanceLateThreshold;
+    } catch { /* use default */ }
+
+    const autoLate = isLate(currentHHMM, lateThreshold);
+    const attendanceStatus = autoLate ? 'late' : 'present';
+
     const attendance = await db.staffAttendance.upsert({
       where: {
         schoolId_userId_date: {
-          schoolId: auth.schoolId!,
+          schoolId,
           userId: auth.userId!,
           date: today,
         },
       },
       update: {
-        status: 'present',
-        checkInTime: timeStr,
+        status: attendanceStatus,
+        checkInTime: currentHHMM,
         method: parsedData.type === 'school_attendance' ? 'self_scan' : 'qr_scan',
         markedBy: auth.userId,
       },
       create: {
-        schoolId: auth.schoolId!,
+        schoolId,
         userId: auth.userId!,
         date: today,
-        status: 'present',
-        checkInTime: timeStr,
+        status: attendanceStatus,
+        checkInTime: currentHHMM,
         method: parsedData.type === 'school_attendance' ? 'self_scan' : 'qr_scan',
         markedBy: auth.userId,
       },
     });
 
-    // Log the scan
     await db.attendanceScanLog.create({
       data: {
-        schoolId: auth.schoolId!,
+        schoolId,
         userId: auth.userId!,
         scanType: parsedData.type,
         action: 'attendance',
@@ -111,8 +133,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Attendance marked successfully',
-      data: attendance,
+      message: autoLate
+        ? `Attendance marked as late (after ${lateThreshold})`
+        : 'Attendance marked successfully',
+      data: { ...attendance, late: autoLate },
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';

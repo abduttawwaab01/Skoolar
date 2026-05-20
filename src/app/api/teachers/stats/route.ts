@@ -3,20 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
 
 // GET /api/teachers/stats - Get teacher performance statistics
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id?: string }> }
-) {
+export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth(request);
     if (auth instanceof NextResponse) return auth;
 
-    const { id } = await params;
-    const teacherId = id || auth.userId;
-
-    // Verify teacher profile exists
+    // Look up teacher profile by userId (not teacher.id, since auth.userId is the user account id)
     const teacher = await db.teacher.findUnique({
-      where: { id: teacherId },
+      where: { userId: auth.userId },
     });
 
     if (!teacher) {
@@ -32,11 +26,11 @@ export async function GET(
     // Get all classes taught by this teacher (either as class teacher or subject teacher)
     const [classTeacherClasses, subjectTeacherClasses] = await Promise.all([
       db.class.findMany({
-        where: { classTeacherId: teacherId, schoolId: teacher.schoolId },
+        where: { classTeacherId: teacher.id, schoolId: teacher.schoolId },
         select: { id: true, name: true, _count: { select: { students: true } } },
       }),
       db.classSubject.findMany({
-        where: { teacherId: teacherId, class: { schoolId: teacher.schoolId } },
+        where: { teacherId: teacher.id, class: { schoolId: teacher.schoolId } },
         select: { class: { select: { id: true, name: true, _count: { select: { students: true } } } } },
       }),
     ]);
@@ -59,7 +53,7 @@ export async function GET(
 
     // Get all exams taught by this teacher
     const exams = await db.exam.findMany({
-      where: { teacherId, schoolId: teacher.schoolId },
+      where: { teacherId: teacher.id, schoolId: teacher.schoolId },
       select: { id: true, classId: true, totalMarks: true, passingMarks: true },
     });
 

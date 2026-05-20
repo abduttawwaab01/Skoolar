@@ -67,7 +67,7 @@ const statusFilters = ['All', 'Active', 'Draft', 'Published', 'Locked'] as const
 export function ExamsView() {
   const { currentUser, selectedSchoolId, currentRole } = useAppStore();
   const schoolId = currentUser.schoolId || selectedSchoolId || '';
-  const isAdmin = ['SCHOOL_ADMIN', 'SUPER_ADMIN'].includes(currentRole || '');
+  const isAdmin = ['SCHOOL_ADMIN', 'SUPER_ADMIN', 'TEACHER'].includes(currentRole || '');
   const [exams, setExams] = React.useState<ExamRecord[]>([]);
   const [classes, setClasses] = React.useState<{ id: string; name: string }[]>([]);
   const [subjects, setSubjects] = React.useState<{ id: string; name: string }[]>([]);

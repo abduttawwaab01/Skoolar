@@ -2,41 +2,72 @@ import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-middleware';
 
+function getCurrentTimeHHMM(): string {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
+
+function isLate(currentHHMM: string, threshold: string): boolean {
+  if (!threshold) return false;
+  const [ch, cm] = currentHHMM.split(':').map(Number);
+  const [th, tm] = threshold.split(':').map(Number);
+  if (isNaN(ch) || isNaN(cm) || isNaN(th) || isNaN(tm)) return false;
+  return ch > th || (ch === th && cm >= tm);
+}
+
+function parseQR(qrData: unknown): any {
+  if (typeof qrData === 'string') {
+    try { return JSON.parse(qrData); } catch { return null; }
+  }
+  if (typeof qrData === 'object' && qrData !== null) return qrData;
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth(request);
     if (auth instanceof NextResponse) return auth;
 
     const body = await request.json();
-    const { qrData, scanType = 'attendance', scannedBy, schoolId } = body;
+    const { qrData, scanType = 'attendance', scannedBy } = body;
 
     if (!qrData) {
       return NextResponse.json({ error: 'QR data is required' }, { status: 400 });
     }
 
-    let parsedData: any;
-    try {
-      parsedData = typeof qrData === 'string' ? JSON.parse(qrData) : qrData;
-    } catch {
+    const parsedData = parseQR(qrData);
+    if (!parsedData) {
       return NextResponse.json({ error: 'Invalid QR code data' }, { status: 400 });
     }
 
-    const { type, id: cardId, userId: targetUserId, personId, schoolId: qrSchoolId, name, role, timestamp } = parsedData;
+    const { type, id: cardId, userId: targetUserId, personId, schoolId: qrSchoolId, name, role } = parsedData;
 
-    if ((!personId && !targetUserId) || !schoolId) {
+    // Resolve schoolId: body → auth → QR
+    const effectiveSchoolId = auth.schoolId || qrSchoolId || '';
+    if (!effectiveSchoolId) {
+      return NextResponse.json({ error: 'Could not determine school' }, { status: 400 });
+    }
+
+    if (!personId && !targetUserId) {
       return NextResponse.json({ error: 'QR code missing required fields' }, { status: 400 });
     }
 
-    const userSchoolId = auth.schoolId;
-    const targetSchoolId = auth.role === 'SUPER_ADMIN' ? (schoolId || qrSchoolId) : userSchoolId;
-
-    if (auth.role !== 'SUPER_ADMIN' && qrSchoolId !== userSchoolId) {
+    if (auth.role !== 'SUPER_ADMIN' && qrSchoolId && qrSchoolId !== effectiveSchoolId) {
       return NextResponse.json({ error: 'QR code does not belong to your school' }, { status: 403 });
     }
 
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    const currentHHMM = getCurrentTimeHHMM();
+
+    // Fetch the late threshold from school settings
+    let lateThreshold = '08:00';
+    try {
+      const settings = await db.schoolSettings.findUnique({ where: { schoolId: effectiveSchoolId } });
+      if (settings?.attendanceLateThreshold) lateThreshold = settings.attendanceLateThreshold;
+    } catch { /* use default */ }
+
+    const autoLate = isLate(currentHHMM, lateThreshold);
 
     // 1. Identify the person being scanned
     let person: any = null;
@@ -87,13 +118,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 });
     }
 
-    // 2. Check for duplicate scan today (prevent multiple marks per day)
+    // 2. Check for duplicate scan today
     let alreadyScannedToday = false;
     if (isStudent) {
       const existing = await db.attendance.findUnique({
         where: {
           schoolId_studentId_date: {
-            schoolId: targetSchoolId,
+            schoolId: effectiveSchoolId,
             studentId: personId,
             date: todayStart,
           },
@@ -105,7 +136,7 @@ export async function POST(request: NextRequest) {
       const existing = await db.staffAttendance.findUnique({
         where: {
           schoolId_userId_date: {
-            schoolId: targetSchoolId,
+            schoolId: effectiveSchoolId,
             userId: finalUserId,
             date: todayStart,
           },
@@ -115,14 +146,14 @@ export async function POST(request: NextRequest) {
       alreadyScannedToday = !!existing;
     }
 
-    // 3. Record scan in AttendanceScanLog (always, even on duplicate)
+    // 3. Record scan in AttendanceScanLog
     const scanLog = await db.attendanceScanLog.create({
       data: {
-        schoolId: targetSchoolId,
+        schoolId: effectiveSchoolId,
         studentId: isStudent ? personId : null,
         teacherId: (!isStudent && type === 'staff' && personId) ? personId : null,
         userId: finalUserId,
-        cardId: cardId || null,
+        cardId: (cardId as string) || null,
         scanType,
         action: scanType === 'attendance' || scanType === 'staff_attendance' ? 'attendance' : scanType,
         status: alreadyScannedToday ? 'skipped' : 'success',
@@ -139,7 +170,7 @@ export async function POST(request: NextRequest) {
           scanLog,
           person: {
             name: isStudent ? person.user?.name : person.name,
-            id: admissionNo || employeeNo || person.id.slice(0, 8),
+            id: admissionNo || employeeNo || (person.id as string)?.slice(0, 8),
             role: isStudent ? 'STUDENT' : person.role,
           },
         },
@@ -149,10 +180,12 @@ export async function POST(request: NextRequest) {
 
     // 4. Process Attendance
     if (scanType === 'attendance' || scanType === 'staff_attendance') {
+      const attendanceStatus = autoLate ? 'late' : 'present';
+
       if (isStudent) {
         const currentTerm = await db.term.findFirst({
           where: {
-            schoolId: targetSchoolId,
+            schoolId: effectiveSchoolId,
             startDate: { lte: todayStart },
             endDate: { gte: todayStart },
             isLocked: false,
@@ -163,25 +196,25 @@ export async function POST(request: NextRequest) {
         await db.attendance.upsert({
           where: {
             schoolId_studentId_date: {
-              schoolId: targetSchoolId,
+              schoolId: effectiveSchoolId,
               studentId: personId,
               date: todayStart,
             },
           },
           update: {
-            status: 'present',
+            status: attendanceStatus,
             classId: person.classId,
             termId: currentTerm?.id || 'none',
             method: 'qr_scan',
             markedBy: scannedBy || auth.userId,
           },
           create: {
-            schoolId: targetSchoolId,
+            schoolId: effectiveSchoolId,
             studentId: personId,
             classId: person.classId || 'none',
             termId: currentTerm?.id || 'none',
             date: todayStart,
-            status: 'present',
+            status: attendanceStatus,
             method: 'qr_scan',
             markedBy: scannedBy || auth.userId,
           },
@@ -190,22 +223,22 @@ export async function POST(request: NextRequest) {
         await db.staffAttendance.upsert({
           where: {
             schoolId_userId_date: {
-              schoolId: targetSchoolId,
+              schoolId: effectiveSchoolId,
               userId: finalUserId,
               date: todayStart,
             },
           },
           update: {
-            status: 'present',
+            status: attendanceStatus,
             method: 'qr_scan',
             markedBy: scannedBy || auth.userId,
           },
           create: {
-            schoolId: targetSchoolId,
+            schoolId: effectiveSchoolId,
             userId: finalUserId,
             date: todayStart,
-            status: 'present',
-            checkInTime: timeStr,
+            status: attendanceStatus,
+            checkInTime: currentHHMM,
             method: 'qr_scan',
             markedBy: scannedBy || auth.userId,
           },
@@ -219,11 +252,14 @@ export async function POST(request: NextRequest) {
         scanLog,
         person: {
           name: isStudent ? person.user?.name : person.name,
-          id: admissionNo || employeeNo || person.id.slice(0, 8),
+          id: admissionNo || employeeNo || (person.id as string)?.slice(0, 8),
           role: isStudent ? 'STUDENT' : person.role,
         },
+        late: autoLate,
       },
-      message: 'Attendance recorded successfully',
+      message: autoLate
+        ? `Attendance recorded as late (after ${lateThreshold})`
+        : 'Attendance recorded successfully',
     });
   } catch (error: unknown) {
     console.error('Scan API Error:', error);
